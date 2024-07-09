@@ -8,7 +8,7 @@ go get github.com/insei/tinyconf@latest
 ```
 
 # Description
-tinyconf parses the config and returns the config structure.
+tinyconf parses the config and returns the config structure. When initializing tinyconf.Manager, you can add a logger to it, as well as drivers (for priority in parsing the config, i.e. it will check them starting from the last one you specified). You can also add your own driver.
 
 tinyconf.Manager has methods:
 ```
