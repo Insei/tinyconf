@@ -15,6 +15,9 @@ tinyconf.Manager has methods:
 Register(conf any) error
 Parse(conf any) error 
 ```
+where: <br>
+`Register(conf any) error` - registers fmap.Field for the config.<br>
+`Parse(conf any) error` - parses config from registered fmap.Field.<br>
 
 # Example
 
