@@ -1,3 +1,7 @@
+[![codecov](https://codecov.io/gh/Insei/tinyconf/graph/badge.svg?token=TSOJ1SWF9D)](https://codecov.io/gh/Insei/tinyconf)
+[![build](https://github.com/insei/tinyconf/actions/workflows/go.yml/badge.svg)](https://github.com/Insei/tinyconf/actions/workflows/go.yml)
+[![Goreport](https://goreportcard.com/badge/github.com/insei/tinyconf)](https://goreportcard.com/report/github.com/insei/tinyconf)
+[![GoDoc](https://godoc.org/github.com/insei/tinyconf?status.svg)](https://godoc.org/github.com/insei/tinyconf)
 # tinyconf
 tinyconf - a simple and universal library for parsing configs.
 
@@ -16,8 +20,8 @@ Register(conf any) error
 Parse(conf any) error 
 ```
 where: <br>
-`Register(conf any) error` - registers fmap.Field for the config.<br>
-`Parse(conf any) error` - parses config from registered fmap.Field.<br>
+`Register(conf any) error` - registers map[strings]fmap.Field for the config.<br>
+`Parse(conf any) error` - parses config from registered drivers.<br>
 
 # Example
 
