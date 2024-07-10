@@ -31,7 +31,7 @@ package main
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"tinyconf"
+	"github.com/insei/tinyconf"
 	"tinyconf/drivers/env"
 	"tinyconf/drivers/tag"
 	"tinyconf/drivers/yaml"

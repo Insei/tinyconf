@@ -6,7 +6,8 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"tinyconf"
+
+	"github.com/insei/tinyconf"
 )
 
 // define a utility to capture stdout
