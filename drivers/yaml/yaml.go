@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"tinyconf"
+
+	"github.com/insei/tinyconf"
 
 	"github.com/insei/cast"
 	"github.com/insei/fmap/v2"
