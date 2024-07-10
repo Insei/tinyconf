@@ -1,4 +1,4 @@
-module tinyconf
+module github.com/insei/tinyconf
 
 go 1.18
 
