@@ -2,10 +2,12 @@ package yaml
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io"
 	"os"
-	"tinyconf"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/insei/tinyconf"
 )
 
 type storageImpl struct {
