@@ -1,9 +1,10 @@
 package tinyconf
 
 import (
-	"github.com/insei/fmap/v2"
 	"reflect"
 	"testing"
+
+	"github.com/insei/fmap/v3"
 )
 
 // Mock implementations of Driver interface for the purposes of testing

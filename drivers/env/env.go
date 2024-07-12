@@ -1,12 +1,15 @@
 package env
 
 import (
+	"cmp"
 	"fmt"
-	"os"
-	"tinyconf"
-
 	"github.com/insei/cast"
-	"github.com/insei/fmap/v2"
+	"github.com/insei/fmap/v3"
+	"github.com/insei/tinyconf"
+	"os"
+	"reflect"
+	"slices"
+	"strings"
 )
 
 type envDriver struct {
@@ -31,6 +34,81 @@ func (d envDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 
 func (d envDriver) GetName() string {
 	return d.name
+}
+
+type field struct {
+	path string
+	tag  reflect.StructTag
+}
+
+func (f field) getTag(tag string) string {
+	if tagValue, ok := f.tag.Lookup(tag); ok {
+		return fmt.Sprintf("#%s\n%s:\n", f.tag.Get("doc"), tagValue)
+	}
+	return ""
+}
+
+func (d envDriver) getUniqueFields(storages []fmap.Storage) []field {
+	var fields []field
+	for _, storage := range storages {
+		if storage == nil {
+			continue
+		}
+		for _, path := range storage.GetAllPaths() {
+			member := field{path: path, tag: storage.MustFind(path).GetTag()}
+			if slices.Contains(fields, member) {
+				continue
+			}
+			fields = append(fields, member)
+		}
+	}
+	return fields
+}
+
+func (d envDriver) getRootMap(fields []field) map[string]string {
+	roots := map[string]string{}
+	var keyPath string
+	for _, field := range fields {
+		depth := strings.Count(field.path, ".")
+		if depth == 0 {
+			keyPath = field.path
+			roots[keyPath] = field.getTag(d.name)
+			continue
+		}
+
+		if strings.HasPrefix(field.path, keyPath) {
+			docTag := field.getTag(d.name)
+			if strings.Contains(roots[keyPath], docTag) {
+				continue
+			}
+			roots[keyPath] += docTag
+		}
+	}
+	return roots
+}
+
+func (d envDriver) Doc(storages ...fmap.Storage) string {
+	fields := d.getUniqueFields(storages)
+
+	sortedFields := slices.Clone(fields)
+	slices.SortStableFunc(sortedFields, func(i, j field) int {
+		return cmp.Compare(i.path, j.path)
+	})
+
+	roots := d.getRootMap(sortedFields)
+
+	var doc string
+	for _, field := range fields {
+		depth := strings.Count(field.path, ".")
+		if depth != 0 {
+			continue
+		}
+
+		doc += roots[field.path]
+	}
+
+	fmt.Println(doc)
+	return doc
 }
 
 func New() (tinyconf.Driver, error) {

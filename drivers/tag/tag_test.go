@@ -1,24 +1,28 @@
 package tag
 
 import (
-	"github.com/insei/fmap/v2"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/insei/fmap/v3"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDefaultTagDriver_GetValue(t *testing.T) {
 	tests := []struct {
 		name          string
-		field         fmap.Field
+		getField      func() fmap.Field
 		driver        *defaultTagDriver
 		expectedValue interface{}
 		wantErr       bool
 	}{
 		{
 			name: "value successfully retrieved",
-			field: fmap.Get[struct {
-				Test string `default:"test"`
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string `default:"test"`
+				}]()
+				return storage.MustFind("Test")
+			},
 			driver: &defaultTagDriver{
 				tag:  "default",
 				name: "tag",
@@ -28,9 +32,12 @@ func TestDefaultTagDriver_GetValue(t *testing.T) {
 		},
 		{
 			name: "missing tag",
-			field: fmap.Get[struct {
-				Test string
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string
+				}]()
+				return storage.MustFind("Test")
+			},
 			driver: &defaultTagDriver{
 				tag:  "default",
 				name: "tag",
@@ -39,9 +46,12 @@ func TestDefaultTagDriver_GetValue(t *testing.T) {
 		},
 		{
 			name: "empty tag",
-			field: fmap.Get[struct {
-				Test string `default:""`
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string `default:""`
+				}]()
+				return storage.MustFind("Test")
+			},
 			driver: &defaultTagDriver{
 				tag:  "default",
 				name: "tag",
@@ -50,9 +60,12 @@ func TestDefaultTagDriver_GetValue(t *testing.T) {
 		},
 		{
 			name: "incorrect tag value",
-			field: fmap.Get[struct {
-				Test int `default:"string"`
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test int `default:"string"`
+				}]()
+				return storage.MustFind("Test")
+			},
 			driver: &defaultTagDriver{
 				tag:  "default",
 				name: "tag",
@@ -63,7 +76,7 @@ func TestDefaultTagDriver_GetValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			val, err := tt.driver.GetValue(tt.field)
+			val, err := tt.driver.GetValue(tt.getField())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetValue() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -102,6 +115,28 @@ func TestDefaultTagDriver_GetName(t *testing.T) {
 			if got := d.GetName(); got != tt.want {
 				t.Errorf("defaultTagDriver.GetName() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestDefaultTagDriver_Doc(t *testing.T) {
+	type TestingStruct struct {
+		Test string `tag:"TEST" doc:"Test tag"`
+	}
+	driver := defaultTagDriver{name: "tag"}
+	storage, _ := fmap.Get[TestingStruct]()
+
+	tests := map[string]struct {
+		in  fmap.Storage
+		out string
+	}{
+		"test map": {in: storage, out: "#Test tag\n#TEST="},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			out := driver.Doc(tc.in)
+			assert.Equal(t, tc.out, out)
 		})
 	}
 }

@@ -3,8 +3,8 @@ package yaml
 import (
 	"errors"
 	"testing"
-	"tinyconf"
 
+	"github.com/insei/tinyconf"
 	"github.com/stretchr/testify/assert"
 )
 

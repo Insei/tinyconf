@@ -1,13 +1,15 @@
 package yaml
 
 import (
+	"cmp"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
-	"tinyconf"
 
 	"github.com/insei/cast"
-	"github.com/insei/fmap/v2"
+	"github.com/insei/fmap/v3"
+	"github.com/insei/tinyconf"
 )
 
 type yamlDriver struct {
@@ -73,6 +75,92 @@ func (d *yamlDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 
 func (d *yamlDriver) GetName() string {
 	return d.name
+}
+
+type field struct {
+	path string
+	tag  reflect.StructTag
+}
+
+func (d *yamlDriver) getUniqueFields(storages []fmap.Storage) []field {
+	var fields []field
+	for _, storage := range storages {
+		if storage == nil {
+			continue
+		}
+		for _, path := range storage.GetAllPaths() {
+			member := field{path: path, tag: storage.MustFind(path).GetTag()}
+			if slices.Contains(fields, member) {
+				continue
+			}
+			fields = append(fields, member)
+		}
+	}
+	return fields
+}
+
+func (d *yamlDriver) getRootMap(fields []field) map[string]string {
+	roots := map[string]string{}
+	var offset strings.Builder
+	var keyPath, keyTag string
+
+	for _, field := range fields {
+		depth := strings.Count(field.path, ".")
+		if depth == 0 {
+			if tagValue, ok := field.tag.Lookup(d.name); ok {
+				keyPath, keyTag = field.path, tagValue
+				roots[keyTag] = ""
+			}
+			continue
+		}
+
+		if strings.HasPrefix(field.path, keyPath) {
+			var path string
+			for i := 0; i < depth; i++ {
+				offset.WriteRune('\t')
+			}
+			if tagValue, ok := field.tag.Lookup(d.name); ok {
+				remark := offset.String() + "#" + field.tag.Get("doc")
+				tagValue = offset.String() + tagValue
+				path = fmt.Sprintf("%s\n%s:\n", remark, tagValue)
+				roots[keyTag] += path
+			}
+			offset.Reset()
+		}
+	}
+
+	return roots
+}
+
+func (d *yamlDriver) Doc(storages ...fmap.Storage) string {
+	fields := d.getUniqueFields(storages)
+
+	sortedFields := slices.Clone(fields)
+	slices.SortStableFunc(sortedFields, func(i, j field) int {
+		return cmp.Compare(i.path, j.path)
+	})
+
+	roots := d.getRootMap(sortedFields)
+
+	var doc string
+	for _, field := range fields {
+		depth := strings.Count(field.path, ".")
+		if depth != 0 {
+			continue
+		}
+
+		tagValue, ok := field.tag.Lookup(d.name)
+		if !ok {
+			continue
+		}
+
+		if v, ok := roots[tagValue]; ok {
+			doc += fmt.Sprintf("#%s\n%s:\n%s", field.tag.Get("doc"), tagValue, v)
+		}
+	}
+
+	fmt.Println(doc)
+	return doc
 }
 
 func New(file string) (tinyconf.Driver, error) {

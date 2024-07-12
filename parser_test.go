@@ -2,10 +2,11 @@ package tinyconf
 
 import (
 	"errors"
-	"github.com/insei/fmap/v2"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+
+	"github.com/insei/fmap/v3"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_checkConfig(t *testing.T) {
@@ -146,39 +147,51 @@ func TestGetDereferencedValue(t *testing.T) {
 func TestGetLoggerValue(t *testing.T) {
 	cases := []struct {
 		name     string
-		field    fmap.Field
+		getField func() fmap.Field
 		val      any
 		expected string
 	}{
 		{
 			name: "hidden_tag_is_not_set",
-			field: fmap.Get[struct {
-				Test string
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string
+				}]()
+				return storage.MustFind("Test")
+			},
 			val:      any(42),
 			expected: "42",
 		},
 		{
 			name: "hidden_tag_set_to_false",
-			field: fmap.Get[struct {
-				Test string `hidden:"false"`
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string `hidden:"false"`
+				}]()
+				return storage.MustFind("Test")
+			},
 			val:      any(1001),
 			expected: "1001",
 		},
 		{
 			name: "hidden_tag_set_to_true",
-			field: fmap.Get[struct {
-				Test int `hidden:"true"`
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string `hidden:"true"`
+				}]()
+				return storage.MustFind("Test")
+			},
 			val:      any(1234567890),
 			expected: "**********",
 		},
 		{
 			name: "hidden_tag_set_to_true_string_value",
-			field: fmap.Get[struct {
-				Test string `hidden:"true"`
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string `hidden:"true"`
+				}]()
+				return storage.MustFind("Test")
+			},
 			val:      any("mysecretvalue"),
 			expected: "*************",
 		},
@@ -186,7 +199,7 @@ func TestGetLoggerValue(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			result := getLoggerValue(c.field, c.val)
+			result := getLoggerValue(c.getField(), c.val)
 			if result != c.expected {
 				t.Errorf("Expected '%s', got '%s'", c.expected, result)
 			}
@@ -205,7 +218,7 @@ func TestNew(t *testing.T) {
 			opts: []Option{},
 			expected: &Manager{
 				log:        &noopLogger{},
-				registered: map[reflect.Type]map[string]fmap.Field{},
+				registered: map[reflect.Type]fmap.Storage{},
 			},
 		},
 		{
@@ -215,7 +228,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &Manager{
 				log:        &noopLogger{},
-				registered: map[reflect.Type]map[string]fmap.Field{},
+				registered: map[reflect.Type]fmap.Storage{},
 				drivers: []Driver{
 					&mockDriver{},
 				},
@@ -228,7 +241,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &Manager{
 				log:        &mockLogger{},
-				registered: map[reflect.Type]map[string]fmap.Field{},
+				registered: map[reflect.Type]fmap.Storage{},
 			},
 		},
 		{
@@ -239,7 +252,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &Manager{
 				log:        &mockLogger{},
-				registered: map[reflect.Type]map[string]fmap.Field{},
+				registered: map[reflect.Type]fmap.Storage{},
 				drivers: []Driver{
 					&mockDriver{},
 				},
@@ -253,7 +266,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &Manager{
 				log:        &noopLogger{},
-				registered: map[reflect.Type]map[string]fmap.Field{},
+				registered: map[reflect.Type]fmap.Storage{},
 				drivers: []Driver{
 					&mockDriver{},
 					&mockDriver{},
@@ -372,12 +385,11 @@ func TestManager_Parse(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			c := &Manager{
 				drivers:    tc.Drivers,
-				registered: make(map[reflect.Type]map[string]fmap.Field),
+				registered: make(map[reflect.Type]fmap.Storage),
 				log:        &testLogger{},
 			}
-			if tc.Registered {
-				c.registered[reflect.TypeOf(tc.Config)] = fmap.GetFrom(tc.Config)
-			}
+
+			assert.NoError(t, c.Register(tc.Config))
 
 			_ = c.Parse(tc.Config)
 

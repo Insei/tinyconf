@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"github.com/google/uuid"
-	"tinyconf"
-	"tinyconf/drivers/env"
-	"tinyconf/drivers/tag"
-	"tinyconf/drivers/yaml"
-	"tinyconf/logger"
+	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/drivers/env"
+	"github.com/insei/tinyconf/drivers/tag"
+	"github.com/insei/tinyconf/drivers/yaml"
+	"github.com/insei/tinyconf/logger"
 )
 
 type Embedded struct {
@@ -67,5 +66,4 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Print(c)
 }

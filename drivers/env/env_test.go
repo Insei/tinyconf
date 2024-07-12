@@ -1,10 +1,11 @@
 package env
 
 import (
-	"github.com/insei/fmap/v2"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/insei/fmap/v3"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_envDriver_GetName(t *testing.T) {
@@ -17,33 +18,42 @@ func Test_envDriver_GetName(t *testing.T) {
 func Test_envDriver_GetValue(t *testing.T) {
 	tests := map[string]struct {
 		setup         func()
-		field         fmap.Field
+		getField      func() fmap.Field
 		wantErr       bool
 		expectedValue any
 	}{
 		"TagNotSet": {
 			setup: func() {},
-			field: fmap.Get[struct {
-				Test string
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string
+				}]()
+				return storage.MustFind("Test")
+			},
 			wantErr: true,
 		},
 		"EnvNotSet": {
 			setup: func() {
 				os.Clearenv()
 			},
-			field: fmap.Get[struct {
-				Test string `env:"TEST"`
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string `env:"TEST"`
+				}]()
+				return storage.MustFind("Test")
+			},
 			wantErr: true,
 		},
 		"EnvSetCorrectly": {
 			setup: func() {
 				os.Setenv("TEST", "value")
 			},
-			field: fmap.Get[struct {
-				Test string `env:"TEST"`
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string `env:"TEST"`
+				}]()
+				return storage.MustFind("Test")
+			},
 			wantErr:       false,
 			expectedValue: "value",
 		},
@@ -51,9 +61,12 @@ func Test_envDriver_GetValue(t *testing.T) {
 			setup: func() {
 				os.Setenv("TEST", "value")
 			},
-			field: fmap.Get[struct {
-				Test int `env:"TEST"`
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test int `env:"TEST"`
+				}]()
+				return storage.MustFind("Test")
+			},
 			wantErr: true,
 		},
 	}
@@ -63,7 +76,7 @@ func Test_envDriver_GetValue(t *testing.T) {
 	for tn, tc := range tests {
 		t.Run(tn, func(t *testing.T) {
 			tc.setup()
-			val, err := d.GetValue(tc.field)
+			val, err := d.GetValue(tc.getField())
 			if (err != nil) != tc.wantErr {
 				t.Errorf("GetValue() error = %v, wantErr %v", err, tc.wantErr)
 				return
@@ -71,6 +84,68 @@ func Test_envDriver_GetValue(t *testing.T) {
 			if err == nil && tc.expectedValue != nil {
 				assert.Equal(t, tc.expectedValue, val.Value)
 			}
+		})
+	}
+}
+
+func TestEnvDriver_Doc(t *testing.T) {
+	type TestingFirstStruct struct {
+		Service struct {
+			Name string `env:"SERVICE_NAME" doc:"service name"`
+		}
+		HTTP struct {
+			Auth struct {
+				Alg    string `env:"HTTP_AUTH_ALG" doc:"http authentication algorithm"`
+				Issuer string `env:"HTTP_AUTH_ISSUER" doc:"http authentication issuer"`
+			}
+		}
+	}
+	type TestingSecondStruct struct {
+		Service struct {
+			ServiceName string `env:"SERVICE_NAME" doc:"service name"`
+		}
+		Something uint `env:"SOMETHING" doc:"something"`
+	}
+	type TestingThirdStruct struct {
+		HTTP struct {
+			Host string `env:"HTTP_HOST" doc:"http protocol host"`
+			Port string `env:"HTTP_PORT" doc:"http protocol port"`
+		}
+	}
+
+	driver := envDriver{name: "env"}
+
+	storages := make([]fmap.Storage, 3)
+	storages[0], _ = fmap.Get[TestingFirstStruct]()
+	storages[1], _ = fmap.Get[TestingSecondStruct]()
+	storages[2], _ = fmap.Get[TestingThirdStruct]()
+
+	tests := map[string]struct {
+		in  []fmap.Storage
+		out string
+	}{
+		"test map": {
+			in: storages,
+			out: `#service name
+SERVICE_NAME:
+#http authentication algorithm
+HTTP_AUTH_ALG:
+#http authentication issuer
+HTTP_AUTH_ISSUER:
+#http protocol host
+HTTP_HOST:
+#http protocol port
+HTTP_PORT:
+#something
+SOMETHING:
+`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			out := driver.Doc(tc.in...)
+			assert.Equal(t, tc.out, out)
 		})
 	}
 }
