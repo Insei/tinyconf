@@ -68,7 +68,7 @@ func (t *fmtLogger) Warn(msg string, fld ...tinyconf.Field) {
 }
 
 func (t *fmtLogger) Info(msg string, fld ...tinyconf.Field) {
-	t.msg("WARN", msg, fld...)
+	t.msg("INFO", msg, fld...)
 }
 
 func (t *fmtLogger) With(flds ...tinyconf.Field) tinyconf.Logger {
