@@ -119,7 +119,7 @@ func TestWith(t *testing.T) {
 	newLogger := logger.With(field)
 
 	if newLogger.(*fmtLogger).fields[0] != field {
-		t.Error("fields don't match in logger.With()")
+		t.Error("fields don't match in l.With()")
 	}
 }
 
@@ -151,6 +151,6 @@ func TestNewFmtLogger(t *testing.T) {
 
 	_, ok := logger.(*fmtLogger)
 	if !ok {
-		t.Error("The type of logger is not '*fmtLogger'")
+		t.Error("The type of l is not '*fmtLogger'")
 	}
 }
