@@ -1,13 +1,16 @@
 package env
 
 import (
+	"cmp"
 	"fmt"
 	"os"
-
-	"github.com/insei/tinyconf"
+	"reflect"
+	"slices"
+	"strings"
 
 	"github.com/insei/cast"
-	"github.com/insei/fmap/v2"
+	"github.com/insei/fmap/v3"
+	"github.com/insei/tinyconf"
 )
 
 type envDriver struct {
@@ -32,6 +35,84 @@ func (d envDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 
 func (d envDriver) GetName() string {
 	return d.name
+}
+
+type field struct {
+	path  string
+	value any
+	depth int
+	tag   reflect.StructTag
+}
+
+func (f field) genDoc(driver string) string {
+	if tagDriver, ok := f.tag.Lookup(driver); ok {
+		tagDoc := f.tag.Get("doc")
+		return fmt.Sprintf("#%s\n#%s=%v\n", tagDoc, tagDriver, f.value)
+	}
+	return ""
+}
+
+func (d envDriver) getUniqueFields(registers []tinyconf.Registered) []field {
+	var fields []field
+	for _, register := range registers {
+		for _, path := range register.Storage.GetAllPaths() {
+			fld := register.Storage.MustFind(path)
+
+			tag := fld.GetTag()
+			tagDriver, ok := tag.Lookup(d.name)
+			if !ok {
+				continue
+			}
+
+			member := field{
+				path:  strings.Split(tagDriver, "_")[0],
+				value: fld.Get(register.Config),
+				depth: strings.Count(tagDriver, "_"),
+				tag:   tag,
+			}
+
+			if slices.ContainsFunc(fields, func(item field) bool {
+				return item.tag.Get(d.name) == member.tag.Get(d.name)
+			}) {
+				continue
+			}
+			fields = append(fields, member)
+		}
+	}
+	return fields
+}
+
+func (d envDriver) getRootMap(fields []field) map[int]map[string]string {
+	roots := make(map[int]map[string]string)
+	root := make(map[string]string)
+
+	for _, field := range fields {
+		root[field.path] += field.genDoc(d.name)
+		roots[field.depth] = root
+	}
+	return roots
+}
+
+func (d envDriver) GenDoc(registers ...tinyconf.Registered) string {
+	uniqueFields := d.getUniqueFields(registers)
+
+	sortedFields := slices.Clone(uniqueFields)
+	slices.SortStableFunc(sortedFields, func(i, j field) int {
+		return cmp.Compare(j.depth, i.depth)
+	})
+
+	roots := d.getRootMap(sortedFields)
+	marks := make([]string, 0)
+
+	var doc string
+	for _, field := range uniqueFields {
+		if slices.Contains(marks, field.path) {
+			continue
+		}
+		marks = append(marks, field.path)
+		doc += roots[field.depth][field.path] + "\n"
+	}
+	return doc
 }
 
 func New() (tinyconf.Driver, error) {

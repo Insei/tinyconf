@@ -91,6 +91,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(config.GenDoc("yaml"))
 	err = config.Parse(&c)
 	if err != nil {
 		panic(err)

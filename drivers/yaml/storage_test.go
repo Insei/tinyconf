@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/insei/tinyconf"
-
 	"github.com/stretchr/testify/assert"
 )
 
