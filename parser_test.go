@@ -290,6 +290,10 @@ type parseMockDriver struct {
 	value any
 }
 
+func (md *parseMockDriver) GenDoc(storages ...fmap.Storage) string {
+	return "doc parseMockDriver"
+}
+
 func (md *parseMockDriver) GetName() string {
 	return md.name
 }
@@ -398,6 +402,66 @@ func TestManager_Parse(t *testing.T) {
 			assert.Equal(t, tc.ExpectWarnLogged, logger.WarnLogged)
 			assert.Equal(t, tc.ExpectErrorLogged, logger.ErrorLogged)
 			assert.Equal(t, tc.ExpectDebugLogged, logger.DebugLogged)
+		})
+	}
+}
+
+func TestManager_GenDoc(t *testing.T) {
+	type fields struct {
+		drivers    []Driver
+		log        Logger
+		registered map[reflect.Type]fmap.Storage
+	}
+	type args struct {
+		driverName string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   string
+	}{
+		{
+			name: "success",
+			fields: fields{
+				drivers: []Driver{
+					&parseMockDriver{name: "mockDriver", err: nil},
+					&parseMockDriver{name: "newMockDriver", err: nil},
+					&mockDriver{},
+				},
+				log:        nil,
+				registered: nil,
+			},
+			args: args{
+				driverName: "mockDriver",
+			},
+			want: "doc mockDriver",
+		},
+		{
+			name: "not found driver",
+			fields: fields{
+				drivers: []Driver{
+					&parseMockDriver{name: "mockDriver", err: nil},
+					&parseMockDriver{name: "newMockDriver", err: nil},
+					&mockDriver{},
+				},
+				log:        nil,
+				registered: nil,
+			},
+			args: args{
+				driverName: "testDriver",
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Manager{
+				drivers:    tt.fields.drivers,
+				log:        tt.fields.log,
+				registered: tt.fields.registered,
+			}
+			assert.Equalf(t, tt.want, c.GenDoc(tt.args.driverName), "GenDoc(%v)", tt.args.driverName)
 		})
 	}
 }

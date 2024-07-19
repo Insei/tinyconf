@@ -3,13 +3,14 @@ package env
 import (
 	"cmp"
 	"fmt"
-	"github.com/insei/cast"
-	"github.com/insei/fmap/v3"
-	"github.com/insei/tinyconf"
 	"os"
 	"reflect"
 	"slices"
 	"strings"
+
+	"github.com/insei/cast"
+	"github.com/insei/fmap/v3"
+	"github.com/insei/tinyconf"
 )
 
 type envDriver struct {
@@ -41,9 +42,10 @@ type field struct {
 	tag  reflect.StructTag
 }
 
-func (f field) getTag(tag string) string {
-	if tagValue, ok := f.tag.Lookup(tag); ok {
-		return fmt.Sprintf("#%s\n%s:\n", f.tag.Get("doc"), tagValue)
+func (f field) genDoc(driver string) string {
+	if tagDriver, ok := f.tag.Lookup(driver); ok {
+		tagDoc := f.tag.Get("doc")
+		return fmt.Sprintf("#%s\n#%s=\n", tagDoc, tagDriver)
 	}
 	return ""
 }
@@ -51,9 +53,6 @@ func (f field) getTag(tag string) string {
 func (d envDriver) getUniqueFields(storages []fmap.Storage) []field {
 	var fields []field
 	for _, storage := range storages {
-		if storage == nil {
-			continue
-		}
 		for _, path := range storage.GetAllPaths() {
 			member := field{path: path, tag: storage.MustFind(path).GetTag()}
 			if slices.Contains(fields, member) {
@@ -67,30 +66,29 @@ func (d envDriver) getUniqueFields(storages []fmap.Storage) []field {
 
 func (d envDriver) getRootMap(fields []field) map[string]string {
 	roots := map[string]string{}
-	var keyPath string
+	var rootPath string
 	for _, field := range fields {
+		docField := field.genDoc(d.name)
 		depth := strings.Count(field.path, ".")
 		if depth == 0 {
-			keyPath = field.path
-			roots[keyPath] = field.getTag(d.name)
+			rootPath = field.path
+			roots[rootPath] = docField
 			continue
 		}
-
-		if strings.HasPrefix(field.path, keyPath) {
-			docTag := field.getTag(d.name)
-			if strings.Contains(roots[keyPath], docTag) {
+		if strings.HasPrefix(field.path, rootPath) {
+			if strings.Contains(roots[rootPath], field.tag.Get(d.name)) {
 				continue
 			}
-			roots[keyPath] += docTag
+			roots[rootPath] += docField
 		}
 	}
 	return roots
 }
 
-func (d envDriver) Doc(storages ...fmap.Storage) string {
-	fields := d.getUniqueFields(storages)
+func (d envDriver) GenDoc(storages ...fmap.Storage) string {
+	uniqueFields := d.getUniqueFields(storages)
 
-	sortedFields := slices.Clone(fields)
+	sortedFields := slices.Clone(uniqueFields)
 	slices.SortStableFunc(sortedFields, func(i, j field) int {
 		return cmp.Compare(i.path, j.path)
 	})
@@ -98,16 +96,15 @@ func (d envDriver) Doc(storages ...fmap.Storage) string {
 	roots := d.getRootMap(sortedFields)
 
 	var doc string
-	for _, field := range fields {
+	for _, field := range uniqueFields {
 		depth := strings.Count(field.path, ".")
 		if depth != 0 {
 			continue
 		}
 
-		doc += roots[field.path]
+		doc += roots[field.path] + "\n"
 	}
 
-	fmt.Println(doc)
 	return doc
 }
 

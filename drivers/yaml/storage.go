@@ -5,8 +5,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/insei/tinyconf"
 	"gopkg.in/yaml.v3"
+
+	"github.com/insei/tinyconf"
 )
 
 type storageImpl struct {

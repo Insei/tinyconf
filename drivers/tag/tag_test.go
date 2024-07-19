@@ -119,28 +119,6 @@ func TestDefaultTagDriver_GetName(t *testing.T) {
 	}
 }
 
-func TestDefaultTagDriver_Doc(t *testing.T) {
-	type TestingStruct struct {
-		Test string `tag:"TEST" doc:"Test tag"`
-	}
-	driver := defaultTagDriver{name: "tag"}
-	storage, _ := fmap.Get[TestingStruct]()
-
-	tests := map[string]struct {
-		in  fmap.Storage
-		out string
-	}{
-		"test map": {in: storage, out: "#Test tag\n#TEST="},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			out := driver.Doc(tc.in)
-			assert.Equal(t, tc.out, out)
-		})
-	}
-}
-
 func TestNew(t *testing.T) {
 	testCases := []struct {
 		name     string

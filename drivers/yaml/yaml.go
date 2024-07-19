@@ -82,15 +82,32 @@ type field struct {
 	tag  reflect.StructTag
 }
 
+func (f field) genDoc(driver string, depth int) string {
+	var offset strings.Builder
+	for i := 0; i < depth; i++ {
+		offset.WriteRune('\t')
+	}
+	offset.WriteRune('#')
+	tagDriver := offset.String() + f.tag.Get(driver)
+	tagDoc := offset.String() + f.tag.Get("doc")
+	offset.Reset()
+	return fmt.Sprintf("%s\n%s:\n", tagDoc, tagDriver)
+}
+
 func (d *yamlDriver) getUniqueFields(storages []fmap.Storage) []field {
 	var fields []field
 	for _, storage := range storages {
-		if storage == nil {
-			continue
-		}
 		for _, path := range storage.GetAllPaths() {
 			member := field{path: path, tag: storage.MustFind(path).GetTag()}
-			if slices.Contains(fields, member) {
+			tagDriver, ok := member.tag.Lookup(d.name)
+			if !ok {
+				continue
+			}
+			if slices.ContainsFunc(fields, func(item field) bool {
+				matchPath := item.path == member.path
+				matchTagDriver := tagDriver == item.tag.Get(d.name)
+				return matchPath && matchTagDriver
+			}) {
 				continue
 			}
 			fields = append(fields, member)
@@ -101,41 +118,27 @@ func (d *yamlDriver) getUniqueFields(storages []fmap.Storage) []field {
 
 func (d *yamlDriver) getRootMap(fields []field) map[string]string {
 	roots := map[string]string{}
-	var offset strings.Builder
-	var keyPath, keyTag string
-
+	var root struct {
+		path, tag string
+	}
 	for _, field := range fields {
 		depth := strings.Count(field.path, ".")
 		if depth == 0 {
-			if tagValue, ok := field.tag.Lookup(d.name); ok {
-				keyPath, keyTag = field.path, tagValue
-				roots[keyTag] = ""
-			}
+			root = struct{ path, tag string }{path: field.path, tag: field.tag.Get(d.name)}
+			roots[root.tag] = ""
 			continue
 		}
-
-		if strings.HasPrefix(field.path, keyPath) {
-			var path string
-			for i := 0; i < depth; i++ {
-				offset.WriteRune('\t')
-			}
-			if tagValue, ok := field.tag.Lookup(d.name); ok {
-				remark := offset.String() + "#" + field.tag.Get("doc")
-				tagValue = offset.String() + tagValue
-				path = fmt.Sprintf("%s\n%s:\n", remark, tagValue)
-				roots[keyTag] += path
-			}
-			offset.Reset()
+		if strings.HasPrefix(field.path, root.path) {
+			roots[root.tag] += field.genDoc(d.name, depth)
 		}
 	}
-
 	return roots
 }
 
-func (d *yamlDriver) Doc(storages ...fmap.Storage) string {
-	fields := d.getUniqueFields(storages)
+func (d *yamlDriver) GenDoc(storages ...fmap.Storage) string {
+	uniqueFields := d.getUniqueFields(storages)
 
-	sortedFields := slices.Clone(fields)
+	sortedFields := slices.Clone(uniqueFields)
 	slices.SortStableFunc(sortedFields, func(i, j field) int {
 		return cmp.Compare(i.path, j.path)
 	})
@@ -143,23 +146,19 @@ func (d *yamlDriver) Doc(storages ...fmap.Storage) string {
 	roots := d.getRootMap(sortedFields)
 
 	var doc string
-	for _, field := range fields {
+	for _, field := range uniqueFields {
 		depth := strings.Count(field.path, ".")
 		if depth != 0 {
 			continue
 		}
 
-		tagValue, ok := field.tag.Lookup(d.name)
-		if !ok {
-			continue
-		}
-
-		if v, ok := roots[tagValue]; ok {
-			doc += fmt.Sprintf("#%s\n%s:\n%s", field.tag.Get("doc"), tagValue, v)
+		tagRootDriver := field.tag.Get(d.name)
+		if nestedDoc, ok := roots[tagRootDriver]; ok {
+			rootFieldDoc := field.genDoc(d.name, 0)
+			doc += rootFieldDoc + nestedDoc
 		}
 	}
 
-	fmt.Println(doc)
 	return doc
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/insei/tinyconf"
 	"github.com/insei/tinyconf/drivers/env"
@@ -62,6 +63,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(config.GenDoc("yaml"))
 	err = config.Parse(&c)
 	if err != nil {
 		panic(err)

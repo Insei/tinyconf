@@ -227,21 +227,11 @@ func TestYamlDriver_GetMapValue(t *testing.T) {
 	}
 }
 
-func TestYamlDriver_Doc(t *testing.T) {
-	//type TestingStruct struct {
-	//	Test       string `yaml:"TestYAML" doc:"Test yaml"`
-	//	TestStruct struct {
-	//		Location struct {
-	//			NestedField string `yaml:"NestedFieldYAML"`
-	//		} `yaml:"LocationYAML"`
-	//		Field string `yaml:"FieldYAML"`
-	//	} `yaml:"TestStructYAML"`
-	//}
-
+func TestYamlDriver_GenDoc(t *testing.T) {
 	type TestingFirstStruct struct {
 		HTTP struct {
-			A    uint
-			B    int
+			A    uint `yaml:"a"`
+			B    int  `yaml:"b"`
 			C    uint
 			Host string `yaml:"host" doc:"http protocol host"`
 			Port string `yaml:"port" doc:"http protocol port"`
@@ -273,26 +263,30 @@ func TestYamlDriver_Doc(t *testing.T) {
 		"test map": {
 			in: storages,
 			out: `#network protocol http
-http:
+#http:
+	#
+	#a:
 	#authentication block
-	auth:
+	#auth:
 		#http authentication algorithm
-		alg:
+		#alg:
 		#http authentication issuer
-		issuer:
+		#issuer:
+	#
+	#b:
 	#http protocol host
-	host:
+	#host:
 	#http protocol port
-	port:
+	#port:
 #description of y
-y:
+#y:
 `,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			out := driver.Doc(tc.in...)
+			out := driver.GenDoc(tc.in...)
 			assert.Equal(t, tc.out, out)
 		})
 	}

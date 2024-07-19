@@ -88,21 +88,21 @@ func Test_envDriver_GetValue(t *testing.T) {
 	}
 }
 
-func TestEnvDriver_Doc(t *testing.T) {
+func TestEnvDriver_GenDoc(t *testing.T) {
 	type TestingFirstStruct struct {
 		Service struct {
 			Name string `env:"SERVICE_NAME" doc:"service name"`
 		}
 		HTTP struct {
 			Auth struct {
-				Alg    string `env:"HTTP_AUTH_ALG" doc:"http authentication algorithm"`
-				Issuer string `env:"HTTP_AUTH_ISSUER" doc:"http authentication issuer"`
+				Alg    string `env:"HTTP_AUTH_ALG"`
+				Issuer string `env:"HTTP_AUTH_ISSUER" doc:""`
 			}
 		}
 	}
 	type TestingSecondStruct struct {
 		Service struct {
-			ServiceName string `env:"SERVICE_NAME" doc:"service name"`
+			ServiceName string `env:"SERVICE_NAME" doc:"service name 27"`
 		}
 		Something uint `env:"SOMETHING" doc:"something"`
 	}
@@ -127,24 +127,27 @@ func TestEnvDriver_Doc(t *testing.T) {
 		"test map": {
 			in: storages,
 			out: `#service name
-SERVICE_NAME:
-#http authentication algorithm
-HTTP_AUTH_ALG:
-#http authentication issuer
-HTTP_AUTH_ISSUER:
+#SERVICE_NAME=
+
+#
+#HTTP_AUTH_ALG=
+#
+#HTTP_AUTH_ISSUER=
 #http protocol host
-HTTP_HOST:
+#HTTP_HOST=
 #http protocol port
-HTTP_PORT:
+#HTTP_PORT=
+
 #something
-SOMETHING:
+#SOMETHING=
+
 `,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			out := driver.Doc(tc.in...)
+			out := driver.GenDoc(tc.in...)
 			assert.Equal(t, tc.out, out)
 		})
 	}

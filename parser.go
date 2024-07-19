@@ -35,10 +35,12 @@ func (c *Manager) Register(conf any) error {
 	if err != nil {
 		return fmt.Errorf("config can't be registred: %w", err)
 	}
-	c.registered[reflect.TypeOf(conf)], err = fmap.GetFrom(conf)
-	if err != nil {
-		return fmt.Errorf("config can't be registred: %w", err)
+
+	storage, err := fmap.GetFrom(conf)
+	if err != nil || storage == nil {
+		fmt.Errorf("config can't be registred: %w", err)
 	}
+	c.registered[reflect.TypeOf(conf)] = storage
 	return nil
 }
 
@@ -98,6 +100,22 @@ func (c *Manager) Parse(conf any) error {
 		}
 	}
 	return nil
+}
+
+func (c *Manager) GenDoc(driverName string) string {
+	var storages []fmap.Storage
+	for _, storage := range c.registered {
+		storages = append(storages, storage)
+	}
+
+	var doc string
+	for _, driver := range c.drivers {
+		if driverName == driver.GetName() {
+			doc = driver.GenDoc(storages...)
+		}
+	}
+
+	return doc
 }
 
 func New(opts ...Option) (*Manager, error) {

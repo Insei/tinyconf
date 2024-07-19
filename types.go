@@ -18,6 +18,7 @@ type Value struct {
 }
 
 type Driver interface {
+	GenDoc(storages ...fmap.Storage) string
 	GetName() string
 	GetValue(field fmap.Field) (*Value, error)
 }
