@@ -3,15 +3,21 @@ package tinyconf
 import (
 	"errors"
 	"fmt"
-	"github.com/insei/fmap/v2"
 	"reflect"
 	"strings"
+
+	"github.com/insei/fmap/v3"
 )
+
+type Registered struct {
+	Storage fmap.Storage
+	Config  any
+}
 
 type Manager struct {
 	drivers    []Driver
 	log        Logger
-	registered map[reflect.Type]map[string]fmap.Field
+	registered map[reflect.Type]Registered
 }
 
 func checkConfig(conf any) error {
@@ -30,10 +36,19 @@ func checkConfig(conf any) error {
 }
 
 func (c *Manager) Register(conf any) error {
-	if err := checkConfig(conf); err != nil {
+	err := checkConfig(conf)
+	if err != nil {
 		return fmt.Errorf("config can't be registred: %w", err)
 	}
-	c.registered[reflect.TypeOf(conf)] = fmap.GetFrom(conf)
+
+	storage, err := fmap.GetFrom(conf)
+	if err != nil || storage == nil {
+		fmt.Errorf("config can't be registred: %w", err)
+	}
+	c.registered[reflect.TypeOf(conf)] = Registered{
+		Storage: storage,
+		Config:  conf,
+	}
 	return nil
 }
 
@@ -59,12 +74,13 @@ func getLoggerValue(field fmap.Field, val any) string {
 
 func (c *Manager) Parse(conf any) error {
 	confTypeOf := reflect.TypeOf(conf)
-	fields, ok := c.registered[confTypeOf]
+	register, ok := c.registered[confTypeOf]
 	if !ok {
 		return ErrNotRegisteredConfig
 	}
 	for _, d := range c.drivers {
-		for path, field := range fields {
+		for _, path := range register.Storage.GetAllPaths() {
+			field := register.Storage.MustFind(path)
 			if field.GetType().Kind() == reflect.Struct {
 				continue
 			}
@@ -94,8 +110,24 @@ func (c *Manager) Parse(conf any) error {
 	return nil
 }
 
+func (c *Manager) GenDoc(driverName string) string {
+	var registers []Registered
+	for _, register := range c.registered {
+		registers = append(registers, register)
+	}
+
+	var doc string
+	for _, driver := range c.drivers {
+		if driverName == driver.GetName() {
+			doc = driver.GenDoc(registers...)
+		}
+	}
+
+	return doc
+}
+
 func New(opts ...Option) (*Manager, error) {
-	m := &Manager{log: &noopLogger{}, registered: map[reflect.Type]map[string]fmap.Field{}}
+	m := &Manager{log: &noopLogger{}, registered: map[reflect.Type]Registered{}}
 	count := countDrivers(opts...)
 	if count > 0 {
 		m.drivers = make([]Driver, 0, count)

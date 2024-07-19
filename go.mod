@@ -1,10 +1,10 @@
 module github.com/insei/tinyconf
 
-go 1.18
+go 1.21
 
 require (
 	github.com/insei/cast v1.1.1
-	github.com/insei/fmap/v2 v2.0.1
+	github.com/insei/fmap/v3 v3.0.0
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1

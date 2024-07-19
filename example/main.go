@@ -1,35 +1,59 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"os"
+	"strings"
 
-	"github.com/google/uuid"
-
-	"tinyconf"
-
-	"tinyconf/drivers/env"
-	"tinyconf/drivers/tag"
-	"tinyconf/drivers/yaml"
-	"tinyconf/logger"
+	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/drivers/env"
+	"github.com/insei/tinyconf/drivers/tag"
+	"github.com/insei/tinyconf/drivers/yaml"
+	"github.com/insei/tinyconf/logger"
 )
 
-type Embedded struct {
-	Test string `initial:"Shakalaka"`
+const (
+	UsageDocFlag = "Show documentation in selected format. Supported formats: env, yaml.\nExample: go run ./example/main.go -doc yaml"
+)
+
+type Application struct {
+	Name string `env:"APPLICATION_NAME" yaml:"name" doc:"application name"`
+}
+type HTTP struct {
+	Host string `env:"HTTP_HOST" yaml:"host" doc:"http host"`
+	Port int    `env:"HTTP_PORT" yaml:"port" doc:"http port"`
+}
+type HTTPAuth struct {
+	Auth struct {
+		Issuer   string `env:"HTTP_AUTH_ISSUER" yaml:"issuer" doc:"http authentication issuer"`
+		Audience string `env:"HTTP_AUTH_AUDIENCE" yaml:"audience" doc:"http authentication audience"`
+	} `yaml:"auth"`
+}
+type HTTPAuthSign struct {
+	Middleware struct {
+		Sign string `env:"HTTP_AUTH_SIGN" yaml:"sign" doc:"http middleware sign"`
+		Key  string `env:"HTTP_AUTH_KEY" yaml:"key" doc:"http middleware key"`
+	} `yaml:"auth"`
 }
 
-type DefConf struct {
-	Embedded Embedded
-	Test     string    `initial:"123" yaml:"test" env:"DEFAULT_TEST"`
-	Test2    int       `initial:"123"  yaml:"test2"`
-	Test3    int32     `initial:"2" yaml:"test3,omitempty"`
-	Test4    *int32    `initial:"3" yaml:"test4,omitempty"`
-	Test5    *string   `initial:"*string" yaml:"test5,omitempty" env:"DEFAULT_TEST"`
-	Test6    string    `yaml:"test6,omitempty"`
-	Test7    uuid.UUID `initial:"f9a49892-860e-48ec-b927-73f9d2560eec"`
-	Password string    `initial:"Qwerty" yaml:"password" hidden:"true"`
+type sharedConfig struct {
+	HTTP HTTP `yaml:"http"`
+}
+type sharedAuthConfig struct {
+	HTTP HTTPAuth `yaml:"http"`
+}
+type sharedApplicationConfig struct {
+	HTTP Application `yaml:"application"`
+}
+type sharedAuthSignConfig struct {
+	HTTP HTTPAuthSign `yaml:"http"`
 }
 
 func main() {
+	driverName := flag.String("doc", "", UsageDocFlag)
+	flag.Parse()
+
 	yamlDriver, err := yaml.New("config.yaml")
 	if err != nil {
 		return
@@ -42,6 +66,7 @@ func main() {
 	if err != nil {
 		return
 	}
+
 	config, err := tinyconf.New(
 		tinyconf.WithLogger(logger.NewFmtLogger(logger.TRACE)),
 		tinyconf.WithDriver(tagDriver),
@@ -51,24 +76,48 @@ func main() {
 	if err != nil {
 		return
 	}
-	c := DefConf{
-		Embedded: Embedded{},
-		Test:     "Tests",
-		Test2:    22,
-		Test3:    0,
-		Test4:    nil,
-		Test5:    nil,
-		Test6:    "",
-		Test7:    uuid.UUID{},
-		Password: "",
-	}
-	err = config.Register(&c)
-	if err != nil {
+
+	c1 := &sharedAuthSignConfig{}
+	if err = config.Register(c1); err != nil {
 		panic(err)
 	}
-	err = config.Parse(&c)
-	if err != nil {
+
+	c2 := &sharedConfig{}
+	if err = config.Register(c2); err != nil {
 		panic(err)
 	}
-	fmt.Print(c)
+
+	c3 := &sharedAuthConfig{}
+	if err = config.Register(c3); err != nil {
+		panic(err)
+	}
+
+	c4 := &sharedApplicationConfig{}
+	if err = config.Register(c4); err != nil {
+		panic(err)
+	}
+
+	if *driverName == "" {
+		if err = config.Parse(c1); err != nil {
+			panic(err)
+		}
+		if err = config.Parse(c2); err != nil {
+			panic(err)
+		}
+		if err = config.Parse(c3); err != nil {
+			panic(err)
+		}
+		if err = config.Parse(c4); err != nil {
+			panic(err)
+		}
+	}
+
+	if strings.Contains("env yaml", *driverName) {
+		doc := config.GenDoc(*driverName)
+		fmt.Println(doc)
+		os.Exit(0)
+	}
+
+	flag.Usage()
+	os.Exit(1)
 }

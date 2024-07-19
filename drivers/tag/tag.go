@@ -3,10 +3,9 @@ package tag
 import (
 	"fmt"
 
-	"github.com/insei/tinyconf"
-
 	"github.com/insei/cast"
-	"github.com/insei/fmap/v2"
+	"github.com/insei/fmap/v3"
+	"github.com/insei/tinyconf"
 )
 
 type defaultTagDriver struct {
@@ -31,6 +30,10 @@ func (d defaultTagDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 
 func (d defaultTagDriver) GetName() string {
 	return d.name
+}
+
+func (d defaultTagDriver) GenDoc(registers ...tinyconf.Registered) string {
+	return ""
 }
 
 func New(tagName string) (tinyconf.Driver, error) {

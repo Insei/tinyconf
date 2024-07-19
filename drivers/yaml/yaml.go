@@ -1,14 +1,15 @@
 package yaml
 
 import (
+	"cmp"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 
-	"github.com/insei/tinyconf"
-
 	"github.com/insei/cast"
-	"github.com/insei/fmap/v2"
+	"github.com/insei/fmap/v3"
+	"github.com/insei/tinyconf"
 )
 
 type yamlDriver struct {
@@ -74,6 +75,104 @@ func (d *yamlDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 
 func (d *yamlDriver) GetName() string {
 	return d.name
+}
+
+type field struct {
+	path  string
+	value any
+	tag   reflect.StructTag
+}
+
+func (f field) genDoc(driver string, depth int) string {
+	var offset strings.Builder
+	for i := 0; i < depth; i++ {
+		offset.WriteRune('\t')
+	}
+	offset.WriteRune('#')
+	tagDriver := offset.String() + f.tag.Get(driver)
+	tagDoc := offset.String() + f.tag.Get("doc")
+	offset.Reset()
+	if reflect.TypeOf(f.value).Kind() == reflect.Struct {
+		f.value = ""
+	}
+	return fmt.Sprintf("%s\n%s: %v\n", tagDoc, tagDriver, f.value)
+}
+
+func (d *yamlDriver) getUniqueFields(registers []tinyconf.Registered) []field {
+	var fields []field
+	for _, register := range registers {
+		for _, path := range register.Storage.GetAllPaths() {
+			fld := register.Storage.MustFind(path)
+
+			tag := fld.GetTag()
+			tagDriver, ok := tag.Lookup(d.name)
+			if !ok {
+				continue
+			}
+
+			member := field{
+				path:  fld.GetTagPath(d.name, false),
+				value: fld.Get(register.Config),
+				tag:   tag,
+			}
+
+			if slices.ContainsFunc(fields, func(item field) bool {
+				matchPath := item.path == member.path
+				matchTagDriver := tagDriver == item.tag.Get(d.name)
+				return matchPath && matchTagDriver
+			}) {
+				continue
+			}
+			fields = append(fields, member)
+		}
+	}
+	return fields
+}
+
+func (d *yamlDriver) getRootMap(fields []field) map[string]string {
+	roots := map[string]string{}
+	var root struct {
+		path, tag string
+	}
+	for _, field := range fields {
+		depth := strings.Count(field.path, ".")
+		if depth == 0 {
+			root = struct{ path, tag string }{path: field.path, tag: field.tag.Get(d.name)}
+			roots[root.tag] = ""
+			continue
+		}
+		if strings.HasPrefix(field.path, root.path) {
+			roots[root.tag] += field.genDoc(d.name, depth)
+		}
+	}
+	return roots
+}
+
+func (d *yamlDriver) GenDoc(registers ...tinyconf.Registered) string {
+	uniqueFields := d.getUniqueFields(registers)
+
+	sortedFields := slices.Clone(uniqueFields)
+	slices.SortStableFunc(sortedFields, func(i, j field) int {
+		return cmp.Compare(i.path, j.path)
+	})
+
+	roots := d.getRootMap(sortedFields)
+
+	var doc string
+	for _, field := range uniqueFields {
+		depth := strings.Count(field.path, ".")
+		if depth != 0 {
+			continue
+		}
+
+		tagRootDriver := field.tag.Get(d.name)
+		if nestedDoc, ok := roots[tagRootDriver]; ok {
+			rootFieldDoc := field.genDoc(d.name, 0)
+			doc += rootFieldDoc + nestedDoc
+		}
+	}
+
+	return doc
 }
 
 func New(file string) (tinyconf.Driver, error) {

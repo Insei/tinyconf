@@ -2,10 +2,11 @@ package tinyconf
 
 import (
 	"errors"
-	"github.com/insei/fmap/v2"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
+
+	"github.com/insei/fmap/v3"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_checkConfig(t *testing.T) {
@@ -146,39 +147,51 @@ func TestGetDereferencedValue(t *testing.T) {
 func TestGetLoggerValue(t *testing.T) {
 	cases := []struct {
 		name     string
-		field    fmap.Field
+		getField func() fmap.Field
 		val      any
 		expected string
 	}{
 		{
 			name: "hidden_tag_is_not_set",
-			field: fmap.Get[struct {
-				Test string
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string
+				}]()
+				return storage.MustFind("Test")
+			},
 			val:      any(42),
 			expected: "42",
 		},
 		{
 			name: "hidden_tag_set_to_false",
-			field: fmap.Get[struct {
-				Test string `hidden:"false"`
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string `hidden:"false"`
+				}]()
+				return storage.MustFind("Test")
+			},
 			val:      any(1001),
 			expected: "1001",
 		},
 		{
 			name: "hidden_tag_set_to_true",
-			field: fmap.Get[struct {
-				Test int `hidden:"true"`
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string `hidden:"true"`
+				}]()
+				return storage.MustFind("Test")
+			},
 			val:      any(1234567890),
 			expected: "**********",
 		},
 		{
 			name: "hidden_tag_set_to_true_string_value",
-			field: fmap.Get[struct {
-				Test string `hidden:"true"`
-			}]()["Test"],
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test string `hidden:"true"`
+				}]()
+				return storage.MustFind("Test")
+			},
 			val:      any("mysecretvalue"),
 			expected: "*************",
 		},
@@ -186,7 +199,7 @@ func TestGetLoggerValue(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			result := getLoggerValue(c.field, c.val)
+			result := getLoggerValue(c.getField(), c.val)
 			if result != c.expected {
 				t.Errorf("Expected '%s', got '%s'", c.expected, result)
 			}
@@ -205,7 +218,7 @@ func TestNew(t *testing.T) {
 			opts: []Option{},
 			expected: &Manager{
 				log:        &noopLogger{},
-				registered: map[reflect.Type]map[string]fmap.Field{},
+				registered: map[reflect.Type]Registered{},
 			},
 		},
 		{
@@ -215,7 +228,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &Manager{
 				log:        &noopLogger{},
-				registered: map[reflect.Type]map[string]fmap.Field{},
+				registered: map[reflect.Type]Registered{},
 				drivers: []Driver{
 					&mockDriver{},
 				},
@@ -228,7 +241,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &Manager{
 				log:        &mockLogger{},
-				registered: map[reflect.Type]map[string]fmap.Field{},
+				registered: map[reflect.Type]Registered{},
 			},
 		},
 		{
@@ -239,7 +252,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &Manager{
 				log:        &mockLogger{},
-				registered: map[reflect.Type]map[string]fmap.Field{},
+				registered: map[reflect.Type]Registered{},
 				drivers: []Driver{
 					&mockDriver{},
 				},
@@ -253,7 +266,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &Manager{
 				log:        &noopLogger{},
-				registered: map[reflect.Type]map[string]fmap.Field{},
+				registered: map[reflect.Type]Registered{},
 				drivers: []Driver{
 					&mockDriver{},
 					&mockDriver{},
@@ -275,6 +288,10 @@ type parseMockDriver struct {
 	name  string
 	err   error
 	value any
+}
+
+func (md *parseMockDriver) GenDoc(registers ...Registered) string {
+	return "doc parseMockDriver"
 }
 
 func (md *parseMockDriver) GetName() string {
@@ -323,7 +340,7 @@ func TestManager_Parse(t *testing.T) {
 		ExpectDebugLogged bool
 	}{
 		{
-			Name:              "not registered config",
+			Name:              "not Registered config",
 			Config:            &struct{}{},
 			Registered:        false,
 			Drivers:           nil,
@@ -332,7 +349,7 @@ func TestManager_Parse(t *testing.T) {
 			ExpectDebugLogged: false,
 		},
 		{
-			Name:              "registered config, no drivers",
+			Name:              "Registered config, no drivers",
 			Config:            &struct{}{},
 			Registered:        true,
 			Drivers:           nil,
@@ -341,7 +358,7 @@ func TestManager_Parse(t *testing.T) {
 			ExpectDebugLogged: false,
 		},
 		{
-			Name:       "registered config, drivers, one err",
+			Name:       "Registered config, drivers, one err",
 			Config:     &struct{ Test string }{},
 			Registered: true,
 			Drivers: []Driver{
@@ -354,7 +371,7 @@ func TestManager_Parse(t *testing.T) {
 			ExpectDebugLogged: true,
 		},
 		{
-			Name:       "registered config, drivers, values",
+			Name:       "Registered config, drivers, values",
 			Config:     &struct{ Test struct{ Test int } }{},
 			Registered: true,
 			Drivers: []Driver{
@@ -372,12 +389,11 @@ func TestManager_Parse(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			c := &Manager{
 				drivers:    tc.Drivers,
-				registered: make(map[reflect.Type]map[string]fmap.Field),
+				registered: make(map[reflect.Type]Registered),
 				log:        &testLogger{},
 			}
-			if tc.Registered {
-				c.registered[reflect.TypeOf(tc.Config)] = fmap.GetFrom(tc.Config)
-			}
+
+			assert.NoError(t, c.Register(tc.Config))
 
 			_ = c.Parse(tc.Config)
 
@@ -386,6 +402,66 @@ func TestManager_Parse(t *testing.T) {
 			assert.Equal(t, tc.ExpectWarnLogged, logger.WarnLogged)
 			assert.Equal(t, tc.ExpectErrorLogged, logger.ErrorLogged)
 			assert.Equal(t, tc.ExpectDebugLogged, logger.DebugLogged)
+		})
+	}
+}
+
+func TestManager_GenDoc(t *testing.T) {
+	type fields struct {
+		drivers    []Driver
+		log        Logger
+		registered map[reflect.Type]Registered
+	}
+	type args struct {
+		driverName string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   string
+	}{
+		{
+			name: "success",
+			fields: fields{
+				drivers: []Driver{
+					&parseMockDriver{name: "mockDriver", err: nil},
+					&parseMockDriver{name: "newMockDriver", err: nil},
+					&mockDriver{},
+				},
+				log:        nil,
+				registered: nil,
+			},
+			args: args{
+				driverName: "mockDriver",
+			},
+			want: "doc mockDriver",
+		},
+		{
+			name: "not found driver",
+			fields: fields{
+				drivers: []Driver{
+					&parseMockDriver{name: "mockDriver", err: nil},
+					&parseMockDriver{name: "newMockDriver", err: nil},
+					&mockDriver{},
+				},
+				log:        nil,
+				registered: nil,
+			},
+			args: args{
+				driverName: "testDriver",
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Manager{
+				drivers:    tt.fields.drivers,
+				log:        tt.fields.log,
+				registered: tt.fields.registered,
+			}
+			assert.Equalf(t, tt.want, c.GenDoc(tt.args.driverName), "GenDoc(%v)", tt.args.driverName)
 		})
 	}
 }
