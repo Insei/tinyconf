@@ -2,11 +2,13 @@ package logger
 
 import (
 	"bytes"
-	"github.com/insei/tinyconf"
+
 	"io"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/insei/tinyconf"
 )
 
 // define a utility to capture stdout
