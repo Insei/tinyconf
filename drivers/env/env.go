@@ -1,9 +1,9 @@
 package env
 
 import (
+	"bufio"
 	"cmp"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"reflect"
@@ -118,9 +118,7 @@ func (d envDriver) GenDoc(registers ...tinyconf.Registered) string {
 }
 
 func New() (tinyconf.Driver, error) {
-	if err := setENVs(); err != nil {
-		return nil, err
-	}
+	setENVs()
 
 	return envDriver{
 		name: "env",
@@ -150,21 +148,20 @@ func setENVs() error {
 }
 
 func setENVsFromPath(envDirPath string) error {
-	file, err := os.Open(envDirPath + string(os.PathSeparator) + ".env")
+	envFile, err := os.Open(path.Join(envDirPath, ".env"))
 	if err != nil {
 		return err
 	}
 
-	envBytes, err := io.ReadAll(file)
-	if err != nil {
-		return err
+	fileScanner := bufio.NewScanner(envFile)
+	fileScanner.Split(bufio.ScanLines)
+	var envLines []string
+
+	for fileScanner.Scan() {
+		envLines = append(envLines, fileScanner.Text())
 	}
 
-	conf := string(envBytes)
-
-	envRows := strings.Split(conf, "\n")
-
-	for _, envRow := range envRows {
+	for _, envRow := range envLines {
 		e := strings.Split(envRow, "=")
 		val := ""
 		if len(e) > 1 {
