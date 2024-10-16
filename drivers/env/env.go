@@ -3,7 +3,9 @@ package env
 import (
 	"cmp"
 	"fmt"
+	"io"
 	"os"
+	"path"
 	"reflect"
 	"slices"
 	"strings"
@@ -116,7 +118,63 @@ func (d envDriver) GenDoc(registers ...tinyconf.Registered) string {
 }
 
 func New() (tinyconf.Driver, error) {
+	if err := setENVs(); err != nil {
+		return nil, err
+	}
+
 	return envDriver{
 		name: "env",
 	}, nil
+}
+
+func setENVs() error {
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	envPath := path.Dir(execPath)
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	if err = setENVsFromPath(envPath); err != nil {
+		return err
+	}
+	if err = setENVsFromPath(wd); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func setENVsFromPath(envDirPath string) error {
+	file, err := os.Open(envDirPath + string(os.PathSeparator) + ".env")
+	if err != nil {
+		return err
+	}
+
+	envBytes, err := io.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	conf := string(envBytes)
+
+	envRows := strings.Split(conf, "\n")
+
+	for _, envRow := range envRows {
+		e := strings.Split(envRow, "=")
+		val := ""
+		if len(e) > 1 {
+			val = e[1]
+		}
+
+		if err = os.Setenv(e[0], val); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
