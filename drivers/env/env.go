@@ -118,39 +118,29 @@ func (d envDriver) GenDoc(registers ...tinyconf.Registered) string {
 }
 
 func New() (tinyconf.Driver, error) {
-	err := setENVs()
+	setENVsFromExecutable()
+	setENVsFromWD()
 
 	return envDriver{
 		name: "env",
-	}, err
+	}, nil
 }
 
-func setENVs() error {
-	execPath, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
+func setENVsFromExecutable() {
+	execPath, _ := os.Executable()
 	envPath := path.Dir(execPath)
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	if err = setENVsFromPath(envPath); err != nil {
-		return err
-	}
-	if err = setENVsFromPath(wd); err != nil {
-		return err
-	}
-
-	return nil
+	setENVsFromPath(envPath)
 }
 
-func setENVsFromPath(envDirPath string) error {
+func setENVsFromWD() {
+	wd, _ := os.Getwd()
+	setENVsFromPath(wd)
+}
+
+func setENVsFromPath(envDirPath string) {
 	envFile, err := os.Open(path.Join(envDirPath, ".env"))
 	if err != nil {
-		return err
+		return
 	}
 
 	fileScanner := bufio.NewScanner(envFile)
@@ -165,16 +155,14 @@ func setENVsFromPath(envDirPath string) error {
 	}
 
 	for _, envLine := range envLines {
-		e := strings.Split(envLine, "=")
-		val := ""
-		if len(e) > 1 {
-			val = e[1]
+		envRow := strings.Split(envLine, "=")
+		envVal := ""
+		if len(envRow) > 1 {
+			envVal = envRow[1]
 		}
 
-		if err = os.Setenv(e[0], val); err != nil {
-			return err
+		if err = os.Setenv(strings.TrimSpace(envRow[0]), envVal); err != nil {
+			return
 		}
 	}
-
-	return nil
 }
