@@ -293,7 +293,36 @@ func BenchmarkEnvDriver_GenDoc(b *testing.B) {
 }
 
 func TestNew(t *testing.T) {
-	driver, err := New()
-	assert.NoError(t, err)
-	assert.NotNil(t, driver)
+	tests := map[string]struct {
+		envVarName  string
+		expectedVal string
+	}{
+		"EnvSet": {
+			"ENV_VAR",
+			"true",
+		},
+		"EnvNotSet": {
+			"ENV_NOT_SET",
+			"",
+		},
+		"EnvCommented": {
+			"COMMENTED",
+			"",
+		},
+		"EnvEmpty": {
+			"",
+			"",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			driver, err := New()
+			envVar := os.Getenv(test.envVarName)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, driver)
+			assert.Equal(t, test.expectedVal, envVar)
+		})
+	}
 }
