@@ -118,11 +118,11 @@ func (d envDriver) GenDoc(registers ...tinyconf.Registered) string {
 }
 
 func New() (tinyconf.Driver, error) {
-	setENVs()
+	err := setENVs()
 
 	return envDriver{
 		name: "env",
-	}, nil
+	}, err
 }
 
 func setENVs() error {
@@ -158,11 +158,14 @@ func setENVsFromPath(envDirPath string) error {
 	var envLines []string
 
 	for fileScanner.Scan() {
-		envLines = append(envLines, fileScanner.Text())
+		envLine := fileScanner.Text()
+		if envLine[:1] != "#" {
+			envLines = append(envLines, fileScanner.Text())
+		}
 	}
 
-	for _, envRow := range envLines {
-		e := strings.Split(envRow, "=")
+	for _, envLine := range envLines {
+		e := strings.Split(envLine, "=")
 		val := ""
 		if len(e) > 1 {
 			val = e[1]
