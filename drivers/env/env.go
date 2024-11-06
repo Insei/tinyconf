@@ -160,7 +160,9 @@ func setENVsFromPath(envDirPath string) {
 		if len(envRow) > 1 {
 			envVal = envRow[1]
 		}
-
+		if _, exist := os.LookupEnv(strings.TrimSpace(envRow[0])); exist {
+			continue
+		}
 		if err = os.Setenv(strings.TrimSpace(envRow[0]), envVal); err != nil {
 			return
 		}
