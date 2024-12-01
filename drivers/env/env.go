@@ -54,7 +54,7 @@ func (f field) genDoc(driver string) string {
 	return ""
 }
 
-func (d envDriver) getUniqueFields(registers []tinyconf.Registered) []field {
+func (d envDriver) getUniqueFields(registers []*tinyconf.Registered) []field {
 	var fields []field
 	for _, register := range registers {
 		for _, path := range register.Storage.GetAllPaths() {
@@ -95,7 +95,7 @@ func (d envDriver) getRootMap(fields []field) map[int]map[string]string {
 	return roots
 }
 
-func (d envDriver) GenDoc(registers ...tinyconf.Registered) string {
+func (d envDriver) GenDoc(registers ...*tinyconf.Registered) string {
 	uniqueFields := d.getUniqueFields(registers)
 
 	sortedFields := slices.Clone(uniqueFields)

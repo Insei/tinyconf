@@ -10,8 +10,8 @@ import (
 // Mock implementations of Driver interface for the purposes of testing
 type mockDriver struct{}
 
-func (md mockDriver) GenDoc(registers ...Registered) string { return "doc mockDriver" }
-func (md mockDriver) GetName() string                       { return "mockDriver" }
+func (md mockDriver) GenDoc(registers ...*Registered) string { return "doc mockDriver" }
+func (md mockDriver) GetName() string                        { return "mockDriver" }
 func (md mockDriver) GetValue(field fmap.Field) (*Value, error) {
 	return nil, nil
 }

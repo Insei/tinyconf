@@ -218,7 +218,7 @@ func TestNew(t *testing.T) {
 			opts: []Option{},
 			expected: &Manager{
 				log:        &noopLogger{},
-				registered: map[reflect.Type]Registered{},
+				registered: map[reflect.Type]*Registered{},
 			},
 		},
 		{
@@ -228,7 +228,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &Manager{
 				log:        &noopLogger{},
-				registered: map[reflect.Type]Registered{},
+				registered: map[reflect.Type]*Registered{},
 				drivers: []Driver{
 					&mockDriver{},
 				},
@@ -241,7 +241,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &Manager{
 				log:        &mockLogger{},
-				registered: map[reflect.Type]Registered{},
+				registered: map[reflect.Type]*Registered{},
 			},
 		},
 		{
@@ -252,7 +252,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &Manager{
 				log:        &mockLogger{},
-				registered: map[reflect.Type]Registered{},
+				registered: map[reflect.Type]*Registered{},
 				drivers: []Driver{
 					&mockDriver{},
 				},
@@ -266,7 +266,7 @@ func TestNew(t *testing.T) {
 			},
 			expected: &Manager{
 				log:        &noopLogger{},
-				registered: map[reflect.Type]Registered{},
+				registered: map[reflect.Type]*Registered{},
 				drivers: []Driver{
 					&mockDriver{},
 					&mockDriver{},
@@ -290,7 +290,7 @@ type parseMockDriver struct {
 	value any
 }
 
-func (md *parseMockDriver) GenDoc(registers ...Registered) string {
+func (md *parseMockDriver) GenDoc(registers ...*Registered) string {
 	return "doc parseMockDriver"
 }
 
@@ -327,9 +327,26 @@ func (tl *testLogger) With(_ ...Field) Logger {
 	return tl
 }
 
+func TestManager_ParseSubConfig(t *testing.T) {
+	type FieldConfig struct {
+		Test string
+	}
+	type Config struct {
+		Field FieldConfig
+	}
+	c := &Manager{
+		drivers:    []Driver{&parseMockDriver{name: "d3", value: "test"}},
+		registered: make(map[reflect.Type]*Registered),
+		log:        &testLogger{},
+	}
+	conf := &Config{}
+	subConf := &FieldConfig{}
+	assert.NoError(t, c.Register(conf))
+
+	assert.NoError(t, c.Parse(subConf))
+}
 func TestManager_Parse(t *testing.T) {
 	t.Parallel()
-
 	testCases := []struct {
 		Name              string
 		Config            any
@@ -383,13 +400,26 @@ func TestManager_Parse(t *testing.T) {
 			ExpectWarnLogged:  false,
 			ExpectDebugLogged: true,
 		},
+		{
+			Name:       "Registered config, drivers, values",
+			Config:     &struct{ Test struct{ Test int } }{},
+			Registered: true,
+			Drivers: []Driver{
+				&parseMockDriver{name: "d1", value: 1},
+				&parseMockDriver{name: "d2", value: 3},
+				&parseMockDriver{name: "d3", value: 3},
+			},
+			ExpectErrorLogged: false,
+			ExpectWarnLogged:  false,
+			ExpectDebugLogged: true,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			c := &Manager{
 				drivers:    tc.Drivers,
-				registered: make(map[reflect.Type]Registered),
+				registered: make(map[reflect.Type]*Registered),
 				log:        &testLogger{},
 			}
 
@@ -410,7 +440,7 @@ func TestManager_GenDoc(t *testing.T) {
 	type fields struct {
 		drivers    []Driver
 		log        Logger
-		registered map[reflect.Type]Registered
+		registered map[reflect.Type]*Registered
 	}
 	type args struct {
 		driverName string

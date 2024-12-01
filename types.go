@@ -2,6 +2,7 @@ package tinyconf
 
 import (
 	"fmt"
+
 	"github.com/insei/fmap/v3"
 )
 
@@ -17,7 +18,7 @@ type Value struct {
 }
 
 type Driver interface {
-	GenDoc(...Registered) string
+	GenDoc(...*Registered) string
 	GetName() string
 	GetValue(field fmap.Field) (*Value, error)
 }

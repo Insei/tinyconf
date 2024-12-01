@@ -162,11 +162,11 @@ func TestEnvDriver_GenDoc(t *testing.T) {
 	driver := envDriver{name: "env"}
 
 	tests := map[string]struct {
-		in  []tinyconf.Registered
+		in  []*tinyconf.Registered
 		out string
 	}{
 		"test map": {
-			in: []tinyconf.Registered{
+			in: []*tinyconf.Registered{
 				{Storage: storages[0], Config: configs[0]},
 				{Storage: storages[1], Config: configs[1]},
 				{Storage: storages[2], Config: configs[2]},
@@ -272,10 +272,10 @@ func BenchmarkEnvDriver_GenDoc(b *testing.B) {
 	driver := envDriver{name: "env"}
 
 	benchData := map[string]struct {
-		registers []tinyconf.Registered
+		registers []*tinyconf.Registered
 	}{
 		"with 3 registers": {
-			registers: []tinyconf.Registered{
+			registers: []*tinyconf.Registered{
 				{Storage: storages[0], Config: configs[0]},
 				{Storage: storages[1], Config: configs[1]},
 				{Storage: storages[2], Config: configs[2]}},

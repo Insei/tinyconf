@@ -17,7 +17,7 @@ type Registered struct {
 type Manager struct {
 	drivers    []Driver
 	log        Logger
-	registered map[reflect.Type]Registered
+	registered map[reflect.Type]*Registered
 }
 
 func checkConfig(conf any) error {
@@ -43,9 +43,9 @@ func (c *Manager) Register(conf any) error {
 
 	storage, err := fmap.GetFrom(conf)
 	if err != nil || storage == nil {
-		fmt.Errorf("config can't be registred: %w", err)
+		return fmt.Errorf("config can't be registred: %w", err)
 	}
-	c.registered[reflect.TypeOf(conf)] = Registered{
+	c.registered[reflect.TypeOf(conf)] = &Registered{
 		Storage: storage,
 		Config:  conf,
 	}
@@ -72,10 +72,51 @@ func getLoggerValue(field fmap.Field, val any) string {
 	return valueLog
 }
 
-func (c *Manager) Parse(conf any) error {
+func copyToSubConfig(conf, subConf any, subpath string) error {
+	confFields, err := fmap.GetFrom(conf)
+	if err != nil {
+		return err
+	}
+	subConfFields, err := fmap.GetFrom(subConf)
+	if err != nil {
+		return err
+	}
+	for _, path := range confFields.GetAllPaths() {
+		if path != subpath && strings.HasPrefix(path, subpath) {
+			field := confFields.MustFind(path)
+			subFieldPath := strings.Replace(path, subpath+".", "", -1)
+			subField, ok := subConfFields.Find(subFieldPath)
+			if !ok {
+				return fmt.Errorf("subconf field %s not found", path)
+			}
+			subField.Set(subConf, field.Get(conf))
+		}
+	}
+	return nil
+}
+
+func (c *Manager) Parse(conf any) (err error) {
+	confParse := conf
 	confTypeOf := reflect.TypeOf(conf)
 	register, ok := c.registered[confTypeOf]
 	if !ok {
+		for registeredTypeOf, registeredConf := range c.registered {
+			for _, path := range registeredConf.Storage.GetAllPaths() {
+				field := registeredConf.Storage.MustFind(path)
+				fieldType := field.GetDereferencedType()
+				if fieldType.Kind() == reflect.Struct &&
+					reflect.PointerTo(fieldType) == confTypeOf {
+					register = registeredConf
+					confParse = reflect.New(registeredTypeOf.Elem()).Interface()
+					defer func() {
+						err = copyToSubConfig(confParse, conf, field.GetStructPath())
+					}()
+					break
+				}
+			}
+		}
+	}
+	if register == nil {
 		return ErrNotRegisteredConfig
 	}
 	for _, d := range c.drivers {
@@ -99,10 +140,10 @@ func (c *Manager) Parse(conf any) error {
 				!errors.Is(err, ErrIncorrectTagSettings):
 				c.log.Error("failed", LogField("details", err.Error()))
 			case err == nil:
-				currentValue := field.Get(conf)
+				currentValue := field.Get(confParse)
 				if currentValue != driverValue.Value {
 					log.Debug("override", LogField("value", getLoggerValue(field, driverValue.Value)))
-					field.Set(conf, driverValue.Value)
+					field.Set(confParse, driverValue.Value)
 				}
 			}
 		}
@@ -111,7 +152,7 @@ func (c *Manager) Parse(conf any) error {
 }
 
 func (c *Manager) GenDoc(driverName string) string {
-	var registers []Registered
+	var registers []*Registered
 	for _, register := range c.registered {
 		registers = append(registers, register)
 	}
@@ -127,7 +168,7 @@ func (c *Manager) GenDoc(driverName string) string {
 }
 
 func New(opts ...Option) (*Manager, error) {
-	m := &Manager{log: &noopLogger{}, registered: map[reflect.Type]Registered{}}
+	m := &Manager{log: &noopLogger{}, registered: map[reflect.Type]*Registered{}}
 	count := countDrivers(opts...)
 	if count > 0 {
 		m.drivers = make([]Driver, 0, count)

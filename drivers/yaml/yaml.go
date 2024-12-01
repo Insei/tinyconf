@@ -98,7 +98,7 @@ func (f field) genDoc(driver string, depth int) string {
 	return fmt.Sprintf("%s\n%s: %v\n", tagDoc, tagDriver, f.value)
 }
 
-func (d *yamlDriver) getUniqueFields(registers []tinyconf.Registered) []field {
+func (d *yamlDriver) getUniqueFields(registers []*tinyconf.Registered) []field {
 	var fields []field
 	for _, register := range registers {
 		for _, path := range register.Storage.GetAllPaths() {
@@ -148,7 +148,7 @@ func (d *yamlDriver) getRootMap(fields []field) map[string]string {
 	return roots
 }
 
-func (d *yamlDriver) GenDoc(registers ...tinyconf.Registered) string {
+func (d *yamlDriver) GenDoc(registers ...*tinyconf.Registered) string {
 	uniqueFields := d.getUniqueFields(registers)
 
 	sortedFields := slices.Clone(uniqueFields)

@@ -32,7 +32,7 @@ func (d defaultTagDriver) GetName() string {
 	return d.name
 }
 
-func (d defaultTagDriver) GenDoc(registers ...tinyconf.Registered) string {
+func (d defaultTagDriver) GenDoc(registers ...*tinyconf.Registered) string {
 	return ""
 }
 
