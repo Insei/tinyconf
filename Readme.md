@@ -6,7 +6,7 @@
 tinyconf - a simple and universal library for parsing configs.
 
 # Installation
-Install via go get. Note that Go 1.18 or newer is required.
+Install via go get. Note that Go 1.19 or newer is required.
 ```sh
 go get github.com/insei/tinyconf@latest
 ```
