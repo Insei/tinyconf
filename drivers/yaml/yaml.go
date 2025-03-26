@@ -1,7 +1,6 @@
 package yaml
 
 import (
-	"cmp"
 	"fmt"
 	"reflect"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"github.com/insei/fmap/v3"
 
 	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/cmp118"
 	"github.com/insei/tinyconf/slices118"
 )
 
@@ -154,7 +154,7 @@ func (d *yamlDriver) GenDoc(registers ...*tinyconf.Registered) string {
 
 	sortedFields := slices118.Clone(uniqueFields)
 	slices118.SortStableFunc(sortedFields, func(i, j field) int {
-		return cmp.Compare(i.path, j.path)
+		return cmp118.Compare(i.path, j.path)
 	})
 
 	roots := d.getRootMap(sortedFields)
