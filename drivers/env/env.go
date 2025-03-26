@@ -2,7 +2,6 @@ package env
 
 import (
 	"bufio"
-	"cmp"
 	"fmt"
 	"os"
 	"path"
@@ -10,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/cmp118"
 	"github.com/insei/tinyconf/slices118"
 
 	"github.com/insei/cast"
@@ -101,7 +101,7 @@ func (d envDriver) GenDoc(registers ...*tinyconf.Registered) string {
 
 	sortedFields := slices118.Clone(uniqueFields)
 	slices118.SortStableFunc(sortedFields, func(i, j field) int {
-		return cmp.Compare(j.depth, i.depth)
+		return cmp118.Compare(j.depth, i.depth)
 	})
 
 	roots := d.getRootMap(sortedFields)
