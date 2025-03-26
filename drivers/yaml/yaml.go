@@ -10,7 +10,7 @@ import (
 	"github.com/insei/fmap/v3"
 
 	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/slices"
+	"github.com/insei/tinyconf/slices118"
 )
 
 type yamlDriver struct {
@@ -117,7 +117,7 @@ func (d *yamlDriver) getUniqueFields(registers []*tinyconf.Registered) []field {
 				tag:   tag,
 			}
 
-			if slices.ContainsFunc(fields, func(item field) bool {
+			if slices118.ContainsFunc(fields, func(item field) bool {
 				matchPath := item.path == member.path
 				matchTagDriver := tagDriver == item.tag.Get(d.name)
 				return matchPath && matchTagDriver
@@ -152,8 +152,8 @@ func (d *yamlDriver) getRootMap(fields []field) map[string]string {
 func (d *yamlDriver) GenDoc(registers ...*tinyconf.Registered) string {
 	uniqueFields := d.getUniqueFields(registers)
 
-	sortedFields := slices.Clone(uniqueFields)
-	slices.SortStableFunc(sortedFields, func(i, j field) int {
+	sortedFields := slices118.Clone(uniqueFields)
+	slices118.SortStableFunc(sortedFields, func(i, j field) int {
 		return cmp.Compare(i.path, j.path)
 	})
 

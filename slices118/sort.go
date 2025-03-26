@@ -1,4 +1,4 @@
-package slices
+package slices118
 
 // insertionSortCmpFunc sorts data[a:b] using insertion sort.
 func insertionSortCmpFunc[E any](data []E, a, b int, cmp func(a, b E) int) {

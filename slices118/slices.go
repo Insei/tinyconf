@@ -1,5 +1,5 @@
-// Package slices defines various functions useful with slices of any type.
-package slices
+// Package slices118 defines various functions useful with slices118 of any type.
+package slices118
 
 // Index returns the index of the first occurrence of v in s,
 // or -1 if not present.
