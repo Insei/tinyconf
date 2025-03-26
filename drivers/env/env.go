@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/slices"
+	"github.com/insei/tinyconf/slices118"
 
 	"github.com/insei/cast"
 	"github.com/insei/fmap/v3"
@@ -74,7 +74,7 @@ func (d envDriver) getUniqueFields(registers []*tinyconf.Registered) []field {
 				tag:   tag,
 			}
 
-			if slices.ContainsFunc(fields, func(item field) bool {
+			if slices118.ContainsFunc(fields, func(item field) bool {
 				return item.tag.Get(d.name) == member.tag.Get(d.name)
 			}) {
 				continue
@@ -99,8 +99,8 @@ func (d envDriver) getRootMap(fields []field) map[int]map[string]string {
 func (d envDriver) GenDoc(registers ...*tinyconf.Registered) string {
 	uniqueFields := d.getUniqueFields(registers)
 
-	sortedFields := slices.Clone(uniqueFields)
-	slices.SortStableFunc(sortedFields, func(i, j field) int {
+	sortedFields := slices118.Clone(uniqueFields)
+	slices118.SortStableFunc(sortedFields, func(i, j field) int {
 		return cmp.Compare(j.depth, i.depth)
 	})
 
@@ -109,7 +109,7 @@ func (d envDriver) GenDoc(registers ...*tinyconf.Registered) string {
 
 	var doc string
 	for _, field := range uniqueFields {
-		if slices.Contains(marks, field.path) {
+		if slices118.Contains(marks, field.path) {
 			continue
 		}
 		marks = append(marks, field.path)
