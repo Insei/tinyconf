@@ -72,7 +72,7 @@ func getLoggerValue(field fmap.Field, val any) string {
 	return valueLog
 }
 
-func copyToSubConfig(conf, subConf any, subpath string) error {
+func copyToSubConfig(conf, subConf any, subpath string, parsedPaths []string) error {
 	confFields, err := fmap.GetFrom(conf)
 	if err != nil {
 		return err
@@ -82,15 +82,24 @@ func copyToSubConfig(conf, subConf any, subpath string) error {
 		return err
 	}
 	for _, path := range confFields.GetAllPaths() {
-		if path != subpath && strings.HasPrefix(path, subpath) {
-			field := confFields.MustFind(path)
-			subFieldPath := strings.Replace(path, subpath+".", "", -1)
-			subField, ok := subConfFields.Find(subFieldPath)
-			if !ok {
-				return fmt.Errorf("subconf field %s not found", path)
+		// exclude paths that is not parsed by tinyconf drivers
+		skip := true
+		for _, parsedPath := range parsedPaths {
+			if path == parsedPath {
+				skip = false
+				break
 			}
-			subField.Set(subConf, field.Get(conf))
 		}
+		if skip || path == subpath || !strings.HasPrefix(path, subpath) {
+			continue
+		}
+		field := confFields.MustFind(path)
+		subFieldPath := strings.Replace(path, subpath+".", "", -1)
+		subField, ok := subConfFields.Find(subFieldPath)
+		if !ok {
+			return fmt.Errorf("subconf field %s not found", path)
+		}
+		subField.Set(subConf, field.Get(conf))
 	}
 	return nil
 }
@@ -99,7 +108,9 @@ func (c *Manager) Parse(conf any) (err error) {
 	confParse := conf
 	confTypeOf := reflect.TypeOf(conf)
 	register, ok := c.registered[confTypeOf]
+	parsedPaths := make([]string, 0)
 	if !ok {
+	RegisteredLoop:
 		for registeredTypeOf, registeredConf := range c.registered {
 			for _, path := range registeredConf.Storage.GetAllPaths() {
 				field := registeredConf.Storage.MustFind(path)
@@ -109,9 +120,9 @@ func (c *Manager) Parse(conf any) (err error) {
 					register = registeredConf
 					confParse = reflect.New(registeredTypeOf.Elem()).Interface()
 					defer func() {
-						err = copyToSubConfig(confParse, conf, field.GetStructPath())
+						err = copyToSubConfig(confParse, conf, field.GetStructPath(), parsedPaths)
 					}()
-					break
+					break RegisteredLoop
 				}
 			}
 		}
@@ -144,6 +155,8 @@ func (c *Manager) Parse(conf any) (err error) {
 				if currentValue != driverValue.Value {
 					log.Debug("override", LogField("value", getLoggerValue(field, driverValue.Value)))
 					field.Set(confParse, driverValue.Value)
+					// only for sub configs
+					parsedPaths = append(parsedPaths, path)
 				}
 			}
 		}

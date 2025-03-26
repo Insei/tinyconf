@@ -329,21 +329,57 @@ func (tl *testLogger) With(_ ...Field) Logger {
 
 func TestManager_ParseSubConfig(t *testing.T) {
 	type FieldConfig struct {
-		Test string
+		Test  string
+		Test2 string
 	}
 	type Config struct {
 		Field FieldConfig
 	}
-	c := &Manager{
-		drivers:    []Driver{&parseMockDriver{name: "d3", value: "test"}},
-		registered: make(map[reflect.Type]*Registered),
-		log:        &testLogger{},
+	testCases := []struct {
+		Name                string
+		Drivers             []Driver
+		expectedFieldValues any
+		config              *FieldConfig
+	}{
+		{
+			Name: "Simple value",
+			Drivers: []Driver{
+				&parseMockDriver{
+					value: "test",
+				},
+			},
+			expectedFieldValues: "test",
+			config:              &FieldConfig{},
+		},
+		{
+			Name: "Driver no value, no override existing fields values",
+			Drivers: []Driver{
+				&parseMockDriver{
+					value: "",
+					err:   ErrValueNotFound,
+				},
+			},
+			expectedFieldValues: "test123",
+			config: &FieldConfig{
+				Test:  "test123",
+				Test2: "test123",
+			},
+		},
 	}
-	conf := &Config{}
-	subConf := &FieldConfig{}
-	assert.NoError(t, c.Register(conf))
-
-	assert.NoError(t, c.Parse(subConf))
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			c := &Manager{
+				drivers:    testCase.Drivers,
+				registered: make(map[reflect.Type]*Registered),
+				log:        &testLogger{},
+			}
+			conf := &Config{Field: FieldConfig{}}
+			assert.NoError(t, c.Register(conf))
+			assert.NoError(t, c.Parse(testCase.config))
+			assert.Equal(t, testCase.expectedFieldValues, testCase.config.Test)
+			assert.Equal(t, testCase.expectedFieldValues, testCase.config.Test2)
+		})
+	}
 }
 func TestManager_Parse(t *testing.T) {
 	t.Parallel()
