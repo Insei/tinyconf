@@ -7,12 +7,13 @@ import (
 	"os"
 	"path"
 	"reflect"
-	"slices"
 	"strings"
+
+	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/slices"
 
 	"github.com/insei/cast"
 	"github.com/insei/fmap/v3"
-	"github.com/insei/tinyconf"
 )
 
 type envDriver struct {
