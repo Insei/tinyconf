@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -25,6 +26,7 @@ type envDriver struct {
 	prefix      string
 	autoKeys    bool
 	secretFiles bool
+	indexedKeys bool
 	// values from .env files, that are not exported to the process environment
 	values map[string]string
 }
@@ -86,6 +88,19 @@ func (d envDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 			envKey, envVal, ok = envKey+secretFileSuffix, strings.TrimRight(string(data), "\r\n"), true
 		}
 	}
+	if !ok && d.indexedKeys {
+		tree, found, err := indexedTree(field.GetType(), d.environ(envKey+"_"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse env values from keys %s_* for %s config field: %w", envKey, field.GetStructPath(), err)
+		}
+		if found {
+			value, err := convert.TreeToField(tree, field, d.name)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse env values from keys %s_* for %s config field: %w", envKey, field.GetStructPath(), err)
+			}
+			return &tinyconf.Value{Source: envKey + "_*", Value: value}, nil
+		}
+	}
 	if !ok {
 		return nil, fmt.Errorf("%w: %s is not defined in env for %s config field", tinyconf.ErrValueNotFound, envKey, field.GetStructPath())
 	}
@@ -94,6 +109,150 @@ func (d envDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 		return nil, fmt.Errorf("failed to parse env value from key %s for %s config field: %w", envKey, field.GetStructPath(), err)
 	}
 	return &tinyconf.Value{Source: envKey, Value: value}, err
+}
+
+// environ returns all env variables with the prefix, keys are the names of the variables without the prefix.
+func (d envDriver) environ(prefix string) map[string]string {
+	vars := make(map[string]string)
+	add := func(envKey, envVal string) {
+		if strings.HasPrefix(envKey, prefix) && len(envKey) > len(prefix) {
+			vars[envKey[len(prefix):]] = envVal
+		}
+	}
+	for envKey, envVal := range d.values {
+		add(envKey, envVal)
+	}
+	// process environment has priority over .env files
+	for _, env := range os.Environ() {
+		if idx := strings.Index(env, "="); idx > 0 {
+			add(env[:idx], env[idx+1:])
+		}
+	}
+	return vars
+}
+
+// cutSegment splits the name of the variable to the first segment and the rest: 0_HOST -> 0, HOST.
+func cutSegment(name string) (string, string) {
+	if idx := strings.Index(name, "_"); idx >= 0 {
+		return name[:idx], name[idx+1:]
+	}
+	return name, ""
+}
+
+// indexedTree builds the value with type t from the separate variables:
+// HOSTS_0, HOSTS_1 for slices and arrays, LABELS_key for maps, SERVER_HOST for structs
+// and their combinations like SERVERS_0_HOST. Keys of vars are the names of the variables without the name of the field,
+// empty key is used for the value of the whole type. Variables that do not match the type are ignored.
+func indexedTree(t reflect.Type, vars map[string]string) (any, bool, error) {
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if val, ok := vars[""]; ok {
+		return val, true, nil
+	}
+	if convert.IsScalar(t) {
+		return nil, false, nil
+	}
+	// variables of the nested values by the first segment of the name
+	groups := make(map[string]map[string]string)
+	group := func(key, rest, val string) {
+		if groups[key] == nil {
+			groups[key] = make(map[string]string)
+		}
+		groups[key][rest] = val
+	}
+	items := make(map[string]any)
+	build := func(elem reflect.Type) error {
+		for key, vars := range groups {
+			item, found, err := indexedTree(elem, vars)
+			if err != nil {
+				return fmt.Errorf("%s: %w", key, err)
+			}
+			if found {
+				items[key] = item
+			}
+		}
+		return nil
+	}
+	switch t.Kind() {
+	case reflect.Slice, reflect.Array:
+		for name, val := range vars {
+			segment, rest := cutSegment(name)
+			if idx, err := strconv.Atoi(segment); err == nil && strconv.Itoa(idx) == segment && idx >= 0 {
+				group(segment, rest, val)
+			}
+		}
+		if err := build(t.Elem()); err != nil {
+			return nil, false, err
+		}
+		if len(items) == 0 {
+			return nil, false, nil
+		}
+		list := make([]any, len(items))
+		for i := range list {
+			item, ok := items[strconv.Itoa(i)]
+			if !ok {
+				return nil, false, fmt.Errorf("index %d is not defined, indexes should be sequential and start from 0", i)
+			}
+			list[i] = item
+		}
+		return list, true, nil
+	case reflect.Map:
+		for name, val := range vars {
+			if convert.IsScalar(t.Elem()) || t.Elem().Kind() == reflect.Interface {
+				// the whole name is a key
+				group(name, "", val)
+				continue
+			}
+			segment, rest := cutSegment(name)
+			group(segment, rest, val)
+		}
+		if err := build(t.Elem()); err != nil {
+			return nil, false, err
+		}
+	case reflect.Struct:
+		for i := 0; i < t.NumField(); i++ {
+			fld := t.Field(i)
+			envKey, treeKey := fld.Tag.Get("env"), fld.Tag.Get("env")
+			if fld.PkgPath != "" || envKey == "-" {
+				continue
+			}
+			if envKey == "" {
+				envKey, treeKey = autoKey(fld.Name), fld.Name
+			}
+			groups = make(map[string]map[string]string)
+			for name, val := range vars {
+				if name == envKey {
+					group(treeKey, "", val)
+				} else if strings.HasPrefix(name, envKey+"_") && !hasLongerField(t, name, envKey) {
+					group(treeKey, name[len(envKey)+1:], val)
+				}
+			}
+			if err := build(fld.Type); err != nil {
+				return nil, false, err
+			}
+		}
+	}
+	if len(items) == 0 {
+		return nil, false, nil
+	}
+	return items, true, nil
+}
+
+// hasLongerField reports whether the struct has another field that matches the name of the variable better than envKey:
+// HOST_NAME should be used for the field HOST_NAME, not for the field HOST.
+func hasLongerField(t reflect.Type, name, envKey string) bool {
+	for i := 0; i < t.NumField(); i++ {
+		fld := t.Field(i)
+		other := fld.Tag.Get("env")
+		if other == "" {
+			other = autoKey(fld.Name)
+		}
+		if fld.PkgPath == "" && len(other) > len(envKey) && (name == other || strings.HasPrefix(name, other+"_")) {
+			return true
+		}
+	}
+	return false
 }
 
 func (d envDriver) GetName() string {
@@ -182,6 +341,7 @@ type options struct {
 	prefix      string
 	autoKeys    bool
 	secretFiles bool
+	indexedKeys bool
 	isolation   bool
 	files       []string
 	customFiles bool
@@ -213,6 +373,25 @@ func WithAutoKeys() Option {
 func WithSecretFiles() Option {
 	return func(o *options) {
 		o.secretFiles = true
+	}
+}
+
+// WithIndexedKeys enables reading of slices, arrays, maps and structs from the separate variables,
+// if the variable with the whole value is not set:
+//   - slices and arrays: HOSTS_0=a, HOSTS_1=b, indexes should be sequential and start from 0;
+//   - maps: LABELS_env=prod, the rest of the variable name is a key, as is;
+//   - structs: SERVER_HOST=a, SERVER_MAX_CONNS=1, names are taken from the env tags of the struct fields
+//     or built from the field names;
+//   - nested types: SERVERS_0_HOST=a, SERVERS_0_PORT=1, MATRIX_0_1=2. Keys of the maps with nested types
+//     should not contain underscores.
+//
+// Variables that do not match the type of the field are ignored.
+// For maps with simple values all variables with the name of the field as a prefix are used as map items,
+// so the name of such field should not be a prefix of other variables: with LABELS and LABELS_EXTRA fields
+// the variable LABELS_EXTRA_a is also an item of LABELS.
+func WithIndexedKeys() Option {
+	return func(o *options) {
+		o.indexedKeys = true
 	}
 }
 
@@ -249,6 +428,7 @@ func New(opts ...Option) (tinyconf.Driver, error) {
 		prefix:      o.prefix,
 		autoKeys:    o.autoKeys,
 		secretFiles: o.secretFiles,
+		indexedKeys: o.indexedKeys,
 	}
 	set := setENV
 	if o.isolation {
