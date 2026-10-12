@@ -54,6 +54,14 @@ type Driver interface {
 	GetValue(field fmap.Field) (*Value, error)
 }
 
+// Loader is an optional interface of the driver.
+// Load is called once at the start of every Manager.Parse call, before any GetValue call,
+// so driver can read its source once and not for every field.
+// If Load returns an error, the driver is skipped and the error is returned from Manager.Parse.
+type Loader interface {
+	Load() error
+}
+
 type Option interface {
 	apply(*Manager)
 }

@@ -155,7 +155,18 @@ func (c *Manager) Parse(conf any) error {
 		return ErrNotRegisteredConfig
 	}
 	var errs parseErrors
+	drivers := make([]Driver, 0, len(c.drivers))
 	for _, d := range c.drivers {
+		if loader, ok := d.(Loader); ok {
+			if err := loader.Load(); err != nil {
+				c.log.Error("failed to load", LogField("driver", d.GetName()), LogField("details", err.Error()))
+				errs = append(errs, fmt.Errorf("%s driver: %w", d.GetName(), err))
+				continue
+			}
+		}
+		drivers = append(drivers, d)
+	}
+	for _, d := range drivers {
 		for _, path := range register.Storage.GetAllPaths() {
 			if isSubConf && !strings.HasPrefix(path, subPath+".") {
 				continue
