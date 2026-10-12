@@ -50,6 +50,9 @@ type field struct {
 func (f field) genDoc(driver string) string {
 	if tagDriver, ok := f.tag.Lookup(driver); ok {
 		tagDoc := f.tag.Get("doc")
+		if f.tag.Get("hidden") == "true" {
+			f.value = ""
+		}
 		return fmt.Sprintf("#%s\n#%s=%v\n", tagDoc, tagDriver, f.value)
 	}
 	return ""
@@ -149,23 +152,32 @@ func setENVsFromPath(envDirPath string) {
 	var envLines []string
 
 	for fileScanner.Scan() {
-		envLine := fileScanner.Text()
-		if envLine[:1] != "#" {
-			envLines = append(envLines, fileScanner.Text())
+		envLine := strings.TrimSpace(fileScanner.Text())
+		if envLine != "" && !strings.HasPrefix(envLine, "#") {
+			envLines = append(envLines, envLine)
 		}
 	}
 
 	for _, envLine := range envLines {
-		envRow := strings.Split(envLine, "=")
+		envRow := strings.SplitN(envLine, "=", 2)
+		envKey := strings.TrimSpace(envRow[0])
 		envVal := ""
 		if len(envRow) > 1 {
-			envVal = envRow[1]
+			envVal = unquote(strings.TrimSpace(envRow[1]))
 		}
-		if _, exist := os.LookupEnv(strings.TrimSpace(envRow[0])); exist {
+		if _, exist := os.LookupEnv(envKey); exist {
 			continue
 		}
-		if err = os.Setenv(strings.TrimSpace(envRow[0]), envVal); err != nil {
+		if err = os.Setenv(envKey, envVal); err != nil {
 			return
 		}
 	}
+}
+
+// unquote removes matching single or double quotes around the value.
+func unquote(val string) string {
+	if len(val) > 1 && (val[0] == '"' || val[0] == '\'') && val[len(val)-1] == val[0] {
+		return val[1 : len(val)-1]
+	}
+	return val
 }

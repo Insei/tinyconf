@@ -2,6 +2,7 @@ package env
 
 import (
 	"os"
+	"path"
 	"testing"
 
 	"github.com/insei/fmap/v3"
@@ -325,4 +326,57 @@ func TestNew(t *testing.T) {
 			assert.Equal(t, test.expectedVal, envVar)
 		})
 	}
+}
+
+func Test_setENVsFromPath(t *testing.T) {
+	content := "\n" +
+		"# comment\n" +
+		"  # indented comment\n" +
+		"TINYCONF_TEST_PLAIN=value\n" +
+		"\n" +
+		"TINYCONF_TEST_DSN=postgres://host/db?sslmode=disable\n" +
+		"TINYCONF_TEST_DOUBLE_QUOTED=\"quoted value\"\n" +
+		"TINYCONF_TEST_SINGLE_QUOTED='quoted=value'\n" +
+		"TINYCONF_TEST_SPACED = spaced \n" +
+		"TINYCONF_TEST_EMPTY=\n" +
+		"TINYCONF_TEST_EXISTING=from file\n"
+	expected := map[string]string{
+		"TINYCONF_TEST_PLAIN":         "value",
+		"TINYCONF_TEST_DSN":           "postgres://host/db?sslmode=disable",
+		"TINYCONF_TEST_DOUBLE_QUOTED": "quoted value",
+		"TINYCONF_TEST_SINGLE_QUOTED": "quoted=value",
+		"TINYCONF_TEST_SPACED":        "spaced",
+		"TINYCONF_TEST_EMPTY":         "",
+		"TINYCONF_TEST_EXISTING":      "from env",
+	}
+	t.Setenv("TINYCONF_TEST_EXISTING", "from env")
+	t.Cleanup(func() {
+		for key := range expected {
+			os.Unsetenv(key)
+		}
+	})
+
+	dir := t.TempDir()
+	assert.NoError(t, os.WriteFile(path.Join(dir, ".env"), []byte(content), 0o600))
+	assert.NotPanics(t, func() {
+		setENVsFromPath(dir)
+	})
+
+	for key, value := range expected {
+		envVal, ok := os.LookupEnv(key)
+		assert.True(t, ok, key)
+		assert.Equal(t, value, envVal, key)
+	}
+}
+
+func TestEnvDriver_GenDoc_Hidden(t *testing.T) {
+	conf := &struct {
+		Password string `env:"APP_PASSWORD" doc:"password" hidden:"true"`
+	}{Password: "secret"}
+	storage, err := fmap.GetFrom(conf)
+	assert.NoError(t, err)
+
+	driver := envDriver{name: "env"}
+	doc := driver.GenDoc(&tinyconf.Registered{Storage: storage, Config: conf})
+	assert.Equal(t, "#password\n#APP_PASSWORD=\n\n", doc)
 }
