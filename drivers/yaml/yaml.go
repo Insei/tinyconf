@@ -2,68 +2,34 @@ package yaml
 
 import (
 	"fmt"
+	"io/fs"
 	"reflect"
 	"strings"
 
-	"github.com/insei/fmap/v3"
+	"gopkg.in/yaml.v3"
 
 	"github.com/insei/tinyconf"
 	"github.com/insei/tinyconf/cmp118"
 	"github.com/insei/tinyconf/convert"
+	"github.com/insei/tinyconf/drivers/internal/tree"
 	"github.com/insei/tinyconf/slices118"
 )
 
 type yamlDriver struct {
 	name string
-	storage
-}
-
-func getMapValue(field fmap.Field, yamlMap any) (any, error) {
-	yamlPathKey := field.GetTagPath("yaml", true)
-	if yamlPathKey == "" {
-		return nil, fmt.Errorf("%w: 'yaml' tag is not set", tinyconf.ErrIncorrectTagSettings)
-	}
-	yamlPathKeyArr := strings.Split(yamlPathKey, ".")
-	mMap, _ := yamlMap.(map[string]interface{})
-	for _, key := range yamlPathKeyArr[:len(yamlPathKeyArr)-1] {
-		nested, ok := mMap[key].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("%w: value not found in yaml config", tinyconf.ErrValueNotFound)
-		}
-		mMap = nested
-	}
-	val, ok := mMap[yamlPathKeyArr[len(yamlPathKeyArr)-1]]
-	if !ok || val == nil {
-		return nil, fmt.Errorf("%w: value not found in yaml config", tinyconf.ErrValueNotFound)
-	}
-	return val, nil
-}
-
-func convertValToType(field fmap.Field, val any) (any, error) {
-	return convert.TreeToField(val, field, "yaml")
-}
-
-func (d *yamlDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
-	yamlMap, err := d.load()
-	if err != nil {
-		return nil, err
-	}
-	val, err := getMapValue(field, yamlMap)
-	if err != nil {
-		return nil, err
-	}
-	val, err = convertValToType(field, val)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert yaml map value to field type value: %w", err)
-	}
-	return &tinyconf.Value{
-		Source: d.name,
-		Value:  val,
-	}, nil
+	*tree.Driver
 }
 
 func (d *yamlDriver) GetName() string {
 	return d.name
+}
+
+func decode(data []byte) (map[string]any, error) {
+	yamlMap := make(map[string]any)
+	if err := yaml.Unmarshal(data, &yamlMap); err != nil {
+		return nil, fmt.Errorf("failed to decode yaml: %w", err)
+	}
+	return yamlMap, nil
 }
 
 type field struct {
@@ -164,9 +130,70 @@ func (d *yamlDriver) GenDoc(registers ...*tinyconf.Registered) string {
 	return doc
 }
 
-func New(file string) (tinyconf.Driver, error) {
+type options struct {
+	sources   []tree.Source
+	optional  bool
+	expandEnv bool
+}
+
+// Option is a yaml driver option.
+type Option func(*options)
+
+// WithFiles adds additional config files. Files are merged in the order of addition,
+// values from the next files overrides values from the previous, nested maps are merged by keys.
+func WithFiles(files ...string) Option {
+	return func(o *options) {
+		for _, file := range files {
+			o.sources = append(o.sources, tree.FileSource(file))
+		}
+	}
+}
+
+// WithFS adds config files from the fsys, embed.FS for example.
+func WithFS(fsys fs.FS, files ...string) Option {
+	return func(o *options) {
+		for _, file := range files {
+			o.sources = append(o.sources, tree.FSSource(fsys, file))
+		}
+	}
+}
+
+// WithData adds in-memory config content, name is used in error messages.
+func WithData(name string, data []byte) Option {
+	return func(o *options) {
+		o.sources = append(o.sources, tree.DataSource(name, data))
+	}
+}
+
+// WithOptional allows config files to be absent, by default absent file is an error.
+func WithOptional() Option {
+	return func(o *options) {
+		o.optional = true
+	}
+}
+
+// WithEnvExpansion replaces ${VAR} and ${VAR:-default} in the config content with the values of the environment variables.
+// Default is used when variable is not set or empty, $$ is replaced with $.
+func WithEnvExpansion() Option {
+	return func(o *options) {
+		o.expandEnv = true
+	}
+}
+
+// New creates new yaml driver. File can be empty if config sources are added by options.
+func New(file string, opts ...Option) (tinyconf.Driver, error) {
+	o := &options{}
+	if file != "" {
+		o.sources = append(o.sources, tree.FileSource(file))
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
+	for i := range o.sources {
+		o.sources[i].Optional = o.optional
+	}
 	return &yamlDriver{
-		name:    "yaml",
-		storage: &storageImpl{filePath: file},
+		name:   "yaml",
+		Driver: tree.New("yaml", decode, o.sources, o.expandEnv),
 	}, nil
 }

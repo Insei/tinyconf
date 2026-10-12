@@ -1,267 +1,20 @@
 package yaml
 
 import (
-	"io"
-	"math"
-	"reflect"
+	"os"
+	"path/filepath"
 	"testing"
+	"testing/fstest"
 
 	"github.com/insei/fmap/v3"
 	"github.com/insei/tinyconf"
 	"github.com/stretchr/testify/assert"
 )
 
-type mockReaderCloser struct {
-	n    int
-	data []byte
-}
-
-func (m *mockReaderCloser) Read(p []byte) (int, error) {
-	n := 0
-	if m.n == 0 {
-		n = copy(p, m.data)
-	} else {
-		n = copy(p, m.data[m.n:])
-	}
-	if m.n != m.n+n {
-		m.n += n
-		return n, nil
-	}
-	return 0, io.EOF
-}
-
-func (m *mockReaderCloser) Close() error {
-	return nil
-}
-
 func TestYamlDriver_GetName(t *testing.T) {
 	d, _ := New("anystring.yaml")
 	if d.GetName() != "yaml" {
 		t.Fail()
-	}
-}
-
-func Test_convertValToType(t *testing.T) {
-	tests := []struct {
-		name     string
-		getField func() fmap.Field
-		val      any
-		want     any
-		wantErr  bool
-	}{
-		{
-			name: "Convert string to int",
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test int
-				}]()
-				return storage.MustFind("Test")
-			},
-			val:     "123",
-			want:    123,
-			wantErr: false,
-		},
-		{
-			name: "Incompatible types",
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test int
-				}]()
-				return storage.MustFind("Test")
-			},
-			val:     "test",
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name: "Already same types",
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test string
-				}]()
-				return storage.MustFind("Test")
-			},
-			val:     "test",
-			want:    "test",
-			wantErr: false,
-		},
-		{
-			name: "convertible type",
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test int
-				}]()
-				return storage.MustFind("Test")
-			},
-			val:     float64(123),
-			want:    123,
-			wantErr: false,
-		},
-		{
-			name: "non convertible type",
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test int32
-				}]()
-				return storage.MustFind("Test")
-			},
-			val:     int64(math.MaxInt64),
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := convertValToType(tt.getField(), tt.val)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("convertValToType() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("convertValToType() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestYamlDriver_GetMapValue(t *testing.T) {
-	tests := []struct {
-		name          string
-		yamlMap       map[string]any
-		getField      func() fmap.Field
-		expectedValue any
-		wantErr       bool
-	}{
-		{
-			name:    "NonExistingYamlTag",
-			yamlMap: nil,
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test int
-				}]()
-				return storage.MustFind("Test")
-			},
-			expectedValue: nil,
-			wantErr:       true,
-		},
-		{
-			name:    "NonExistingValueInNonExistingYaml",
-			yamlMap: nil,
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test int `yaml:"nonexisting"`
-				}]()
-				return storage.MustFind("Test")
-			},
-			expectedValue: nil,
-			wantErr:       true,
-		},
-		{
-			name:    "NonExistingFieldInExistingYaml",
-			yamlMap: map[string]any{"existent": "value"},
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test int `yaml:"nonexistent"`
-				}]()
-				return storage.MustFind("Test")
-			},
-			expectedValue: nil,
-			wantErr:       true,
-		},
-		{
-			name:    "ExistingNonEmptyField",
-			yamlMap: map[string]any{"existent": "value"},
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test int `yaml:"existent"`
-				}]()
-				return storage.MustFind("Test")
-			},
-			expectedValue: "value",
-			wantErr:       false,
-		},
-		{
-			name:    "NestedExistingNonEmptyField",
-			yamlMap: map[string]any{"existent": map[string]any{"nested": "value"}},
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test struct {
-						Nested string `yaml:"nested"`
-					} `yaml:"existent"`
-				}]()
-				return storage.MustFind("Test.Nested")
-			},
-			expectedValue: "value",
-			wantErr:       false,
-		},
-		{
-			name:    "NestedNonExistingField",
-			yamlMap: map[string]any{"existent": map[string]any{"nested": "value"}},
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test struct {
-						Nonested string `yaml:"nonested"`
-					} `yaml:"existent"`
-				}]()
-				return storage.MustFind("Test.Nonested")
-			},
-			expectedValue: nil,
-			wantErr:       true,
-		},
-		{
-			name:    "NestedNonExistingFieldWithEmptyMap",
-			yamlMap: map[string]any{"existent": "value"},
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test struct {
-						Nonested string `yaml:"nonesting"`
-					} `yaml:"existent"`
-				}]()
-				return storage.MustFind("Test.Nonested")
-			},
-			expectedValue: nil,
-			wantErr:       true,
-		},
-		{
-			name:    "NestedMissingParentDoesNotFallbackToRoot",
-			yamlMap: map[string]any{"nested": "root value"},
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test struct {
-						Nested string `yaml:"nested"`
-					} `yaml:"nonexistent"`
-				}]()
-				return storage.MustFind("Test.Nested")
-			},
-			expectedValue: nil,
-			wantErr:       true,
-		},
-		{
-			name:    "DeepNestedMissingParentDoesNotFallbackToGrandparent",
-			yamlMap: map[string]any{"existent": map[string]any{"nested": "parent value"}},
-			getField: func() fmap.Field {
-				storage, _ := fmap.Get[struct {
-					Test struct {
-						Middle struct {
-							Nested string `yaml:"nested"`
-						} `yaml:"nonexistent"`
-					} `yaml:"existent"`
-				}]()
-				return storage.MustFind("Test.Middle.Nested")
-			},
-			expectedValue: nil,
-			wantErr:       true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := getMapValue(tt.getField(), tt.yamlMap)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedValue, got)
-		})
 	}
 }
 
@@ -469,4 +222,157 @@ func TestYamlDriver_GenDoc_Hidden(t *testing.T) {
 	driver := &yamlDriver{name: "yaml"}
 	doc := driver.GenDoc(&tinyconf.Registered{Storage: storage, Config: conf})
 	assert.Equal(t, "#password\n#password: \n", doc)
+}
+
+func writeFile(t *testing.T, name, content string) string {
+	filePath := filepath.Join(t.TempDir(), name)
+	assert.NoError(t, os.WriteFile(filePath, []byte(content), 0o600))
+	return filePath
+}
+
+func TestYamlDriver_Sources(t *testing.T) {
+	type config struct {
+		HTTP struct {
+			Host string `yaml:"host"`
+			Port int    `yaml:"port"`
+		} `yaml:"http"`
+		Hosts []string `yaml:"hosts"`
+		Name  string   `yaml:"name"`
+	}
+	base := "http:\n  host: localhost\n  port: 80\nhosts: [a, b]\nname: base\n"
+	override := "http:\n  port: 8080\nhosts: [c]\n"
+	tests := []struct {
+		name    string
+		driver  func(t *testing.T) (tinyconf.Driver, error)
+		want    func(c *config)
+		wantErr bool
+	}{
+		{
+			name: "single file",
+			driver: func(t *testing.T) (tinyconf.Driver, error) {
+				return New(writeFile(t, "base.yaml", base))
+			},
+			want: func(c *config) {
+				c.HTTP.Host, c.HTTP.Port, c.Hosts, c.Name = "localhost", 80, []string{"a", "b"}, "base"
+			},
+		},
+		{
+			name: "next file overrides previous, nested maps are merged",
+			driver: func(t *testing.T) (tinyconf.Driver, error) {
+				return New(writeFile(t, "base.yaml", base), WithFiles(writeFile(t, "override.yaml", override)))
+			},
+			want: func(c *config) {
+				c.HTTP.Host, c.HTTP.Port, c.Hosts, c.Name = "localhost", 8080, []string{"c"}, "base"
+			},
+		},
+		{
+			name: "absent file",
+			driver: func(t *testing.T) (tinyconf.Driver, error) {
+				return New(filepath.Join(t.TempDir(), "absent.yaml"))
+			},
+			want:    func(c *config) {},
+			wantErr: true,
+		},
+		{
+			name: "absent optional file",
+			driver: func(t *testing.T) (tinyconf.Driver, error) {
+				return New(writeFile(t, "base.yaml", base), WithFiles(filepath.Join(t.TempDir(), "absent.yaml")), WithOptional())
+			},
+			want: func(c *config) {
+				c.HTTP.Host, c.HTTP.Port, c.Hosts, c.Name = "localhost", 80, []string{"a", "b"}, "base"
+			},
+		},
+		{
+			name: "all optional files are absent",
+			driver: func(t *testing.T) (tinyconf.Driver, error) {
+				return New(filepath.Join(t.TempDir(), "absent.yaml"), WithOptional())
+			},
+			want: func(c *config) {},
+		},
+		{
+			name: "incorrect optional file",
+			driver: func(t *testing.T) (tinyconf.Driver, error) {
+				return New(writeFile(t, "bad.yaml", "key: value:"), WithOptional())
+			},
+			want:    func(c *config) {},
+			wantErr: true,
+		},
+		{
+			name: "empty file",
+			driver: func(t *testing.T) (tinyconf.Driver, error) {
+				return New(writeFile(t, "empty.yaml", ""))
+			},
+			want: func(c *config) {},
+		},
+		{
+			name: "fs and data",
+			driver: func(t *testing.T) (tinyconf.Driver, error) {
+				fsys := fstest.MapFS{"conf/base.yaml": {Data: []byte(base)}}
+				return New("", WithFS(fsys, "conf/base.yaml"), WithData("override", []byte(override)))
+			},
+			want: func(c *config) {
+				c.HTTP.Host, c.HTTP.Port, c.Hosts, c.Name = "localhost", 8080, []string{"c"}, "base"
+			},
+		},
+		{
+			name: "env expansion",
+			driver: func(t *testing.T) (tinyconf.Driver, error) {
+				t.Setenv("TINYCONF_YAML_HOST", "example.com")
+				content := "http:\n  host: ${TINYCONF_YAML_HOST}\n  port: ${TINYCONF_YAML_PORT:-443}\nname: $${NAME}\n"
+				return New("", WithData("config", []byte(content)), WithEnvExpansion())
+			},
+			want: func(c *config) {
+				c.HTTP.Host, c.HTTP.Port, c.Name = "example.com", 443, "${NAME}"
+			},
+		},
+		{
+			name: "without env expansion",
+			driver: func(t *testing.T) (tinyconf.Driver, error) {
+				return New("", WithData("config", []byte("name: ${TINYCONF_YAML_HOST}\n")))
+			},
+			want: func(c *config) {
+				c.Name = "${TINYCONF_YAML_HOST}"
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			driver, err := tt.driver(t)
+			assert.NoError(t, err)
+			manager, err := tinyconf.New(tinyconf.WithDriver(driver))
+			assert.NoError(t, err)
+
+			conf, want := &config{}, &config{}
+			tt.want(want)
+			assert.NoError(t, manager.Register(conf))
+			err = manager.Parse(conf)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, want, conf)
+		})
+	}
+}
+
+func TestYamlDriver_Reload(t *testing.T) {
+	type config struct {
+		Name string `yaml:"name"`
+	}
+	filePath := writeFile(t, "config.yaml", "name: first\n")
+	driver, err := New(filePath)
+	assert.NoError(t, err)
+	manager, err := tinyconf.New(tinyconf.WithDriver(driver))
+	assert.NoError(t, err)
+
+	conf := &config{}
+	assert.NoError(t, manager.Register(conf))
+	assert.NoError(t, manager.Parse(conf))
+	assert.Equal(t, "first", conf.Name)
+
+	// file is read again on every Parse
+	assert.NoError(t, os.WriteFile(filePath, []byte("name: second\n"), 0o600))
+	assert.NoError(t, manager.Parse(conf))
+	assert.Equal(t, "second", conf.Name)
 }
