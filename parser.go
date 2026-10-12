@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/insei/fmap/v3"
+
+	"github.com/insei/tinyconf/convert"
 )
 
 type Registered struct {
@@ -72,6 +74,23 @@ func getLoggerValue(field fmap.Field, val any) string {
 	return valueLog
 }
 
+// isValueField reports whether the field value should be requested from drivers.
+// Structs are parsed by their fields, except the types that are parsed from a single value, time.Time for example.
+func isValueField(storage fmap.Storage, field fmap.Field) bool {
+	path := field.GetStructPath()
+	for i := strings.IndexByte(path, '.'); i >= 0 && i < len(path); {
+		if parent, ok := storage.Find(path[:i]); ok && convert.IsLeaf(parent.GetType()) {
+			return false
+		}
+		next := strings.IndexByte(path[i+1:], '.')
+		if next < 0 {
+			break
+		}
+		i += next + 1
+	}
+	return field.GetType().Kind() != reflect.Struct || convert.IsLeaf(field.GetType())
+}
+
 func copyToSubConfig(conf, subConf any, subpath string, parsedPaths []string) error {
 	confFields, err := fmap.GetFrom(conf)
 	if err != nil {
@@ -99,7 +118,7 @@ func copyToSubConfig(conf, subConf any, subpath string, parsedPaths []string) er
 		if !ok {
 			return fmt.Errorf("subconf field %s not found", path)
 		}
-		subField.Set(subConf, field.Get(conf))
+		convert.SetFieldValue(subField, subConf, convert.GetFieldValue(field, conf))
 	}
 	return nil
 }
@@ -142,7 +161,7 @@ func (c *Manager) Parse(conf any) error {
 				continue
 			}
 			field := register.Storage.MustFind(path)
-			if field.GetType().Kind() == reflect.Struct {
+			if !isValueField(register.Storage, field) {
 				continue
 			}
 			log := c.log.With(
@@ -159,9 +178,9 @@ func (c *Manager) Parse(conf any) error {
 				log.Error("failed", LogField("details", err.Error()))
 				errs = append(errs, fmt.Errorf("%s driver: field %s: %w", d.GetName(), path, err))
 			default:
-				if !reflect.DeepEqual(field.Get(confParse), driverValue.Value) {
+				if !reflect.DeepEqual(convert.GetFieldValue(field, confParse), driverValue.Value) {
 					log.Debug("override", LogField("value", getLoggerValue(field, driverValue.Value)))
-					field.Set(confParse, driverValue.Value)
+					convert.SetFieldValue(field, confParse, driverValue.Value)
 				}
 				parsedPaths = append(parsedPaths, path)
 			}

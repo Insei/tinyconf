@@ -5,11 +5,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/insei/cast"
 	"github.com/insei/fmap/v3"
 
 	"github.com/insei/tinyconf"
 	"github.com/insei/tinyconf/cmp118"
+	"github.com/insei/tinyconf/convert"
 	"github.com/insei/tinyconf/slices118"
 )
 
@@ -40,16 +40,7 @@ func getMapValue(field fmap.Field, yamlMap any) (any, error) {
 }
 
 func convertValToType(field fmap.Field, val any) (any, error) {
-	valOf := reflect.ValueOf(val)
-	fieldType := field.GetType()
-	if valOf.Type() == fieldType {
-		return val, nil
-	}
-	val, err := cast.ToReflect(fmt.Sprintf("%v", val), fieldType)
-	if err != nil {
-		return nil, err
-	}
-	return val, nil
+	return convert.TreeToField(val, field, "yaml")
 }
 
 func (d *yamlDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
@@ -110,7 +101,7 @@ func (d *yamlDriver) getUniqueFields(registers []*tinyconf.Registered) []field {
 
 			member := field{
 				path:  fld.GetTagPath(d.name, false),
-				value: fld.Get(register.Config),
+				value: convert.GetFieldValue(fld, register.Config),
 				tag:   tag,
 			}
 
