@@ -1,6 +1,7 @@
 package tinyconf
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -304,6 +305,72 @@ func (c *Manager) Sources(conf any) []FieldSource {
 		return nil
 	}
 	return append([]FieldSource{}, sources...)
+}
+
+// Watch watches for changes of the config sources and blocks until ctx is done.
+// After every change reported by drivers it parses the config to the new copy of conf
+// and calls onChange with the pointer to this copy and the error of parsing.
+// conf itself is never changed by Watch, its values at the moment of the call are used as defaults for every copy,
+// so the current config can be read concurrently and replaced with the new one in onChange, with atomic.Pointer for example.
+//
+// Config should be registered, or it should be a field of the registered config (sub config).
+// Changes are reported only by drivers that implements Watcher, ErrNoWatchers is returned if there are no such drivers.
+func (c *Manager) Watch(ctx context.Context, conf any, onChange func(conf any, err error)) error {
+	if err := checkConfig(conf); err != nil {
+		return fmt.Errorf("config can't be watched: %w", err)
+	}
+	if register, _, _ := c.findRegister(reflect.TypeOf(conf)); register == nil {
+		return ErrNotRegisteredConfig
+	}
+	var watchers []Driver
+	for _, d := range c.drivers {
+		if _, ok := d.(Watcher); ok {
+			watchers = append(watchers, d)
+		}
+	}
+	if len(watchers) == 0 {
+		return ErrNoWatchers
+	}
+	// defaults for all next configs
+	base := reflect.New(reflect.TypeOf(conf).Elem())
+	base.Elem().Set(reflect.ValueOf(conf).Elem())
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	changes := make(chan struct{}, 1)
+	notify := func() {
+		select {
+		case changes <- struct{}{}:
+		default:
+			// change is already waiting for parsing
+		}
+	}
+	errs := make(chan error, len(watchers))
+	var wg sync.WaitGroup
+	for _, d := range watchers {
+		wg.Add(1)
+		go func(d Driver) {
+			defer wg.Done()
+			if err := d.(Watcher).Watch(ctx, notify); err != nil && ctx.Err() == nil {
+				errs <- fmt.Errorf("%s driver: %w", d.GetName(), err)
+			}
+		}(d)
+	}
+	defer wg.Wait()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case err := <-errs:
+			cancel()
+			return err
+		case <-changes:
+			fresh := reflect.New(base.Type().Elem())
+			fresh.Elem().Set(base.Elem())
+			err := c.Parse(fresh.Interface())
+			onChange(fresh.Interface(), err)
+		}
+	}
 }
 
 func (c *Manager) GenDoc(driverName string) string {

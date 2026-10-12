@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"context"
 	"errors"
 	"io"
 	"io/fs"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/insei/fmap/v3"
 	"github.com/stretchr/testify/assert"
@@ -334,4 +336,67 @@ func TestDriver(t *testing.T) {
 		driver = New("test", testDecode, []Source{DataSource("bad", []byte("incorrect"))}, false)
 		assert.Error(t, driver.Load())
 	})
+}
+
+func TestDriver_Watch(t *testing.T) {
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "config")
+	absentPath := filepath.Join(dir, "absent")
+	assert.NoError(t, os.WriteFile(filePath, []byte("name=first"), 0o600))
+
+	options := &Options{WatchInterval: 5 * time.Millisecond}
+	options.AddFiles(filePath, absentPath, "")
+	options.AddData("data", []byte("port=80"))
+	options.Optional = true
+	driver := options.NewDriver("test", testDecode)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	changes, done := make(chan struct{}, 10), make(chan error, 1)
+	go func() {
+		done <- driver.Watch(ctx, func() { changes <- struct{}{} })
+	}()
+	waitChange := func() {
+		select {
+		case <-changes:
+		case <-time.After(5 * time.Second):
+			t.Fatal("change is not detected")
+		}
+	}
+	// nothing is changed
+	select {
+	case <-changes:
+		t.Fatal("unexpected change")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	assert.NoError(t, os.WriteFile(filePath, []byte("name=second value"), 0o600))
+	waitChange()
+	assert.NoError(t, driver.Load())
+	storage, err := fmap.Get[testConfig]()
+	assert.NoError(t, err)
+	val, err := driver.GetValue(storage.MustFind("Name"))
+	assert.NoError(t, err)
+	assert.Equal(t, "second value", val.Value)
+
+	// absent file is created
+	assert.NoError(t, os.WriteFile(absentPath, []byte("port=8080"), 0o600))
+	waitChange()
+	// file is removed
+	assert.NoError(t, os.Remove(filePath))
+	waitChange()
+
+	cancel()
+	assert.NoError(t, <-done)
+
+	// changes made between Load and Watch are detected
+	assert.NoError(t, driver.Load())
+	assert.NoError(t, os.WriteFile(filePath, []byte("name=third"), 0o600))
+	ctx, cancel = context.WithCancel(context.Background())
+	go func() {
+		done <- driver.Watch(ctx, func() { changes <- struct{}{} })
+	}()
+	waitChange()
+	cancel()
+	assert.NoError(t, <-done)
+	assert.Equal(t, DefaultWatchInterval, New("test", testDecode, nil, false).watchInterval)
 }
