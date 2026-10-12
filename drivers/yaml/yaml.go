@@ -1,6 +1,7 @@
 package yaml
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"reflect"
@@ -47,10 +48,28 @@ func (f field) genDoc(driver string, depth int) string {
 	tagDriver := offset.String() + f.tag.Get(driver)
 	tagDoc := offset.String() + f.tag.Get("doc")
 	offset.Reset()
-	if reflect.TypeOf(f.value).Kind() == reflect.Struct || f.tag.Get("hidden") == "true" {
-		f.value = ""
+	return fmt.Sprintf("%s\n%s: %s\n", tagDoc, tagDriver, f.formatValue())
+}
+
+// formatValue returns field value in the yaml format, slices and maps are formatted in the flow style.
+func (f field) formatValue() string {
+	typeOf := reflect.TypeOf(f.value)
+	if typeOf == nil || f.tag.Get("hidden") == "true" || (typeOf.Kind() == reflect.Struct && !convert.IsLeaf(typeOf)) {
+		return ""
 	}
-	return fmt.Sprintf("%s\n%s: %v\n", tagDoc, tagDriver, f.value)
+	switch tree := convert.ToTree(f.value, "yaml").(type) {
+	case nil:
+		return ""
+	case []any, map[string]any:
+		// JSON is a valid yaml
+		data, err := json.Marshal(tree)
+		if err != nil {
+			return ""
+		}
+		return string(data)
+	default:
+		return fmt.Sprint(tree)
+	}
 }
 
 func (d *yamlDriver) getUniqueFields(registers []*tinyconf.Registered) []field {
