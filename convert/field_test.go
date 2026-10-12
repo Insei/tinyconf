@@ -86,3 +86,32 @@ func TestGetSetFieldValue(t *testing.T) {
 	SetFieldValue(hosts, conf, []string{"a"})
 	assert.Equal(t, []string{"a"}, GetFieldValue(hosts, conf))
 }
+
+func TestIsValueField(t *testing.T) {
+	type config struct {
+		Name   string
+		At     time.Time
+		Ptr    *server
+		Nested struct {
+			At    *time.Time
+			Inner struct {
+				Value int
+			}
+		}
+	}
+	storage, err := fmap.Get[config]()
+	assert.NoError(t, err)
+	tests := map[string]bool{
+		"Name":               true,
+		"At":                 true,
+		"At.wall":            false,
+		"Ptr":                true,
+		"Nested":             false,
+		"Nested.At":          true,
+		"Nested.Inner":       false,
+		"Nested.Inner.Value": true,
+	}
+	for path, want := range tests {
+		assert.Equal(t, want, IsValueField(storage, storage.MustFind(path)), path)
+	}
+}

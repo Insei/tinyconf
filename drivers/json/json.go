@@ -47,7 +47,7 @@ func (d *jsonDriver) GenDoc(registers ...*tinyconf.Registered) string {
 		for _, path := range register.Storage.GetAllPaths() {
 			fld := register.Storage.MustFind(path)
 			tagPath := fld.GetTagPath(d.name, false)
-			if tagPath == "" || !convert.IsLeaf(fld.GetType()) {
+			if tagPath == "" || !convert.IsValueField(register.Storage, fld) {
 				continue
 			}
 			var value any = ""
