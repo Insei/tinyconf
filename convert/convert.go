@@ -8,11 +8,15 @@
 package convert
 
 import (
+	"bytes"
 	"encoding"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -261,11 +265,46 @@ func scalarFromString(s string, t reflect.Type) (reflect.Value, error) {
 	return reflect.ValueOf(val).Convert(t), nil
 }
 
-func fromJSON(s string, t reflect.Type, opts Options) (reflect.Value, error) {
+// DecodeJSON decodes JSON to the tree for FromTree.
+// Numbers are decoded to int if it is possible, otherwise to float64.
+func DecodeJSON(data []byte) (any, error) {
 	var tree any
-	decoder := json.NewDecoder(strings.NewReader(s))
+	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
 	if err := decoder.Decode(&tree); err != nil {
+		return nil, err
+	}
+	if _, err := decoder.Token(); err != io.EOF {
+		return nil, errors.New("unexpected data after JSON value")
+	}
+	return normalizeJSON(tree), nil
+}
+
+func normalizeJSON(v any) any {
+	switch val := v.(type) {
+	case json.Number:
+		if i, err := strconv.Atoi(val.String()); err == nil {
+			return i
+		}
+		if f, err := val.Float64(); err == nil {
+			return f
+		}
+		return val.String()
+	case []any:
+		for i := range val {
+			val[i] = normalizeJSON(val[i])
+		}
+	case map[string]any:
+		for key := range val {
+			val[key] = normalizeJSON(val[key])
+		}
+	}
+	return v
+}
+
+func fromJSON(s string, t reflect.Type, opts Options) (reflect.Value, error) {
+	tree, err := DecodeJSON([]byte(s))
+	if err != nil {
 		return reflect.Value{}, fmt.Errorf("failed to convert %s to %s, incorrect JSON: %w", s, t.String(), err)
 	}
 	return fromTree(tree, t, opts)

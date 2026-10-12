@@ -101,6 +101,8 @@ func TestFromString(t *testing.T) {
 		{name: "slice of any", s: "a,b", want: []any{"a", "b"}},
 		{name: "slice JSON", s: `["a,b", "c"]`, want: []string{"a,b", "c"}},
 		{name: "slice JSON incorrect", s: `["a,b", "c"`, want: []string(nil), wantErr: true},
+		{name: "slice of any JSON", s: `[1, 1.5, "a", [2], {"b": 3}]`, want: []any{1, 1.5, "a", []any{2}, map[string]any{"b": 3}}},
+		{name: "slice JSON with trailing data", s: `[1] 2`, want: []int(nil), wantErr: true},
 		{name: "slice of slices JSON", s: `[[1,2],[3]]`, want: [][]int{{1, 2}, {3}}},
 		{name: "slice of slices without JSON", s: `1,2`, want: [][]int(nil), wantErr: true},
 		{name: "pointer to slice", s: "a,b", want: ptr([]string{"a", "b"})},
@@ -253,4 +255,15 @@ func TestIsLeaf(t *testing.T) {
 			assert.Equal(t, tt.want, IsLeaf(reflect.TypeOf(tt.val)))
 		})
 	}
+}
+
+func TestDecodeJSON(t *testing.T) {
+	got, err := DecodeJSON([]byte(`{"int": 1, "float": 1.5, "big": 1e40, "list": [1, "a", null, true]}`))
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]any{"int": 1, "float": 1.5, "big": 1e40, "list": []any{1, "a", nil, true}}, got)
+
+	_, err = DecodeJSON([]byte(`{"int": 1`))
+	assert.Error(t, err)
+	_, err = DecodeJSON([]byte(`{} {}`))
+	assert.Error(t, err)
 }
