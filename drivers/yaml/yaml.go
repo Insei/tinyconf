@@ -24,17 +24,14 @@ func getMapValue(field fmap.Field, yamlMap any) (any, error) {
 		return nil, fmt.Errorf("%w: 'yaml' tag is not set", tinyconf.ErrIncorrectTagSettings)
 	}
 	yamlPathKeyArr := strings.Split(yamlPathKey, ".")
-	if len(yamlPathKeyArr) > 1 {
-		for i := 0; i < len(yamlPathKeyArr)-1; i++ {
-			mCast := yamlMap.(map[string]interface{})
-			if newM, ok := mCast[yamlPathKeyArr[i]]; ok {
-				if mapCasted, ok := newM.(map[string]interface{}); ok {
-					yamlMap = mapCasted
-				}
-			}
+	mMap, _ := yamlMap.(map[string]interface{})
+	for _, key := range yamlPathKeyArr[:len(yamlPathKeyArr)-1] {
+		nested, ok := mMap[key].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("%w: value not found in yaml config", tinyconf.ErrValueNotFound)
 		}
+		mMap = nested
 	}
-	mMap := yamlMap.(map[string]interface{})
 	val, ok := mMap[yamlPathKeyArr[len(yamlPathKeyArr)-1]]
 	if !ok || val == nil {
 		return nil, fmt.Errorf("%w: value not found in yaml config", tinyconf.ErrValueNotFound)
@@ -93,7 +90,7 @@ func (f field) genDoc(driver string, depth int) string {
 	tagDriver := offset.String() + f.tag.Get(driver)
 	tagDoc := offset.String() + f.tag.Get("doc")
 	offset.Reset()
-	if reflect.TypeOf(f.value).Kind() == reflect.Struct {
+	if reflect.TypeOf(f.value).Kind() == reflect.Struct || f.tag.Get("hidden") == "true" {
 		f.value = ""
 	}
 	return fmt.Sprintf("%s\n%s: %v\n", tagDoc, tagDriver, f.value)
