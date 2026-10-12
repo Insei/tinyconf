@@ -3,6 +3,7 @@ module github.com/insei/tinyconf
 go 1.19
 
 require (
+	github.com/BurntSushi/toml v1.5.0
 	github.com/insei/cast v1.1.1
 	github.com/insei/fmap/v3 v3.1.2
 	github.com/stretchr/testify v1.9.0
