@@ -14,6 +14,11 @@ type fieldConfig struct {
 	Hosts   []string       `separator:";"`
 	Labels  map[string]int `separator:";" kvseparator:"="`
 	Servers []server
+	Nested  struct {
+		Name  string
+		At    time.Time
+		inner struct{ value int }
+	}
 }
 
 func TestStringToField(t *testing.T) {
@@ -61,6 +66,21 @@ func TestGetSetFieldValue(t *testing.T) {
 	assert.Equal(t, ptr(namedInt(2)), GetFieldValue(level, conf))
 	SetFieldValue(level, conf, nil)
 	assert.Nil(t, conf.Level)
+
+	at := storage.MustFind("Nested.At")
+	date := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
+	SetFieldValue(at, conf, date)
+	assert.Equal(t, date, conf.Nested.At)
+	assert.Equal(t, date, GetFieldValue(at, conf))
+	assert.Equal(t, "", conf.Nested.Name)
+
+	unexported := storage.MustFind("Nested.inner.value")
+	SetFieldValue(unexported, conf, 42)
+	assert.Equal(t, 42, conf.Nested.inner.value)
+	assert.Equal(t, 42, GetFieldValue(unexported, conf))
+
+	// not a pointer
+	assert.Equal(t, date, GetFieldValue(at, *conf))
 
 	hosts := storage.MustFind("Hosts")
 	SetFieldValue(hosts, conf, []string{"a"})

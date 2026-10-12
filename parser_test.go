@@ -4,6 +4,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/insei/fmap/v3"
 	"github.com/stretchr/testify/assert"
@@ -533,8 +534,9 @@ func TestManager_GenDoc(t *testing.T) {
 }
 
 type pathMockDriver struct {
-	values map[string]any
-	errs   map[string]error
+	values    map[string]any
+	errs      map[string]error
+	requested []string
 }
 
 func (md *pathMockDriver) GenDoc(registers ...*Registered) string {
@@ -547,6 +549,7 @@ func (md *pathMockDriver) GetName() string {
 
 func (md *pathMockDriver) GetValue(field fmap.Field) (*Value, error) {
 	path := field.GetStructPath()
+	md.requested = append(md.requested, path)
 	if err, ok := md.errs[path]; ok {
 		return nil, err
 	}
@@ -714,3 +717,85 @@ func TestManager_ParseSubConfig_ZeroValue(t *testing.T) {
 	assert.Equal(t, "", conf.Host)
 	assert.Equal(t, 0, conf.Port)
 }
+
+type parseLevel int
+
+func (l *parseLevel) UnmarshalText(text []byte) error {
+	*l = parseLevel(len(text))
+	return nil
+}
+
+type parseTextStruct struct {
+	Value string
+	inner struct{ value string }
+}
+
+func (s *parseTextStruct) UnmarshalText(text []byte) error {
+	s.Value = string(text)
+	return nil
+}
+
+func TestManager_Parse_Types(t *testing.T) {
+	type Nested struct {
+		At      time.Time
+		Timeout time.Duration
+	}
+	type Config struct {
+		At       time.Time
+		AtPtr    *time.Time
+		Timeout  time.Duration
+		Level    parseLevel
+		Text     parseTextStruct
+		Named    testNamedString
+		NamedPtr *testNamedInt
+		Hosts    []string
+		Labels   map[string]int
+		Nested   Nested
+	}
+	at := time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC)
+	namedInt := testNamedInt(42)
+	expected := Config{
+		At:       at,
+		AtPtr:    &at,
+		Timeout:  5 * time.Second,
+		Level:    parseLevel(4),
+		Text:     parseTextStruct{Value: "text"},
+		Named:    "named",
+		NamedPtr: &namedInt,
+		Hosts:    []string{"a", "b"},
+		Labels:   map[string]int{"a": 1},
+		Nested:   Nested{At: at, Timeout: time.Minute},
+	}
+	driver := &pathMockDriver{values: map[string]any{
+		"At":             expected.At,
+		"AtPtr":          expected.AtPtr,
+		"Timeout":        expected.Timeout,
+		"Level":          expected.Level,
+		"Text":           expected.Text,
+		"Named":          expected.Named,
+		"NamedPtr":       expected.NamedPtr,
+		"Hosts":          expected.Hosts,
+		"Labels":         expected.Labels,
+		"Nested.At":      expected.Nested.At,
+		"Nested.Timeout": expected.Nested.Timeout,
+	}}
+	c := newPathMockManager(driver)
+	conf := &Config{}
+	assert.NoError(t, c.Register(conf))
+	assert.NoError(t, c.Parse(conf))
+	assert.Equal(t, expected, *conf)
+	// fields of the types that are parsed from a single value are not requested from drivers
+	assert.NotContains(t, driver.requested, "At.wall")
+	assert.NotContains(t, driver.requested, "Text.Value")
+	assert.NotContains(t, driver.requested, "Text.inner.value")
+	assert.NotContains(t, driver.requested, "Nested")
+
+	t.Run("sub config", func(t *testing.T) {
+		sub := &Nested{}
+		assert.NoError(t, c.Parse(sub))
+		assert.Equal(t, expected.Nested, *sub)
+	})
+}
+
+type testNamedString string
+type testNamedInt int

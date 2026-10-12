@@ -3,9 +3,10 @@ package tag
 import (
 	"fmt"
 
-	"github.com/insei/cast"
 	"github.com/insei/fmap/v3"
+
 	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/convert"
 )
 
 type defaultTagDriver struct {
@@ -21,7 +22,7 @@ func (d defaultTagDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 	if valueStr == "" {
 		return nil, fmt.Errorf("%w: %s tag is set, but has empty value for %s config field", tinyconf.ErrIncorrectTagSettings, d.tag, field.GetStructPath())
 	}
-	value, err := cast.ToReflect(valueStr, field.GetType())
+	value, err := convert.StringToField(valueStr, field)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse value from tag: %s", err)
 	}

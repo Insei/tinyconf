@@ -10,9 +10,9 @@ import (
 
 	"github.com/insei/tinyconf"
 	"github.com/insei/tinyconf/cmp118"
+	"github.com/insei/tinyconf/convert"
 	"github.com/insei/tinyconf/slices118"
 
-	"github.com/insei/cast"
 	"github.com/insei/fmap/v3"
 )
 
@@ -29,7 +29,7 @@ func (d envDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 	if !ok {
 		return nil, fmt.Errorf("%w: %s is not defined in env for %s config field", tinyconf.ErrValueNotFound, envKey, field.GetStructPath())
 	}
-	value, err := cast.ToReflect(envVal, field.GetType())
+	value, err := convert.StringToField(envVal, field)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse env value from key %s for %s config field: %s", envKey, field.GetStructPath(), err)
 	}
@@ -72,7 +72,7 @@ func (d envDriver) getUniqueFields(registers []*tinyconf.Registered) []field {
 
 			member := field{
 				path:  strings.Split(tagDriver, "_")[0],
-				value: fld.Get(register.Config),
+				value: convert.GetFieldValue(fld, register.Config),
 				depth: strings.Count(tagDriver, "_"),
 				tag:   tag,
 			}
