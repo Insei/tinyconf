@@ -2,6 +2,8 @@ package convert
 
 import (
 	"reflect"
+	"strings"
+	"unsafe"
 
 	"github.com/insei/fmap/v3"
 )
@@ -33,14 +35,34 @@ func TreeToField(v any, field fmap.Field, tag string) (any, error) {
 	return FromTree(v, field.GetType(), fieldOptions(field, tag))
 }
 
-// GetFieldValue returns field value from the obj with exact field type.
-func GetFieldValue(field fmap.Field, obj any) any {
-	return reflect.ValueOf(field.GetPtr(obj)).Elem().Interface()
+// fieldValueOf returns addressable and settable value of the field in the obj.
+// Value is found by the struct path, because offsets of the nested struct fields in fmap are relative to the parent.
+func fieldValueOf(field fmap.Field, obj any) reflect.Value {
+	val := reflect.ValueOf(obj)
+	for val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+	if !val.CanAddr() {
+		// obj is not a pointer, value can be only read from the copy
+		addressable := reflect.New(val.Type()).Elem()
+		addressable.Set(val)
+		val = addressable
+	}
+	for _, name := range strings.Split(field.GetStructPath(), ".") {
+		val = val.FieldByName(name)
+	}
+	// allows to work with unexported fields
+	return reflect.NewAt(val.Type(), unsafe.Pointer(val.UnsafeAddr())).Elem()
 }
 
-// SetFieldValue sets field value in the obj, val should have exact field type.
+// GetFieldValue returns field value from the obj with exact field type.
+func GetFieldValue(field fmap.Field, obj any) any {
+	return fieldValueOf(field, obj).Interface()
+}
+
+// SetFieldValue sets field value in the obj, val should have exact field type, obj should be a pointer to struct.
 func SetFieldValue(field fmap.Field, obj any, val any) {
-	dest := reflect.ValueOf(field.GetPtr(obj)).Elem()
+	dest := fieldValueOf(field, obj)
 	if val == nil {
 		dest.Set(reflect.Zero(dest.Type()))
 		return
