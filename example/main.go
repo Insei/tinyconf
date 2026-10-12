@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/insei/tinyconf"
 	"github.com/insei/tinyconf/drivers/env"
@@ -56,25 +55,25 @@ func main() {
 
 	yamlDriver, err := yaml.New("config.yaml")
 	if err != nil {
-		return
+		panic(err)
 	}
 	envDriver, err := env.New()
 	if err != nil {
-		return
+		panic(err)
 	}
 	tagDriver, err := tag.New("initial")
 	if err != nil {
-		return
+		panic(err)
 	}
 
 	config, err := tinyconf.New(
-		tinyconf.WithLogger(logger.NewFmtLogger(logger.TRACE)),
+		tinyconf.WithLogger(logger.NewFmtLogger(logger.ERROR)),
 		tinyconf.WithDriver(tagDriver),
 		tinyconf.WithDriver(yamlDriver),
 		tinyconf.WithDriver(envDriver),
 	)
 	if err != nil {
-		return
+		panic(err)
 	}
 
 	c1 := &sharedAuthSignConfig{}
@@ -97,7 +96,8 @@ func main() {
 		panic(err)
 	}
 
-	if *driverName == "" {
+	switch *driverName {
+	case "":
 		if err = config.Parse(c1); err != nil {
 			panic(err)
 		}
@@ -110,14 +110,11 @@ func main() {
 		if err = config.Parse(c4); err != nil {
 			panic(err)
 		}
+		fmt.Printf("%+v\n%+v\n%+v\n%+v\n", *c1, *c2, *c3, *c4)
+	case "env", "yaml":
+		fmt.Println(config.GenDoc(*driverName))
+	default:
+		flag.Usage()
+		os.Exit(1)
 	}
-
-	if strings.Contains("env yaml", *driverName) {
-		doc := config.GenDoc(*driverName)
-		fmt.Println(doc)
-		os.Exit(0)
-	}
-
-	flag.Usage()
-	os.Exit(1)
 }

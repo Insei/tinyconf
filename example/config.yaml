@@ -1,2 +1,10 @@
-test1: "123123123123"
-test2: "333"
+application:
+  name: example
+http:
+  host: localhost
+  port: 8080
+  auth:
+    issuer: example
+    audience: users
+    sign: HS256
+    key: secret
