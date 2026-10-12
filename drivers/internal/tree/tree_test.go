@@ -1,0 +1,337 @@
+package tree
+
+import (
+	"errors"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"testing/fstest"
+
+	"github.com/insei/fmap/v3"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/insei/tinyconf"
+)
+
+func TestLookup(t *testing.T) {
+	tests := []struct {
+		name          string
+		yamlMap       map[string]any
+		getField      func() fmap.Field
+		expectedValue any
+		wantErr       bool
+	}{
+		{
+			name:    "NonExistingYamlTag",
+			yamlMap: nil,
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test int
+				}]()
+				return storage.MustFind("Test")
+			},
+			expectedValue: nil,
+			wantErr:       true,
+		},
+		{
+			name:    "NonExistingValueInNonExistingYaml",
+			yamlMap: nil,
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test int `yaml:"nonexisting"`
+				}]()
+				return storage.MustFind("Test")
+			},
+			expectedValue: nil,
+			wantErr:       true,
+		},
+		{
+			name:    "NonExistingFieldInExistingYaml",
+			yamlMap: map[string]any{"existent": "value"},
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test int `yaml:"nonexistent"`
+				}]()
+				return storage.MustFind("Test")
+			},
+			expectedValue: nil,
+			wantErr:       true,
+		},
+		{
+			name:    "ExistingNonEmptyField",
+			yamlMap: map[string]any{"existent": "value"},
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test int `yaml:"existent"`
+				}]()
+				return storage.MustFind("Test")
+			},
+			expectedValue: "value",
+			wantErr:       false,
+		},
+		{
+			name:    "NestedExistingNonEmptyField",
+			yamlMap: map[string]any{"existent": map[string]any{"nested": "value"}},
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test struct {
+						Nested string `yaml:"nested"`
+					} `yaml:"existent"`
+				}]()
+				return storage.MustFind("Test.Nested")
+			},
+			expectedValue: "value",
+			wantErr:       false,
+		},
+		{
+			name:    "NestedNonExistingField",
+			yamlMap: map[string]any{"existent": map[string]any{"nested": "value"}},
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test struct {
+						Nonested string `yaml:"nonested"`
+					} `yaml:"existent"`
+				}]()
+				return storage.MustFind("Test.Nonested")
+			},
+			expectedValue: nil,
+			wantErr:       true,
+		},
+		{
+			name:    "NestedNonExistingFieldWithEmptyMap",
+			yamlMap: map[string]any{"existent": "value"},
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test struct {
+						Nonested string `yaml:"nonesting"`
+					} `yaml:"existent"`
+				}]()
+				return storage.MustFind("Test.Nonested")
+			},
+			expectedValue: nil,
+			wantErr:       true,
+		},
+		{
+			name:    "NestedMissingParentDoesNotFallbackToRoot",
+			yamlMap: map[string]any{"nested": "root value"},
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test struct {
+						Nested string `yaml:"nested"`
+					} `yaml:"nonexistent"`
+				}]()
+				return storage.MustFind("Test.Nested")
+			},
+			expectedValue: nil,
+			wantErr:       true,
+		},
+		{
+			name:    "DeepNestedMissingParentDoesNotFallbackToGrandparent",
+			yamlMap: map[string]any{"existent": map[string]any{"nested": "parent value"}},
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test struct {
+						Middle struct {
+							Nested string `yaml:"nested"`
+						} `yaml:"nonexistent"`
+					} `yaml:"existent"`
+				}]()
+				return storage.MustFind("Test.Middle.Nested")
+			},
+			expectedValue: nil,
+			wantErr:       true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Lookup(tt.getField(), "yaml", tt.yamlMap)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedValue, got)
+		})
+	}
+}
+
+func TestMerge(t *testing.T) {
+	dst := map[string]any{
+		"http":  map[string]any{"host": "localhost", "port": 80, "tls": map[string]any{"enabled": false}},
+		"hosts": []any{"a", "b"},
+		"name":  "base",
+		"db":    "dsn",
+	}
+	src := map[string]any{
+		"http":  map[string]any{"port": 8080, "tls": map[string]any{"enabled": true}},
+		"hosts": []any{"c"},
+		"db":    map[string]any{"host": "db"},
+		"new":   1,
+	}
+	Merge(dst, src)
+	assert.Equal(t, map[string]any{
+		"http":  map[string]any{"host": "localhost", "port": 8080, "tls": map[string]any{"enabled": true}},
+		"hosts": []any{"c"},
+		"name":  "base",
+		"db":    map[string]any{"host": "db"},
+		"new":   1,
+	}, dst)
+}
+
+func TestExpandEnv(t *testing.T) {
+	t.Setenv("TINYCONF_TREE_SET", "value")
+	t.Setenv("TINYCONF_TREE_EMPTY", "")
+	tests := map[string]string{
+		"${TINYCONF_TREE_SET}":                     "value",
+		"a ${TINYCONF_TREE_SET} b":                 "a value b",
+		"${TINYCONF_TREE_SET:-default}":            "value",
+		"${TINYCONF_TREE_UNSET}":                   "",
+		"${TINYCONF_TREE_UNSET:-default}":          "default",
+		"${TINYCONF_TREE_EMPTY:-default}":          "default",
+		"${TINYCONF_TREE_UNSET:-}":                 "",
+		"$${TINYCONF_TREE_SET}":                    "${TINYCONF_TREE_SET}",
+		"$TINYCONF_TREE_SET":                       "$TINYCONF_TREE_SET",
+		"pa$$word and $5":                          "pa$word and $5",
+		"${TINYCONF_TREE_SET}${TINYCONF_TREE_SET}": "valuevalue",
+	}
+	for in, want := range tests {
+		assert.Equal(t, want, ExpandEnv(in), in)
+	}
+}
+
+func testDecode(data []byte) (map[string]any, error) {
+	result := make(map[string]any)
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			return nil, errors.New("incorrect line")
+		}
+		result[parts[0]] = parts[1]
+	}
+	return result, nil
+}
+
+type testConfig struct {
+	Name string `test:"name"`
+	Port int    `test:"port"`
+	Skip string
+}
+
+type countSource struct {
+	opened int
+	data   string
+}
+
+func (s *countSource) source() Source {
+	return Source{Name: "count", Open: func() (io.ReadCloser, error) {
+		s.opened++
+		return io.NopCloser(strings.NewReader(s.data)), nil
+	}}
+}
+
+func TestDriver(t *testing.T) {
+	storage, err := fmap.Get[testConfig]()
+	assert.NoError(t, err)
+	name, port, skip := storage.MustFind("Name"), storage.MustFind("Port"), storage.MustFind("Skip")
+
+	t.Run("values", func(t *testing.T) {
+		driver := New("test", testDecode, []Source{
+			DataSource("first", []byte("name=first\nport=80")),
+			DataSource("second", []byte("name=second")),
+		}, false)
+		assert.Equal(t, "test", driver.GetName())
+		assert.NoError(t, driver.Load())
+
+		val, err := driver.GetValue(name)
+		assert.NoError(t, err)
+		assert.Equal(t, &tinyconf.Value{Source: "test", Value: "second"}, val)
+
+		val, err = driver.GetValue(port)
+		assert.NoError(t, err)
+		assert.Equal(t, 80, val.Value)
+
+		_, err = driver.GetValue(skip)
+		assert.ErrorIs(t, err, tinyconf.ErrIncorrectTagSettings)
+	})
+
+	t.Run("value not found", func(t *testing.T) {
+		driver := New("test", testDecode, []Source{DataSource("first", []byte("name=first"))}, false)
+		_, err := driver.GetValue(port)
+		assert.ErrorIs(t, err, tinyconf.ErrValueNotFound)
+	})
+
+	t.Run("incorrect value", func(t *testing.T) {
+		driver := New("test", testDecode, []Source{DataSource("first", []byte("port=http"))}, false)
+		_, err := driver.GetValue(port)
+		assert.Error(t, err)
+		assert.False(t, errors.Is(err, tinyconf.ErrValueNotFound))
+	})
+
+	t.Run("source is read once per load", func(t *testing.T) {
+		source := &countSource{data: "name=first\nport=80"}
+		driver := New("test", testDecode, []Source{source.source()}, false)
+		// without Load source is read on the first GetValue
+		_, err := driver.GetValue(name)
+		assert.NoError(t, err)
+		_, err = driver.GetValue(port)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, source.opened)
+
+		source.data = "name=second"
+		assert.NoError(t, driver.Load())
+		val, err := driver.GetValue(name)
+		assert.NoError(t, err)
+		assert.Equal(t, "second", val.Value)
+		assert.Equal(t, 2, source.opened)
+	})
+
+	t.Run("env expansion", func(t *testing.T) {
+		t.Setenv("TINYCONF_TREE_NAME", "from env")
+		driver := New("test", testDecode, []Source{DataSource("first", []byte("name=${TINYCONF_TREE_NAME}"))}, true)
+		val, err := driver.GetValue(name)
+		assert.NoError(t, err)
+		assert.Equal(t, "from env", val.Value)
+	})
+
+	t.Run("sources", func(t *testing.T) {
+		dir := t.TempDir()
+		filePath := filepath.Join(dir, "config")
+		assert.NoError(t, os.WriteFile(filePath, []byte("name=file"), 0o600))
+		fsys := fstest.MapFS{"config": {Data: []byte("port=8080")}}
+		absent := FileSource(filepath.Join(dir, "absent"))
+
+		driver := New("test", testDecode, []Source{FileSource(filePath), FSSource(fsys, "config")}, false)
+		assert.NoError(t, driver.Load())
+		val, err := driver.GetValue(name)
+		assert.NoError(t, err)
+		assert.Equal(t, "file", val.Value)
+		val, err = driver.GetValue(port)
+		assert.NoError(t, err)
+		assert.Equal(t, 8080, val.Value)
+
+		driver = New("test", testDecode, []Source{absent}, false)
+		assert.ErrorIs(t, driver.Load(), fs.ErrNotExist)
+		_, err = driver.GetValue(name)
+		assert.ErrorIs(t, err, fs.ErrNotExist)
+
+		absent.Optional = true
+		driver = New("test", testDecode, []Source{absent, FSSource(fsys, "absent")}, false)
+		assert.ErrorIs(t, driver.Load(), fs.ErrNotExist)
+
+		absentFS := FSSource(fsys, "absent")
+		absentFS.Optional = true
+		driver = New("test", testDecode, []Source{absent, absentFS}, false)
+		assert.NoError(t, driver.Load())
+		_, err = driver.GetValue(name)
+		assert.ErrorIs(t, err, tinyconf.ErrValueNotFound)
+
+		driver = New("test", testDecode, []Source{DataSource("bad", []byte("incorrect"))}, false)
+		assert.Error(t, driver.Load())
+	})
+}
