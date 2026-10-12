@@ -81,6 +81,7 @@ func copyToSubConfig(conf, subConf any, subpath string, parsedPaths []string) er
 	if err != nil {
 		return err
 	}
+	prefix := subpath + "."
 	for _, path := range confFields.GetAllPaths() {
 		// exclude paths that is not parsed by tinyconf drivers
 		skip := true
@@ -90,12 +91,11 @@ func copyToSubConfig(conf, subConf any, subpath string, parsedPaths []string) er
 				break
 			}
 		}
-		if skip || path == subpath || !strings.HasPrefix(path, subpath) {
+		if skip || !strings.HasPrefix(path, prefix) {
 			continue
 		}
 		field := confFields.MustFind(path)
-		subFieldPath := strings.Replace(path, subpath+".", "", -1)
-		subField, ok := subConfFields.Find(subFieldPath)
+		subField, ok := subConfFields.Find(strings.TrimPrefix(path, prefix))
 		if !ok {
 			return fmt.Errorf("subconf field %s not found", path)
 		}
@@ -104,10 +104,16 @@ func copyToSubConfig(conf, subConf any, subpath string, parsedPaths []string) er
 	return nil
 }
 
-func (c *Manager) Parse(conf any) (err error) {
+func (c *Manager) Parse(conf any) error {
+	if err := checkConfig(conf); err != nil {
+		return fmt.Errorf("config can't be parsed: %w", err)
+	}
 	confParse := conf
 	confTypeOf := reflect.TypeOf(conf)
 	register, ok := c.registered[confTypeOf]
+	// only for sub configs
+	isSubConf := false
+	subPath := ""
 	parsedPaths := make([]string, 0)
 	if !ok {
 	RegisteredLoop:
@@ -119,9 +125,8 @@ func (c *Manager) Parse(conf any) (err error) {
 					reflect.PointerTo(fieldType) == confTypeOf {
 					register = registeredConf
 					confParse = reflect.New(registeredTypeOf.Elem()).Interface()
-					defer func() {
-						err = copyToSubConfig(confParse, conf, field.GetStructPath(), parsedPaths)
-					}()
+					isSubConf = true
+					subPath = field.GetStructPath()
 					break RegisteredLoop
 				}
 			}
@@ -130,8 +135,12 @@ func (c *Manager) Parse(conf any) (err error) {
 	if register == nil {
 		return ErrNotRegisteredConfig
 	}
+	var errs parseErrors
 	for _, d := range c.drivers {
 		for _, path := range register.Storage.GetAllPaths() {
+			if isSubConf && !strings.HasPrefix(path, subPath+".") {
+				continue
+			}
 			field := register.Storage.MustFind(path)
 			if field.GetType().Kind() == reflect.Struct {
 				continue
@@ -146,20 +155,25 @@ func (c *Manager) Parse(conf any) (err error) {
 				log.Warn("ignore", LogField("details", err.Error()))
 			case errors.Is(err, ErrValueNotFound):
 				log.Debug("skip", LogField("details", err.Error()))
-			case err != nil &&
-				!errors.Is(err, ErrValueNotFound) &&
-				!errors.Is(err, ErrIncorrectTagSettings):
-				c.log.Error("failed", LogField("details", err.Error()))
-			case err == nil:
-				currentValue := field.Get(confParse)
-				if currentValue != driverValue.Value {
+			case err != nil:
+				log.Error("failed", LogField("details", err.Error()))
+				errs = append(errs, fmt.Errorf("%s driver: field %s: %w", d.GetName(), path, err))
+			default:
+				if !reflect.DeepEqual(field.Get(confParse), driverValue.Value) {
 					log.Debug("override", LogField("value", getLoggerValue(field, driverValue.Value)))
 					field.Set(confParse, driverValue.Value)
-					// only for sub configs
-					parsedPaths = append(parsedPaths, path)
 				}
+				parsedPaths = append(parsedPaths, path)
 			}
 		}
+	}
+	if isSubConf {
+		if err := copyToSubConfig(confParse, conf, subPath, parsedPaths); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return errs
 	}
 	return nil
 }
