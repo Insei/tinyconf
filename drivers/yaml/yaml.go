@@ -130,70 +130,55 @@ func (d *yamlDriver) GenDoc(registers ...*tinyconf.Registered) string {
 	return doc
 }
 
-type options struct {
-	sources   []tree.Source
-	optional  bool
-	expandEnv bool
-}
-
 // Option is a yaml driver option.
-type Option func(*options)
+type Option func(*tree.Options)
 
 // WithFiles adds additional config files. Files are merged in the order of addition,
 // values from the next files overrides values from the previous, nested maps are merged by keys.
 func WithFiles(files ...string) Option {
-	return func(o *options) {
-		for _, file := range files {
-			o.sources = append(o.sources, tree.FileSource(file))
-		}
+	return func(o *tree.Options) {
+		o.AddFiles(files...)
 	}
 }
 
 // WithFS adds config files from the fsys, embed.FS for example.
 func WithFS(fsys fs.FS, files ...string) Option {
-	return func(o *options) {
-		for _, file := range files {
-			o.sources = append(o.sources, tree.FSSource(fsys, file))
-		}
+	return func(o *tree.Options) {
+		o.AddFS(fsys, files...)
 	}
 }
 
 // WithData adds in-memory config content, name is used in error messages.
 func WithData(name string, data []byte) Option {
-	return func(o *options) {
-		o.sources = append(o.sources, tree.DataSource(name, data))
+	return func(o *tree.Options) {
+		o.AddData(name, data)
 	}
 }
 
 // WithOptional allows config files to be absent, by default absent file is an error.
 func WithOptional() Option {
-	return func(o *options) {
-		o.optional = true
+	return func(o *tree.Options) {
+		o.Optional = true
 	}
 }
 
 // WithEnvExpansion replaces ${VAR} and ${VAR:-default} in the config content with the values of the environment variables.
 // Default is used when variable is not set or empty, $$ is replaced with $.
 func WithEnvExpansion() Option {
-	return func(o *options) {
-		o.expandEnv = true
+	return func(o *tree.Options) {
+		o.ExpandEnv = true
 	}
 }
 
 // New creates new yaml driver. File can be empty if config sources are added by options.
 func New(file string, opts ...Option) (tinyconf.Driver, error) {
-	o := &options{}
-	if file != "" {
-		o.sources = append(o.sources, tree.FileSource(file))
-	}
+	o := &tree.Options{}
+	o.AddFiles(file)
 	for _, opt := range opts {
 		opt(o)
 	}
-	for i := range o.sources {
-		o.sources[i].Optional = o.optional
-	}
 	return &yamlDriver{
 		name:   "yaml",
-		Driver: tree.New("yaml", decode, o.sources, o.expandEnv),
+		Driver: o.NewDriver("yaml", decode),
 	}, nil
 }

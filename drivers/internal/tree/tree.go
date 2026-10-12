@@ -50,6 +50,44 @@ func DataSource(name string, data []byte) Source {
 	}}
 }
 
+// Options is a common options of the tree based drivers.
+type Options struct {
+	Sources   []Source
+	Optional  bool
+	ExpandEnv bool
+}
+
+// AddFiles adds files from the OS file system.
+func (o *Options) AddFiles(files ...string) {
+	for _, file := range files {
+		if file != "" {
+			o.Sources = append(o.Sources, FileSource(file))
+		}
+	}
+}
+
+// AddFS adds files from the fsys.
+func (o *Options) AddFS(fsys fs.FS, files ...string) {
+	for _, file := range files {
+		o.Sources = append(o.Sources, FSSource(fsys, file))
+	}
+}
+
+// AddData adds in-memory content.
+func (o *Options) AddData(name string, data []byte) {
+	o.Sources = append(o.Sources, DataSource(name, data))
+}
+
+// NewDriver creates new tree driver from the options.
+func (o *Options) NewDriver(name string, decode Decoder) *Driver {
+	sources := make([]Source, len(o.Sources))
+	copy(sources, o.Sources)
+	for i := range sources {
+		sources[i].Optional = o.Optional
+	}
+	return New(name, decode, sources, o.ExpandEnv)
+}
+
 // Driver is a common part of the tree based drivers, GenDoc should be implemented by the format driver.
 type Driver struct {
 	name      string
