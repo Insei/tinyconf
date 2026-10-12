@@ -3,6 +3,7 @@
 package tree
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/insei/fmap/v3"
 
@@ -25,15 +27,28 @@ type Decoder func(data []byte) (map[string]any, error)
 type Source struct {
 	Name string
 	Open func() (io.ReadCloser, error)
+	// Stat returns the state of the source, the source is changed if the state is changed.
+	// Sources without Stat are never changed.
+	Stat func() string
 	// Optional source can be absent.
 	Optional bool
 }
 
 // FileSource returns source that reads the file from the OS file system.
 func FileSource(filePath string) Source {
-	return Source{Name: filePath, Open: func() (io.ReadCloser, error) {
-		return os.Open(filePath)
-	}}
+	return Source{
+		Name: filePath,
+		Open: func() (io.ReadCloser, error) {
+			return os.Open(filePath)
+		},
+		Stat: func() string {
+			info, err := os.Stat(filePath)
+			if err != nil {
+				return "absent"
+			}
+			return fmt.Sprintf("%d %d", info.ModTime().UnixNano(), info.Size())
+		},
+	}
 }
 
 // FSSource returns source that reads the file from the fsys.
@@ -52,9 +67,10 @@ func DataSource(name string, data []byte) Source {
 
 // Options is a common options of the tree based drivers.
 type Options struct {
-	Sources   []Source
-	Optional  bool
-	ExpandEnv bool
+	Sources       []Source
+	Optional      bool
+	ExpandEnv     bool
+	WatchInterval time.Duration
 }
 
 // AddFiles adds files from the OS file system.
@@ -85,24 +101,34 @@ func (o *Options) NewDriver(name string, decode Decoder) *Driver {
 	for i := range sources {
 		sources[i].Optional = o.Optional
 	}
-	return New(name, decode, sources, o.ExpandEnv)
+	d := New(name, decode, sources, o.ExpandEnv)
+	if o.WatchInterval > 0 {
+		d.watchInterval = o.WatchInterval
+	}
+	return d
 }
+
+// DefaultWatchInterval is a default interval of checking the sources for changes.
+const DefaultWatchInterval = 5 * time.Second
 
 // Driver is a common part of the tree based drivers, GenDoc should be implemented by the format driver.
 type Driver struct {
-	name      string
-	decode    Decoder
-	sources   []Source
-	expandEnv bool
+	name          string
+	decode        Decoder
+	sources       []Source
+	expandEnv     bool
+	watchInterval time.Duration
 
 	mu     sync.RWMutex
 	loaded bool
 	tree   map[string]any
+	// state of the sources at the moment of the last Load
+	state string
 }
 
 // New creates new tree driver, name is used as driver name and as name of the struct tag with keys.
 func New(name string, decode Decoder, sources []Source, expandEnv bool) *Driver {
-	return &Driver{name: name, decode: decode, sources: sources, expandEnv: expandEnv}
+	return &Driver{name: name, decode: decode, sources: sources, expandEnv: expandEnv, watchInterval: DefaultWatchInterval}
 }
 
 func (d *Driver) GetName() string {
@@ -111,6 +137,8 @@ func (d *Driver) GetName() string {
 
 // Load reads and merges all sources, values from the next sources overrides values from the previous.
 func (d *Driver) Load() error {
+	// state is taken before reading, so the changes made during the reading will be detected by Watch
+	state := d.stat()
 	tree := make(map[string]any)
 	for _, source := range d.sources {
 		sourceTree, err := d.loadSource(source)
@@ -122,6 +150,7 @@ func (d *Driver) Load() error {
 	d.mu.Lock()
 	d.tree = tree
 	d.loaded = true
+	d.state = state
 	d.mu.Unlock()
 	return nil
 }
@@ -143,6 +172,42 @@ func (d *Driver) loadSource(source Source) (map[string]any, error) {
 		data = []byte(ExpandEnv(string(data)))
 	}
 	return d.decode(data)
+}
+
+func (d *Driver) stat() string {
+	var state strings.Builder
+	for _, source := range d.sources {
+		if source.Stat != nil {
+			state.WriteString(source.Stat())
+		}
+		state.WriteByte(';')
+	}
+	return state.String()
+}
+
+// Watch checks the sources for changes with the watch interval and calls onChange if any source is changed.
+// It blocks until ctx is done. Only files from the OS file system are checked.
+func (d *Driver) Watch(ctx context.Context, onChange func()) error {
+	ticker := time.NewTicker(d.watchInterval)
+	defer ticker.Stop()
+	// changes made after the last Load should be detected too
+	d.mu.RLock()
+	state, loaded := d.state, d.loaded
+	d.mu.RUnlock()
+	if !loaded {
+		state = d.stat()
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			if newState := d.stat(); newState != state {
+				state = newState
+				onChange()
+			}
+		}
+	}
 }
 
 func (d *Driver) getTree() (map[string]any, error) {
