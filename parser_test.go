@@ -799,3 +799,46 @@ func TestManager_Parse_Types(t *testing.T) {
 
 type testNamedString string
 type testNamedInt int
+
+type loaderMockDriver struct {
+	pathMockDriver
+	loaded  int
+	loadErr error
+}
+
+func (md *loaderMockDriver) Load() error {
+	md.loaded++
+	return md.loadErr
+}
+
+func TestManager_Parse_Loader(t *testing.T) {
+	type Config struct {
+		Host string
+		Port int
+	}
+	loadErr := errors.New("load error")
+	failed := &loaderMockDriver{
+		pathMockDriver: pathMockDriver{values: map[string]any{"Host": "failed"}},
+		loadErr:        loadErr,
+	}
+	loaded := &loaderMockDriver{pathMockDriver: pathMockDriver{values: map[string]any{"Port": 80}}}
+	c := &Manager{
+		drivers:    []Driver{&pathMockDriver{values: map[string]any{"Host": "localhost"}}, loaded, failed},
+		registered: make(map[reflect.Type]*Registered),
+		log:        &testLogger{},
+	}
+	conf := &Config{}
+	assert.NoError(t, c.Register(conf))
+
+	err := c.Parse(conf)
+	assert.ErrorIs(t, err, loadErr)
+	assert.True(t, c.log.(*testLogger).ErrorLogged)
+	// values of the failed driver are not used
+	assert.Equal(t, Config{Host: "localhost", Port: 80}, *conf)
+	assert.Empty(t, failed.requested)
+
+	assert.Error(t, c.Parse(conf))
+	// Load is called once per Parse
+	assert.Equal(t, 2, loaded.loaded)
+	assert.Equal(t, 2, failed.loaded)
+}
