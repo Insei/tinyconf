@@ -3,8 +3,10 @@ package yaml
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/insei/fmap/v3"
 	"github.com/insei/tinyconf"
@@ -375,4 +377,64 @@ func TestYamlDriver_Reload(t *testing.T) {
 	assert.NoError(t, os.WriteFile(filePath, []byte("name: second\n"), 0o600))
 	assert.NoError(t, manager.Parse(conf))
 	assert.Equal(t, "second", conf.Name)
+}
+
+func TestYamlDriver_GenDoc_Types(t *testing.T) {
+	type server struct {
+		Host string `yaml:"host"`
+		Port int    `yaml:"port"`
+	}
+	conf := &struct {
+		Hosts   []string       `yaml:"hosts" doc:"hosts"`
+		Labels  map[string]int `yaml:"labels"`
+		Servers []server       `yaml:"servers"`
+		Timeout time.Duration  `yaml:"timeout"`
+		At      time.Time      `yaml:"at"`
+		Ptr     *int           `yaml:"ptr"`
+		Any     any            `yaml:"any"`
+	}{
+		Hosts:   []string{"a", "b"},
+		Labels:  map[string]int{"b": 2, "a": 1},
+		Servers: []server{{Host: "a", Port: 1}},
+		Timeout: 90 * time.Second,
+		At:      time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC),
+	}
+	storage, err := fmap.GetFrom(conf)
+	assert.NoError(t, err)
+
+	driver := &yamlDriver{name: "yaml"}
+	doc := driver.GenDoc(&tinyconf.Registered{Storage: storage, Config: conf})
+	assert.Equal(t, "#hosts\n#hosts: [\"a\",\"b\"]\n"+
+		"#\n#labels: {\"a\":1,\"b\":2}\n"+
+		"#\n#servers: [{\"host\":\"a\",\"port\":1}]\n"+
+		"#\n#timeout: 1m30s\n"+
+		"#\n#at: 2024-01-02T03:04:05Z\n"+
+		"#\n#ptr: \n"+
+		"#\n#any: \n", doc)
+
+	t.Run("doc can be parsed back", func(t *testing.T) {
+		// uncomment lines with values
+		var content string
+		for _, line := range strings.Split(doc, "\n") {
+			if strings.Contains(line, ": ") {
+				content += strings.TrimPrefix(line, "#") + "\n"
+			}
+		}
+		driver, err := New("", WithData("doc", []byte(content)))
+		assert.NoError(t, err)
+		manager, err := tinyconf.New(tinyconf.WithDriver(driver))
+		assert.NoError(t, err)
+		parsed := &struct {
+			Hosts   []string       `yaml:"hosts" doc:"hosts"`
+			Labels  map[string]int `yaml:"labels"`
+			Servers []server       `yaml:"servers"`
+			Timeout time.Duration  `yaml:"timeout"`
+			At      time.Time      `yaml:"at"`
+			Ptr     *int           `yaml:"ptr"`
+			Any     any            `yaml:"any"`
+		}{}
+		assert.NoError(t, manager.Register(parsed))
+		assert.NoError(t, manager.Parse(parsed))
+		assert.Equal(t, conf, parsed)
+	})
 }
