@@ -73,7 +73,7 @@ func (t *fmtLogger) Info(msg string, fld ...tinyconf.Field) {
 
 func (t *fmtLogger) With(flds ...tinyconf.Field) tinyconf.Logger {
 	fields := make([]tinyconf.Field, 0, len(flds)+len(t.fields))
-	copy(t.fields, fields)
+	fields = append(fields, t.fields...)
 	fields = append(fields, flds...)
 	return &fmtLogger{lvl: t.lvl, fields: fields}
 }

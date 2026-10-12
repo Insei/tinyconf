@@ -154,3 +154,16 @@ func TestNewFmtLogger(t *testing.T) {
 		t.Error("The type of logger is not '*fmtLogger'")
 	}
 }
+
+func TestWithChain(t *testing.T) {
+	first := tinyconf.LogField("first", 1)
+	second := tinyconf.LogField("second", 2)
+	logger := &fmtLogger{lvl: DEBUG}
+
+	newLogger := logger.With(first).With(second)
+
+	fields := newLogger.(*fmtLogger).fields
+	if len(fields) != 2 || fields[0] != first || fields[1] != second {
+		t.Errorf("fields don't match in chained logger.With(): %v", fields)
+	}
+}
