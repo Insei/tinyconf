@@ -153,7 +153,11 @@ func (c *Manager) findRegister(confTypeOf reflect.Type) (register *Registered, r
 	for _, registered := range c.getRegisters() {
 		for _, path := range registered.Storage.GetAllPaths() {
 			field := registered.Storage.MustFind(path)
-			fieldType := field.GetDereferencedType()
+			// field.GetDereferencedType is not safe for concurrent use
+			fieldType := field.GetType()
+			for fieldType.Kind() == reflect.Ptr {
+				fieldType = fieldType.Elem()
+			}
 			if fieldType.Kind() == reflect.Struct && reflect.PointerTo(fieldType) == confTypeOf {
 				return registered, reflect.TypeOf(registered.Config), path
 			}
