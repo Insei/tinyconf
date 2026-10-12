@@ -531,3 +531,186 @@ func TestManager_GenDoc(t *testing.T) {
 		})
 	}
 }
+
+type pathMockDriver struct {
+	values map[string]any
+	errs   map[string]error
+}
+
+func (md *pathMockDriver) GenDoc(registers ...*Registered) string {
+	return "doc pathMockDriver"
+}
+
+func (md *pathMockDriver) GetName() string {
+	return "pathMockDriver"
+}
+
+func (md *pathMockDriver) GetValue(field fmap.Field) (*Value, error) {
+	path := field.GetStructPath()
+	if err, ok := md.errs[path]; ok {
+		return nil, err
+	}
+	if value, ok := md.values[path]; ok {
+		return &Value{Source: "mock", Value: value}, nil
+	}
+	return nil, ErrValueNotFound
+}
+
+func newPathMockManager(driver *pathMockDriver) *Manager {
+	return &Manager{
+		drivers:    []Driver{driver},
+		registered: make(map[reflect.Type]*Registered),
+		log:        &testLogger{},
+	}
+}
+
+func TestManager_Parse_UncomparableValues(t *testing.T) {
+	type Config struct {
+		List []any
+		Map  map[string]any
+	}
+	c := newPathMockManager(&pathMockDriver{values: map[string]any{
+		"List": []any{"a", "b"},
+		"Map":  map[string]any{"a": 1},
+	}})
+	conf := &Config{}
+	assert.NoError(t, c.Register(conf))
+	assert.NotPanics(t, func() {
+		assert.NoError(t, c.Parse(conf))
+	})
+	assert.Equal(t, []any{"a", "b"}, conf.List)
+	assert.Equal(t, map[string]any{"a": 1}, conf.Map)
+}
+
+func TestManager_Parse_InvalidConfig(t *testing.T) {
+	type Config struct {
+		Test string
+	}
+	testCases := []struct {
+		Name   string
+		Config any
+	}{
+		{Name: "Nil", Config: nil},
+		{Name: "Nil pointer of registered type", Config: (*Config)(nil)},
+		{Name: "Non-pointer", Config: Config{}},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			c := newPathMockManager(&pathMockDriver{values: map[string]any{"Test": "test"}})
+			assert.NoError(t, c.Register(&Config{}))
+			assert.NotPanics(t, func() {
+				assert.Error(t, c.Parse(testCase.Config))
+			})
+		})
+	}
+}
+
+func TestManager_Parse_DriverErrors(t *testing.T) {
+	type Config struct {
+		Host string
+		Port int
+	}
+	driverErr := errors.New("random error")
+	testCases := []struct {
+		Name      string
+		Err       error
+		WantError bool
+	}{
+		{Name: "Driver error is returned", Err: driverErr, WantError: true},
+		{Name: "Value not found is not an error", Err: ErrValueNotFound, WantError: false},
+		{Name: "Incorrect tag settings is not an error", Err: ErrIncorrectTagSettings, WantError: false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			c := newPathMockManager(&pathMockDriver{
+				values: map[string]any{"Host": "localhost"},
+				errs:   map[string]error{"Port": testCase.Err},
+			})
+			conf := &Config{}
+			assert.NoError(t, c.Register(conf))
+			err := c.Parse(conf)
+			if testCase.WantError {
+				assert.ErrorIs(t, err, driverErr)
+				assert.Contains(t, err.Error(), "Port")
+				assert.True(t, c.log.(*testLogger).ErrorLogged)
+			} else {
+				assert.NoError(t, err)
+			}
+			// other fields are parsed anyway
+			assert.Equal(t, "localhost", conf.Host)
+		})
+	}
+}
+
+func TestManager_ParseSubConfig_SiblingPrefix(t *testing.T) {
+	type HTTP struct {
+		Port int
+	}
+	type HTTPS struct {
+		Port int
+	}
+	type Config struct {
+		HTTP  HTTP
+		HTTPS HTTPS
+	}
+	testCases := []struct {
+		Name   string
+		Driver *pathMockDriver
+	}{
+		{
+			Name: "Sibling with the same prefix has value",
+			Driver: &pathMockDriver{
+				values: map[string]any{"HTTP.Port": 1, "HTTPS.Port": 2},
+			},
+		},
+		{
+			Name: "Sibling with the same prefix has error",
+			Driver: &pathMockDriver{
+				values: map[string]any{"HTTP.Port": 1},
+				errs:   map[string]error{"HTTPS.Port": errors.New("random error")},
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			c := newPathMockManager(testCase.Driver)
+			assert.NoError(t, c.Register(&Config{}))
+			conf := &HTTP{}
+			assert.NoError(t, c.Parse(conf))
+			assert.Equal(t, 1, conf.Port)
+		})
+	}
+}
+
+func TestManager_ParseSubConfig_RepeatedName(t *testing.T) {
+	type Inner struct {
+		Token string
+	}
+	type Auth struct {
+		Auth Inner
+	}
+	type Config struct {
+		Auth Auth
+	}
+	c := newPathMockManager(&pathMockDriver{values: map[string]any{"Auth.Auth.Token": "token"}})
+	assert.NoError(t, c.Register(&Config{}))
+	conf := &Auth{}
+	assert.NoError(t, c.Parse(conf))
+	assert.Equal(t, "token", conf.Auth.Token)
+}
+
+func TestManager_ParseSubConfig_ZeroValue(t *testing.T) {
+	type HTTP struct {
+		Host string
+		Port int
+	}
+	type Config struct {
+		HTTP HTTP
+	}
+	c := newPathMockManager(&pathMockDriver{values: map[string]any{"HTTP.Host": "", "HTTP.Port": 0}})
+	assert.NoError(t, c.Register(&Config{}))
+	conf := &HTTP{Host: "default", Port: 8080}
+	assert.NoError(t, c.Parse(conf))
+	assert.Equal(t, "", conf.Host)
+	assert.Equal(t, 0, conf.Port)
+}
