@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +18,7 @@ import (
 	yamlv3 "gopkg.in/yaml.v3"
 
 	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/convert"
 	"github.com/insei/tinyconf/drivers/env"
 	"github.com/insei/tinyconf/drivers/flag"
 	jsondriver "github.com/insei/tinyconf/drivers/json"
@@ -38,6 +40,10 @@ func (l *conformanceLevel) UnmarshalText(text []byte) error {
 	}
 	*l = level
 	return nil
+}
+
+func (l conformanceLevel) MarshalText() ([]byte, error) {
+	return []byte(map[conformanceLevel]string{1: "debug", 2: "info"}[l]), nil
 }
 
 type conformanceServer struct {
@@ -94,7 +100,7 @@ type conformanceConfig struct {
 	StringsPtr *[]string          `env:"CONFORMANCE_STRINGS_PTR" yaml:"strings_ptr" flag:"strings-ptr" json:"strings_ptr" toml:"strings_ptr" initial:"a,b"`
 	Array      [3]int             `env:"CONFORMANCE_ARRAY" yaml:"array" flag:"array" json:"array" toml:"array" initial:"1,2,3"`
 
-	Map          map[string]int           `env:"CONFORMANCE_MAP" yaml:"map" flag:"map" json:"map" toml:"map" initial:"a:1,b:2"`
+	Map          map[string]int           `env:"CONFORMANCE_PLAIN_MAP" yaml:"map" flag:"map" json:"map" toml:"map" initial:"a:1,b:2"`
 	MapIntKeys   map[int]string           `env:"CONFORMANCE_MAP_INT_KEYS" yaml:"map_int_keys" flag:"map-int-keys" json:"map_int_keys" toml:"map_int_keys" initial:"1:a,2:b"`
 	MapDurations map[string]time.Duration `env:"CONFORMANCE_MAP_DURATIONS" yaml:"map_durations" flag:"map-durations" json:"map_durations" toml:"map_durations" initial:"read:1s,write:2s"`
 	MapCustom    map[string]string        `env:"CONFORMANCE_MAP_CUSTOM" yaml:"map_custom" flag:"map-custom" json:"map_custom" toml:"map_custom" initial:"a=1;b=2" separator:";" kvseparator:"="`
@@ -256,6 +262,37 @@ func writeConformanceFiles(t *testing.T, yamlDoc string) (string, string, string
 	return yamlPath, jsonPath, tomlPath
 }
 
+// indexedVars returns the value in the form of the separate env variables for every item of slices, arrays, maps and structs.
+func indexedVars(key string, value reflect.Value) map[string]string {
+	vars := make(map[string]string)
+	for value.Kind() == reflect.Ptr {
+		value = value.Elem()
+	}
+	add := func(suffix string, item reflect.Value) {
+		for itemKey, itemVal := range indexedVars(key+"_"+suffix, item) {
+			vars[itemKey] = itemVal
+		}
+	}
+	switch {
+	case convert.IsScalar(value.Type()):
+		vars[key] = convert.ToString(value.Interface(), convert.Options{})
+	case value.Kind() == reflect.Slice || value.Kind() == reflect.Array:
+		for i := 0; i < value.Len(); i++ {
+			add(strconv.Itoa(i), value.Index(i))
+		}
+	case value.Kind() == reflect.Map:
+		iter := value.MapRange()
+		for iter.Next() {
+			add(convert.ToString(iter.Key().Interface(), convert.Options{}), iter.Value())
+		}
+	case value.Kind() == reflect.Struct:
+		for i := 0; i < value.NumField(); i++ {
+			add(strings.ToUpper(value.Type().Field(i).Name), value.Field(i))
+		}
+	}
+	return vars
+}
+
 // TestConformance checks that all drivers supports the same set of types.
 func TestConformance(t *testing.T) {
 	fields := conformanceFields(t, reflect.TypeOf(conformanceConfig{}))
@@ -267,6 +304,18 @@ func TestConformance(t *testing.T) {
 		args = append(args, "--"+field.Tag.Get("flag")+"="+field.Tag.Get("initial"))
 	}
 
+	expected := conformanceExpected()
+	// the same values in the separate env variables: INDEXED_CONFORMANCE_STRINGS_0, INDEXED_CONFORMANCE_STRINGS_1
+	for _, field := range fields {
+		value := reflect.ValueOf(expected).FieldByName(field.Name)
+		if !value.IsValid() {
+			value = reflect.ValueOf(expected.Nested).FieldByName(field.Name)
+		}
+		for key, val := range indexedVars("INDEXED_"+field.Tag.Get("env"), value) {
+			t.Setenv(key, val)
+		}
+	}
+
 	drivers := map[string]func() (tinyconf.Driver, error){
 		"env":  func() (tinyconf.Driver, error) { return env.New() },
 		"tag":  func() (tinyconf.Driver, error) { return tag.New("initial") },
@@ -274,8 +323,10 @@ func TestConformance(t *testing.T) {
 		"json": func() (tinyconf.Driver, error) { return jsondriver.New(jsonPath) },
 		"toml": func() (tinyconf.Driver, error) { return tomldriver.New(tomlPath) },
 		"flag": func() (tinyconf.Driver, error) { return flag.New(flag.WithArgs(args)) },
+		"env with indexed keys": func() (tinyconf.Driver, error) {
+			return env.New(env.WithPrefix("INDEXED_"), env.WithIndexedKeys())
+		},
 	}
-	expected := conformanceExpected()
 	for name, newDriver := range drivers {
 		newDriver := newDriver
 		t.Run(name, func(t *testing.T) {
