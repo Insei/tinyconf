@@ -16,6 +16,7 @@ import (
 
 	"github.com/insei/tinyconf"
 	"github.com/insei/tinyconf/drivers/env"
+	"github.com/insei/tinyconf/drivers/flag"
 	jsondriver "github.com/insei/tinyconf/drivers/json"
 	"github.com/insei/tinyconf/drivers/tag"
 	"github.com/insei/tinyconf/drivers/yaml"
@@ -43,63 +44,63 @@ type conformanceServer struct {
 }
 
 type conformanceNested struct {
-	Timeout time.Duration `env:"CONFORMANCE_NESTED_TIMEOUT" yaml:"timeout" json:"timeout" initial:"1m"`
-	Hosts   []string      `env:"CONFORMANCE_NESTED_HOSTS" yaml:"hosts" json:"hosts" initial:"a,b"`
+	Timeout time.Duration `env:"CONFORMANCE_NESTED_TIMEOUT" yaml:"timeout" flag:"timeout" json:"timeout" initial:"1m"`
+	Hosts   []string      `env:"CONFORMANCE_NESTED_HOSTS" yaml:"hosts" flag:"hosts" json:"hosts" initial:"a,b"`
 }
 
 // conformanceConfig contains all types supported by tinyconf.
 // Every field should have tags for all drivers, value of the initial tag is also used as value of the env variable.
 // The same values in the yaml format are in the conformanceYAML.
 type conformanceConfig struct {
-	String  string  `env:"CONFORMANCE_STRING" yaml:"string" json:"string" initial:"value"`
-	Int     int     `env:"CONFORMANCE_INT" yaml:"int" json:"int" initial:"-1"`
-	Int8    int8    `env:"CONFORMANCE_INT8" yaml:"int8" json:"int8" initial:"-8"`
-	Int16   int16   `env:"CONFORMANCE_INT16" yaml:"int16" json:"int16" initial:"-16"`
-	Int32   int32   `env:"CONFORMANCE_INT32" yaml:"int32" json:"int32" initial:"-32"`
-	Int64   int64   `env:"CONFORMANCE_INT64" yaml:"int64" json:"int64" initial:"-64"`
-	Uint    uint    `env:"CONFORMANCE_UINT" yaml:"uint" json:"uint" initial:"1"`
-	Uint8   uint8   `env:"CONFORMANCE_UINT8" yaml:"uint8" json:"uint8" initial:"8"`
-	Uint16  uint16  `env:"CONFORMANCE_UINT16" yaml:"uint16" json:"uint16" initial:"16"`
-	Uint32  uint32  `env:"CONFORMANCE_UINT32" yaml:"uint32" json:"uint32" initial:"32"`
-	Uint64  uint64  `env:"CONFORMANCE_UINT64" yaml:"uint64" json:"uint64" initial:"64"`
-	Float32 float32 `env:"CONFORMANCE_FLOAT32" yaml:"float32" json:"float32" initial:"1.5"`
-	Float64 float64 `env:"CONFORMANCE_FLOAT64" yaml:"float64" json:"float64" initial:"2.5"`
-	Bool    bool    `env:"CONFORMANCE_BOOL" yaml:"bool" json:"bool" initial:"true"`
+	String  string  `env:"CONFORMANCE_STRING" yaml:"string" flag:"string" json:"string" initial:"value"`
+	Int     int     `env:"CONFORMANCE_INT" yaml:"int" flag:"int" json:"int" initial:"-1"`
+	Int8    int8    `env:"CONFORMANCE_INT8" yaml:"int8" flag:"int8" json:"int8" initial:"-8"`
+	Int16   int16   `env:"CONFORMANCE_INT16" yaml:"int16" flag:"int16" json:"int16" initial:"-16"`
+	Int32   int32   `env:"CONFORMANCE_INT32" yaml:"int32" flag:"int32" json:"int32" initial:"-32"`
+	Int64   int64   `env:"CONFORMANCE_INT64" yaml:"int64" flag:"int64" json:"int64" initial:"-64"`
+	Uint    uint    `env:"CONFORMANCE_UINT" yaml:"uint" flag:"uint" json:"uint" initial:"1"`
+	Uint8   uint8   `env:"CONFORMANCE_UINT8" yaml:"uint8" flag:"uint8" json:"uint8" initial:"8"`
+	Uint16  uint16  `env:"CONFORMANCE_UINT16" yaml:"uint16" flag:"uint16" json:"uint16" initial:"16"`
+	Uint32  uint32  `env:"CONFORMANCE_UINT32" yaml:"uint32" flag:"uint32" json:"uint32" initial:"32"`
+	Uint64  uint64  `env:"CONFORMANCE_UINT64" yaml:"uint64" flag:"uint64" json:"uint64" initial:"64"`
+	Float32 float32 `env:"CONFORMANCE_FLOAT32" yaml:"float32" flag:"float32" json:"float32" initial:"1.5"`
+	Float64 float64 `env:"CONFORMANCE_FLOAT64" yaml:"float64" flag:"float64" json:"float64" initial:"2.5"`
+	Bool    bool    `env:"CONFORMANCE_BOOL" yaml:"bool" flag:"bool" json:"bool" initial:"true"`
 
-	StringPtr *string `env:"CONFORMANCE_STRING_PTR" yaml:"string_ptr" json:"string_ptr" initial:"pointer"`
-	IntPtr    *int    `env:"CONFORMANCE_INT_PTR" yaml:"int_ptr" json:"int_ptr" initial:"42"`
+	StringPtr *string `env:"CONFORMANCE_STRING_PTR" yaml:"string_ptr" flag:"string-ptr" json:"string_ptr" initial:"pointer"`
+	IntPtr    *int    `env:"CONFORMANCE_INT_PTR" yaml:"int_ptr" flag:"int-ptr" json:"int_ptr" initial:"42"`
 
-	NamedString conformanceNamedString `env:"CONFORMANCE_NAMED_STRING" yaml:"named_string" json:"named_string" initial:"named"`
-	NamedInt    conformanceNamedInt    `env:"CONFORMANCE_NAMED_INT" yaml:"named_int" json:"named_int" initial:"7"`
+	NamedString conformanceNamedString `env:"CONFORMANCE_NAMED_STRING" yaml:"named_string" flag:"named-string" json:"named_string" initial:"named"`
+	NamedInt    conformanceNamedInt    `env:"CONFORMANCE_NAMED_INT" yaml:"named_int" flag:"named-int" json:"named_int" initial:"7"`
 
-	Duration    time.Duration    `env:"CONFORMANCE_DURATION" yaml:"duration" json:"duration" initial:"1m30s"`
-	DurationPtr *time.Duration   `env:"CONFORMANCE_DURATION_PTR" yaml:"duration_ptr" json:"duration_ptr" initial:"2s"`
-	Time        time.Time        `env:"CONFORMANCE_TIME" yaml:"time" json:"time" initial:"2024-01-02T03:04:05Z"`
-	TimePtr     *time.Time       `env:"CONFORMANCE_TIME_PTR" yaml:"time_ptr" json:"time_ptr" initial:"2024-01-02T03:04:05Z"`
-	URL         url.URL          `env:"CONFORMANCE_URL" yaml:"url" json:"url" initial:"https://example.com/path?a=b"`
-	IP          net.IP           `env:"CONFORMANCE_IP" yaml:"ip" json:"ip" initial:"127.0.0.1"`
-	Level       conformanceLevel `env:"CONFORMANCE_LEVEL" yaml:"level" json:"level" initial:"info"`
-	Bytes       []byte           `env:"CONFORMANCE_BYTES" yaml:"bytes" json:"bytes" initial:"secret"`
+	Duration    time.Duration    `env:"CONFORMANCE_DURATION" yaml:"duration" flag:"duration" json:"duration" initial:"1m30s"`
+	DurationPtr *time.Duration   `env:"CONFORMANCE_DURATION_PTR" yaml:"duration_ptr" flag:"duration-ptr" json:"duration_ptr" initial:"2s"`
+	Time        time.Time        `env:"CONFORMANCE_TIME" yaml:"time" flag:"time" json:"time" initial:"2024-01-02T03:04:05Z"`
+	TimePtr     *time.Time       `env:"CONFORMANCE_TIME_PTR" yaml:"time_ptr" flag:"time-ptr" json:"time_ptr" initial:"2024-01-02T03:04:05Z"`
+	URL         url.URL          `env:"CONFORMANCE_URL" yaml:"url" flag:"url" json:"url" initial:"https://example.com/path?a=b"`
+	IP          net.IP           `env:"CONFORMANCE_IP" yaml:"ip" flag:"ip" json:"ip" initial:"127.0.0.1"`
+	Level       conformanceLevel `env:"CONFORMANCE_LEVEL" yaml:"level" flag:"level" json:"level" initial:"info"`
+	Bytes       []byte           `env:"CONFORMANCE_BYTES" yaml:"bytes" flag:"bytes" json:"bytes" initial:"secret"`
 
-	Strings    []string           `env:"CONFORMANCE_STRINGS" yaml:"strings" json:"strings" initial:"a,b,c"`
-	Quoted     []string           `env:"CONFORMANCE_QUOTED" yaml:"quoted" json:"quoted" initial:"'a,b',c"`
-	Ints       []int              `env:"CONFORMANCE_INTS" yaml:"ints" json:"ints" initial:"1,2,3"`
-	Durations  []time.Duration    `env:"CONFORMANCE_DURATIONS" yaml:"durations" json:"durations" initial:"1s,2m"`
-	Levels     []conformanceLevel `env:"CONFORMANCE_LEVELS" yaml:"levels" json:"levels" initial:"debug,info"`
-	Paths      []string           `env:"CONFORMANCE_PATHS" yaml:"paths" json:"paths" initial:"/bin:/usr/bin" separator:":"`
-	StringsPtr *[]string          `env:"CONFORMANCE_STRINGS_PTR" yaml:"strings_ptr" json:"strings_ptr" initial:"a,b"`
-	Array      [3]int             `env:"CONFORMANCE_ARRAY" yaml:"array" json:"array" initial:"1,2,3"`
+	Strings    []string           `env:"CONFORMANCE_STRINGS" yaml:"strings" flag:"strings" json:"strings" initial:"a,b,c"`
+	Quoted     []string           `env:"CONFORMANCE_QUOTED" yaml:"quoted" flag:"quoted" json:"quoted" initial:"'a,b',c"`
+	Ints       []int              `env:"CONFORMANCE_INTS" yaml:"ints" flag:"ints" json:"ints" initial:"1,2,3"`
+	Durations  []time.Duration    `env:"CONFORMANCE_DURATIONS" yaml:"durations" flag:"durations" json:"durations" initial:"1s,2m"`
+	Levels     []conformanceLevel `env:"CONFORMANCE_LEVELS" yaml:"levels" flag:"levels" json:"levels" initial:"debug,info"`
+	Paths      []string           `env:"CONFORMANCE_PATHS" yaml:"paths" flag:"paths" json:"paths" initial:"/bin:/usr/bin" separator:":"`
+	StringsPtr *[]string          `env:"CONFORMANCE_STRINGS_PTR" yaml:"strings_ptr" flag:"strings-ptr" json:"strings_ptr" initial:"a,b"`
+	Array      [3]int             `env:"CONFORMANCE_ARRAY" yaml:"array" flag:"array" json:"array" initial:"1,2,3"`
 
-	Map          map[string]int           `env:"CONFORMANCE_MAP" yaml:"map" json:"map" initial:"a:1,b:2"`
-	MapIntKeys   map[int]string           `env:"CONFORMANCE_MAP_INT_KEYS" yaml:"map_int_keys" json:"map_int_keys" initial:"1:a,2:b"`
-	MapDurations map[string]time.Duration `env:"CONFORMANCE_MAP_DURATIONS" yaml:"map_durations" json:"map_durations" initial:"read:1s,write:2s"`
-	MapCustom    map[string]string        `env:"CONFORMANCE_MAP_CUSTOM" yaml:"map_custom" json:"map_custom" initial:"a=1;b=2" separator:";" kvseparator:"="`
+	Map          map[string]int           `env:"CONFORMANCE_MAP" yaml:"map" flag:"map" json:"map" initial:"a:1,b:2"`
+	MapIntKeys   map[int]string           `env:"CONFORMANCE_MAP_INT_KEYS" yaml:"map_int_keys" flag:"map-int-keys" json:"map_int_keys" initial:"1:a,2:b"`
+	MapDurations map[string]time.Duration `env:"CONFORMANCE_MAP_DURATIONS" yaml:"map_durations" flag:"map-durations" json:"map_durations" initial:"read:1s,write:2s"`
+	MapCustom    map[string]string        `env:"CONFORMANCE_MAP_CUSTOM" yaml:"map_custom" flag:"map-custom" json:"map_custom" initial:"a=1;b=2" separator:";" kvseparator:"="`
 
-	Matrix      [][]int                      `env:"CONFORMANCE_MATRIX" yaml:"matrix" json:"matrix" initial:"[[1,2],[3]]"`
-	MapOfSlices map[string][]string          `env:"CONFORMANCE_MAP_OF_SLICES" yaml:"map_of_slices" json:"map_of_slices" initial:"{\"a\":[\"b\",\"c\"]}"`
-	Servers     []conformanceServer          `env:"CONFORMANCE_SERVERS" yaml:"servers" json:"servers" initial:"[{\"host\":\"a\",\"port\":1,\"timeout\":\"1s\"},{\"host\":\"b\",\"port\":2}]"`
-	ServersMap  map[string]conformanceServer `env:"CONFORMANCE_SERVERS_MAP" yaml:"servers_map" json:"servers_map" initial:"{\"main\":{\"host\":\"a\",\"port\":1}}"`
-	ServerPtr   *conformanceServer           `env:"CONFORMANCE_SERVER_PTR" yaml:"server_ptr" json:"server_ptr" initial:"{\"host\":\"a\",\"port\":1}"`
+	Matrix      [][]int                      `env:"CONFORMANCE_MATRIX" yaml:"matrix" flag:"matrix" json:"matrix" initial:"[[1,2],[3]]"`
+	MapOfSlices map[string][]string          `env:"CONFORMANCE_MAP_OF_SLICES" yaml:"map_of_slices" flag:"map-of-slices" json:"map_of_slices" initial:"{\"a\":[\"b\",\"c\"]}"`
+	Servers     []conformanceServer          `env:"CONFORMANCE_SERVERS" yaml:"servers" flag:"servers" json:"servers" initial:"[{\"host\":\"a\",\"port\":1,\"timeout\":\"1s\"},{\"host\":\"b\",\"port\":2}]"`
+	ServersMap  map[string]conformanceServer `env:"CONFORMANCE_SERVERS_MAP" yaml:"servers_map" flag:"servers-map" json:"servers_map" initial:"{\"main\":{\"host\":\"a\",\"port\":1}}"`
+	ServerPtr   *conformanceServer           `env:"CONFORMANCE_SERVER_PTR" yaml:"server_ptr" flag:"server-ptr" json:"server_ptr" initial:"{\"host\":\"a\",\"port\":1}"`
 
 	Nested conformanceNested `yaml:"nested" json:"nested"`
 }
@@ -223,7 +224,7 @@ func conformanceFields(t *testing.T, typeOf reflect.Type) []reflect.StructField 
 			fields = append(fields, conformanceFields(t, field.Type)...)
 			continue
 		}
-		for _, tagName := range []string{"env", "yaml", "json", "initial"} {
+		for _, tagName := range []string{"env", "yaml", "json", "flag", "initial"} {
 			if _, ok := field.Tag.Lookup(tagName); !ok {
 				t.Fatalf("field %s has no %s tag, all types should be checked for all drivers", field.Name, tagName)
 			}
@@ -252,8 +253,10 @@ func TestConformance(t *testing.T) {
 	fields := conformanceFields(t, reflect.TypeOf(conformanceConfig{}))
 
 	yamlPath, jsonPath := writeConformanceFiles(t, conformanceYAML)
+	var args []string
 	for _, field := range fields {
 		t.Setenv(field.Tag.Get("env"), field.Tag.Get("initial"))
+		args = append(args, "--"+field.Tag.Get("flag")+"="+field.Tag.Get("initial"))
 	}
 
 	drivers := map[string]func() (tinyconf.Driver, error){
@@ -261,6 +264,7 @@ func TestConformance(t *testing.T) {
 		"tag":  func() (tinyconf.Driver, error) { return tag.New("initial") },
 		"yaml": func() (tinyconf.Driver, error) { return yaml.New(yamlPath) },
 		"json": func() (tinyconf.Driver, error) { return jsondriver.New(jsonPath) },
+		"flag": func() (tinyconf.Driver, error) { return flag.New(flag.WithArgs(args)) },
 	}
 	expected := conformanceExpected()
 	for name, newDriver := range drivers {
@@ -293,13 +297,13 @@ func TestConformance(t *testing.T) {
 // TestConformance_Errors checks that all drivers returns errors for the same incorrect values.
 func TestConformance_Errors(t *testing.T) {
 	type config struct {
-		Int      int            `env:"CONFORMANCE_ERR_INT" yaml:"int" json:"int" initial:"abc"`
-		Duration time.Duration  `env:"CONFORMANCE_ERR_DURATION" yaml:"duration" json:"duration" initial:"5"`
-		Ints     []int          `env:"CONFORMANCE_ERR_INTS" yaml:"ints" json:"ints" initial:"1,b"`
-		Array    [2]int         `env:"CONFORMANCE_ERR_ARRAY" yaml:"array" json:"array" initial:"1,2,3"`
-		Map      map[string]int `env:"CONFORMANCE_ERR_MAP" yaml:"map" json:"map" initial:"a:b"`
-		Matrix   [][]int        `env:"CONFORMANCE_ERR_MATRIX" yaml:"matrix" json:"matrix" initial:"[[1,\"b\"]]"`
-		Chan     chan int       `env:"CONFORMANCE_ERR_CHAN" yaml:"chan" json:"chan" initial:"1"`
+		Int      int            `env:"CONFORMANCE_ERR_INT" yaml:"int" flag:"int" json:"int" initial:"abc"`
+		Duration time.Duration  `env:"CONFORMANCE_ERR_DURATION" yaml:"duration" flag:"duration" json:"duration" initial:"5"`
+		Ints     []int          `env:"CONFORMANCE_ERR_INTS" yaml:"ints" flag:"ints" json:"ints" initial:"1,b"`
+		Array    [2]int         `env:"CONFORMANCE_ERR_ARRAY" yaml:"array" flag:"array" json:"array" initial:"1,2,3"`
+		Map      map[string]int `env:"CONFORMANCE_ERR_MAP" yaml:"map" flag:"map" json:"map" initial:"a:b"`
+		Matrix   [][]int        `env:"CONFORMANCE_ERR_MATRIX" yaml:"matrix" flag:"matrix" json:"matrix" initial:"[[1,\"b\"]]"`
+		Chan     chan int       `env:"CONFORMANCE_ERR_CHAN" yaml:"chan" flag:"chan" json:"chan" initial:"1"`
 	}
 	const yamlDoc = `
 int: abc
@@ -312,8 +316,10 @@ chan: 1
 `
 	typeOf := reflect.TypeOf(config{})
 	yamlPath, jsonPath := writeConformanceFiles(t, yamlDoc)
+	var args []string
 	for i := 0; i < typeOf.NumField(); i++ {
 		t.Setenv(typeOf.Field(i).Tag.Get("env"), typeOf.Field(i).Tag.Get("initial"))
+		args = append(args, "--"+typeOf.Field(i).Tag.Get("flag"), typeOf.Field(i).Tag.Get("initial"))
 	}
 
 	drivers := map[string]func() (tinyconf.Driver, error){
@@ -321,6 +327,7 @@ chan: 1
 		"tag":  func() (tinyconf.Driver, error) { return tag.New("initial") },
 		"yaml": func() (tinyconf.Driver, error) { return yaml.New(yamlPath) },
 		"json": func() (tinyconf.Driver, error) { return jsondriver.New(jsonPath) },
+		"flag": func() (tinyconf.Driver, error) { return flag.New(flag.WithArgs(args)) },
 	}
 	for name, newDriver := range drivers {
 		newDriver := newDriver
