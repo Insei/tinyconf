@@ -74,23 +74,6 @@ func getLoggerValue(field fmap.Field, val any) string {
 	return valueLog
 }
 
-// isValueField reports whether the field value should be requested from drivers.
-// Structs are parsed by their fields, except the types that are parsed from a single value, time.Time for example.
-func isValueField(storage fmap.Storage, field fmap.Field) bool {
-	path := field.GetStructPath()
-	for i := strings.IndexByte(path, '.'); i >= 0 && i < len(path); {
-		if parent, ok := storage.Find(path[:i]); ok && convert.IsLeaf(parent.GetType()) {
-			return false
-		}
-		next := strings.IndexByte(path[i+1:], '.')
-		if next < 0 {
-			break
-		}
-		i += next + 1
-	}
-	return field.GetType().Kind() != reflect.Struct || convert.IsLeaf(field.GetType())
-}
-
 func copyToSubConfig(conf, subConf any, subpath string, parsedPaths []string) error {
 	confFields, err := fmap.GetFrom(conf)
 	if err != nil {
@@ -172,7 +155,7 @@ func (c *Manager) Parse(conf any) error {
 				continue
 			}
 			field := register.Storage.MustFind(path)
-			if !isValueField(register.Storage, field) {
+			if !convert.IsValueField(register.Storage, field) {
 				continue
 			}
 			log := c.log.With(
