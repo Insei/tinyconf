@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/insei/fmap/v3"
 
@@ -20,6 +21,21 @@ type Manager struct {
 	drivers    []Driver
 	log        Logger
 	registered map[reflect.Type]*Registered
+
+	mu sync.RWMutex
+	// types of the registered configs in the registration order
+	order []reflect.Type
+	// sources of the values from the last Parse call for every config type
+	sources map[reflect.Type][]FieldSource
+}
+
+// fmapMu protects the cache of the fmap storages, fmap.GetFrom is not safe for concurrent use.
+var fmapMu sync.Mutex
+
+func getStorage(conf any) (fmap.Storage, error) {
+	fmapMu.Lock()
+	defer fmapMu.Unlock()
+	return fmap.GetFrom(conf)
 }
 
 func checkConfig(conf any) error {
@@ -43,11 +59,17 @@ func (c *Manager) Register(conf any) error {
 		return fmt.Errorf("config can't be registred: %w", err)
 	}
 
-	storage, err := fmap.GetFrom(conf)
+	storage, err := getStorage(conf)
 	if err != nil || storage == nil {
 		return fmt.Errorf("config can't be registred: %w", err)
 	}
-	c.registered[reflect.TypeOf(conf)] = &Registered{
+	typeOf := reflect.TypeOf(conf)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, ok := c.registered[typeOf]; !ok {
+		c.order = append(c.order, typeOf)
+	}
+	c.registered[typeOf] = &Registered{
 		Storage: storage,
 		Config:  conf,
 	}
@@ -75,11 +97,11 @@ func getLoggerValue(field fmap.Field, val any) string {
 }
 
 func copyToSubConfig(conf, subConf any, subpath string, parsedPaths []string) error {
-	confFields, err := fmap.GetFrom(conf)
+	confFields, err := getStorage(conf)
 	if err != nil {
 		return err
 	}
-	subConfFields, err := fmap.GetFrom(subConf)
+	subConfFields, err := getStorage(subConf)
 	if err != nil {
 		return err
 	}
@@ -106,37 +128,66 @@ func copyToSubConfig(conf, subConf any, subpath string, parsedPaths []string) er
 	return nil
 }
 
+// getRegisters returns all registered configs in the registration order.
+func (c *Manager) getRegisters() []*Registered {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	registers := make([]*Registered, 0, len(c.registered))
+	for _, typeOf := range c.order {
+		registers = append(registers, c.registered[typeOf])
+	}
+	return registers
+}
+
+// findRegister returns registered config for the config type.
+// If the type is not registered, but it is a type of the field in some registered config (sub config),
+// it returns this registered config and the struct path of the field.
+// Registered configs are checked in the registration order, the first found field is used.
+func (c *Manager) findRegister(confTypeOf reflect.Type) (register *Registered, registerTypeOf reflect.Type, subPath string) {
+	c.mu.RLock()
+	register, ok := c.registered[confTypeOf]
+	c.mu.RUnlock()
+	if ok {
+		return register, confTypeOf, ""
+	}
+	for _, registered := range c.getRegisters() {
+		for _, path := range registered.Storage.GetAllPaths() {
+			field := registered.Storage.MustFind(path)
+			fieldType := field.GetDereferencedType()
+			if fieldType.Kind() == reflect.Struct && reflect.PointerTo(fieldType) == confTypeOf {
+				return registered, reflect.TypeOf(registered.Config), path
+			}
+		}
+	}
+	return nil, nil, ""
+}
+
+// Parse fills the config with values from the drivers, the next driver overrides values of the previous.
+// Config should be registered, or it should be a field of the registered config (sub config).
+//
+// All fields are parsed even if some of them has errors, all errors are returned as one error,
+// it can be checked with errors.Is and errors.As.
+// Fields with required:"true" tag should have a value from any driver or non-zero value in the config,
+// otherwise ErrRequired is returned.
 func (c *Manager) Parse(conf any) error {
 	if err := checkConfig(conf); err != nil {
 		return fmt.Errorf("config can't be parsed: %w", err)
 	}
 	confParse := conf
 	confTypeOf := reflect.TypeOf(conf)
-	register, ok := c.registered[confTypeOf]
-	// only for sub configs
-	isSubConf := false
-	subPath := ""
-	parsedPaths := make([]string, 0)
-	if !ok {
-	RegisteredLoop:
-		for registeredTypeOf, registeredConf := range c.registered {
-			for _, path := range registeredConf.Storage.GetAllPaths() {
-				field := registeredConf.Storage.MustFind(path)
-				fieldType := field.GetDereferencedType()
-				if fieldType.Kind() == reflect.Struct &&
-					reflect.PointerTo(fieldType) == confTypeOf {
-					register = registeredConf
-					confParse = reflect.New(registeredTypeOf.Elem()).Interface()
-					isSubConf = true
-					subPath = field.GetStructPath()
-					break RegisteredLoop
-				}
-			}
-		}
-	}
+	register, registerTypeOf, subPath := c.findRegister(confTypeOf)
 	if register == nil {
 		return ErrNotRegisteredConfig
 	}
+	// only for sub configs
+	isSubConf := subPath != ""
+	prefix := ""
+	if isSubConf {
+		confParse = reflect.New(registerTypeOf.Elem()).Interface()
+		prefix = subPath + "."
+	}
+	sources := make(map[string]FieldSource)
+
 	var errs parseErrors
 	drivers := make([]Driver, 0, len(c.drivers))
 	for _, d := range c.drivers {
@@ -151,7 +202,7 @@ func (c *Manager) Parse(conf any) error {
 	}
 	for _, d := range drivers {
 		for _, path := range register.Storage.GetAllPaths() {
-			if isSubConf && !strings.HasPrefix(path, subPath+".") {
+			if !strings.HasPrefix(path, prefix) {
 				continue
 			}
 			field := register.Storage.MustFind(path)
@@ -176,8 +227,21 @@ func (c *Manager) Parse(conf any) error {
 					log.Debug("override", LogField("value", getLoggerValue(field, driverValue.Value)))
 					convert.SetFieldValue(field, confParse, driverValue.Value)
 				}
-				parsedPaths = append(parsedPaths, path)
+				sources[path] = FieldSource{
+					Field:  strings.TrimPrefix(path, prefix),
+					Driver: d.GetName(),
+					Source: driverValue.Source,
+				}
 			}
+		}
+	}
+	// sources in the order of the config fields
+	fieldSources := make([]FieldSource, 0, len(sources))
+	parsedPaths := make([]string, 0, len(sources))
+	for _, path := range register.Storage.GetAllPaths() {
+		if source, ok := sources[path]; ok {
+			fieldSources = append(fieldSources, source)
+			parsedPaths = append(parsedPaths, path)
 		}
 	}
 	if isSubConf {
@@ -185,17 +249,61 @@ func (c *Manager) Parse(conf any) error {
 			errs = append(errs, err)
 		}
 	}
+	errs = append(errs, checkRequired(conf, sources, prefix)...)
+
+	c.mu.Lock()
+	if c.sources == nil {
+		c.sources = make(map[reflect.Type][]FieldSource)
+	}
+	c.sources[confTypeOf] = fieldSources
+	c.mu.Unlock()
+
 	if len(errs) > 0 {
 		return errs
 	}
 	return nil
 }
 
-func (c *Manager) GenDoc(driverName string) string {
-	var registers []*Registered
-	for _, register := range c.registered {
-		registers = append(registers, register)
+// checkRequired checks that all fields with required:"true" tag has a value from drivers or non-zero value in the config.
+func checkRequired(conf any, sources map[string]FieldSource, prefix string) []error {
+	storage, err := getStorage(conf)
+	if err != nil {
+		return []error{err}
 	}
+	var errs []error
+	for _, path := range storage.GetAllPaths() {
+		field := storage.MustFind(path)
+		if field.GetTag().Get("required") != "true" || !convert.IsValueField(storage, field) {
+			continue
+		}
+		if _, ok := sources[prefix+path]; ok {
+			continue
+		}
+		valOf := reflect.ValueOf(convert.GetFieldValue(field, conf))
+		isEmpty := !valOf.IsValid() || valOf.IsZero() ||
+			((valOf.Kind() == reflect.Slice || valOf.Kind() == reflect.Map) && valOf.Len() == 0)
+		if isEmpty {
+			errs = append(errs, fmt.Errorf("field %s: %w", path, ErrRequired))
+		}
+	}
+	return errs
+}
+
+// Sources returns sources of the config values from the last Parse call for this config type:
+// which driver has set the value of the field. Fields without values from drivers are not included.
+// Config should be the same pointer type that was used in Parse.
+func (c *Manager) Sources(conf any) []FieldSource {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	sources := c.sources[reflect.TypeOf(conf)]
+	if sources == nil {
+		return nil
+	}
+	return append([]FieldSource{}, sources...)
+}
+
+func (c *Manager) GenDoc(driverName string) string {
+	registers := c.getRegisters()
 
 	var doc string
 	for _, driver := range c.drivers {
