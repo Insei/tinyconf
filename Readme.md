@@ -24,6 +24,7 @@ so the last driver has the highest priority. You can also add your own driver.
 | `Parse(conf any) error` | fills the registered config, or its field with struct type (sub config), with values from drivers |
 | `GenDoc(driverName string) string` | generates documentation of all registered configs in the driver format |
 | `Sources(conf any) []FieldSource` | returns which driver has set the value of every field in the last `Parse` call |
+| `Watch(ctx, conf, onChange) error` | watches for changes of the config sources and parses the config to the new copy after every change |
 
 `Parse` parses all fields even if some of them have errors, all errors are returned as one error that can be checked
 with `errors.Is` and `errors.As`.
@@ -35,6 +36,7 @@ with `errors.Is` and `errors.As`.
 | tag | `drivers/tag` | any, `initial` for example | default values from struct tags |
 | yaml | `drivers/yaml` | `yaml` | YAML files |
 | json | `drivers/json` | `json` | JSON files |
+| toml | `drivers/toml` | `toml` | TOML files |
 | env | `drivers/env` | `env` | environment variables and `.env` files |
 | flag | `drivers/flag` | `flag` | command line flags |
 
@@ -48,7 +50,7 @@ Common struct tags:
 | `separator:";"` | separator of slice, array and map items in string values, `,` by default |
 | `kvseparator:"="` | separator of map key and value in string values, `:` by default |
 
-## yaml and json
+## yaml, json and toml
 ```go
 yamlDriver, err := yaml.New("config.yaml",
 	yaml.WithFiles("config.local.yaml"), // additional files, the next file overrides the previous, nested maps are merged
@@ -56,9 +58,10 @@ yamlDriver, err := yaml.New("config.yaml",
 	yaml.WithEnvExpansion(),             // replace ${VAR} and ${VAR:-default} with environment variables
 	yaml.WithFS(embedFS, "defaults.yaml"),
 	yaml.WithData("inline", []byte("name: app")),
+	yaml.WithWatchInterval(time.Second), // interval of checking the files for changes in Manager.Watch, 5 seconds by default
 )
 ```
-The json driver has the same options. Files are read once per `Parse` call, so the next `Parse` call rereads them.
+The json and toml drivers have the same options. Files are read once per `Parse` call, so the next `Parse` call rereads them.
 
 ## env
 ```go
@@ -68,8 +71,22 @@ envDriver, err := env.New(
 	env.WithSecretFiles(),              // read value from the file with path from HTTP_TOKEN_FILE
 	env.WithFiles(".env", ".env.local"), // custom .env files instead of the default ones
 	env.WithFilesIsolation(),           // do not export values from .env files to the process environment
+	env.WithIndexedKeys(),              // slices, maps and structs from separate variables, see below
 )
 ```
+With `env.WithIndexedKeys()` slices, arrays, maps and structs can be set by separate variables,
+if the variable with the whole value is not set:
+
+| Type | Variables |
+|---|---|
+| `Hosts []string` with `env:"HOSTS"` | `HOSTS_0=a`, `HOSTS_1=b` |
+| `Labels map[string]string` with `env:"LABELS"` | `LABELS_env=prod`, the rest of the name is a key, as is |
+| `Servers []Server` with `env:"SERVERS"` | `SERVERS_0_HOST=a`, `SERVERS_0_MAX_CONNS=10`, `SERVERS_1_HOST=b` |
+
+Names of the struct fields are taken from their `env` tags or built from the field names (`MaxConns` -> `MAX_CONNS`).
+For maps with simple values all variables with the name of the field as a prefix are used as map items,
+so the name of such field should not be a prefix of other variables.
+
 By default, the driver reads `.env` files from the executable directory and from the working directory
 and exports their values to the process environment. Variables of the process environment have priority over `.env` files.
 
@@ -84,7 +101,7 @@ so unknown flags are ignored.
 # Supported types
 All drivers support the same set of types, it is checked by the conformance tests in `drivers/conformance_test.go`.
 
-| Types | String value (env, flag, tag) | yaml and json |
+| Types | String value (env, flag, tag) | yaml, json and toml |
 |---|---|---|
 | `string`, `bool`, integers, floats and named types based on them | `value` | scalar |
 | `time.Duration` | `1m30s` | `1m30s` |
@@ -179,6 +196,28 @@ func main() {
 }
 ```
 
+# Reloading
+`Manager.Watch` blocks until the context is done. After every change of the config sources it parses the config
+to the new copy and passes it to the callback, the original config is never changed, so it can be read concurrently.
+```go
+var current atomic.Pointer[Config]
+current.Store(c)
+
+go func() {
+	err := config.Watch(ctx, c, func(conf any, err error) {
+		if err != nil {
+			log.Println("config is not reloaded:", err)
+			return
+		}
+		current.Store(conf.(*Config))
+	})
+	if err != nil {
+		log.Println("config watching is stopped:", err)
+	}
+}()
+```
+Changes are reported by yaml, json and toml drivers for files from the OS file system.
+
 # Custom drivers
 The driver should implement the `tinyconf.Driver` interface:
 ```go
@@ -195,5 +234,6 @@ and `convert.TreeToField` for values decoded from formats like yaml or json.
 
 If the driver implements the optional `tinyconf.Loader` interface, `Load` is called once at the start of every `Parse` call,
 so the driver can read its source once and not for every field.
+If the driver implements the optional `tinyconf.Watcher` interface, it can report changes of its source for `Manager.Watch`.
 
 More examples in `parser_test.go` and others test files.
