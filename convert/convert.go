@@ -100,6 +100,12 @@ func IsLeaf(t reflect.Type) bool {
 	return t == typeOfTime || t == typeOfURL || isTextUnmarshaler(t)
 }
 
+// IsScalar reports whether the type is parsed from a single string without any separators:
+// all types except slices, arrays, maps, structs that are not parsed from a single value, and pointers to them.
+func IsScalar(t reflect.Type) bool {
+	return isScalar(indirect(t))
+}
+
 // isScalar reports whether the type is parsed from a single string without any separators.
 func isScalar(t reflect.Type) bool {
 	if t == typeOfBytes {

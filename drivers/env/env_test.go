@@ -572,3 +572,125 @@ func TestEnvDriver_GenDoc_Types(t *testing.T) {
 		"#\n#AT=2024-01-02T03:04:05Z\n\n"+
 		"#\n#PTR=\n\n", doc)
 }
+
+func TestEnvDriver_IndexedKeys(t *testing.T) {
+	type server struct {
+		Host     string `env:"HOST"`
+		HostName string `env:"HOST_NAME"`
+		MaxConns int
+		Tags     []string
+		Timeout  time.Duration `env:"-"`
+		private  string
+	}
+	type config struct {
+		Hosts   []string          `env:"IDX_HOSTS"`
+		Ports   [2]int            `env:"IDX_PORTS"`
+		Labels  map[string]string `env:"IDX_LABELS"`
+		Matrix  [][]int           `env:"IDX_MATRIX"`
+		Servers []server          `env:"IDX_SERVERS"`
+		ByName  map[string]server `env:"IDX_BY_NAME"`
+		Server  *server           `env:"IDX_SERVER"`
+		Lists   map[string][]int  `env:"IDX_LISTS"`
+		Name    string            `env:"IDX_NAME"`
+	}
+	parse := func(t *testing.T, vars map[string]string, opts ...Option) (config, error) {
+		for key, val := range vars {
+			t.Setenv(key, val)
+		}
+		driver, err := New(append([]Option{WithFiles()}, opts...)...)
+		assert.NoError(t, err)
+		manager, err := tinyconf.New(tinyconf.WithDriver(driver))
+		assert.NoError(t, err)
+		conf := &config{}
+		assert.NoError(t, manager.Register(conf))
+		err = manager.Parse(conf)
+		return *conf, err
+	}
+	vars := map[string]string{
+		"IDX_HOSTS_0":               "a,b",
+		"IDX_HOSTS_1":               "c",
+		"IDX_HOSTS_FILE":            "ignored",
+		"IDX_HOSTS_01":              "ignored",
+		"IDX_PORTS_0":               "80",
+		"IDX_PORTS_1":               "443",
+		"IDX_LABELS_env":            "prod",
+		"IDX_LABELS_TEAM_NAME":      "core",
+		"IDX_MATRIX_0_0":            "1",
+		"IDX_MATRIX_0_1":            "2",
+		"IDX_MATRIX_1":              "3,4",
+		"IDX_SERVERS_0_HOST":        "a",
+		"IDX_SERVERS_0_HOST_NAME":   "a.example.com",
+		"IDX_SERVERS_0_MAX_CONNS":   "10",
+		"IDX_SERVERS_0_TAGS_0":      "x",
+		"IDX_SERVERS_0_TAGS_1":      "y",
+		"IDX_SERVERS_0_TIMEOUT":     "1s",
+		"IDX_SERVERS_0_UNKNOWN":     "ignored",
+		"IDX_SERVERS_1_HOST":        "b",
+		"IDX_SERVERS_1_TAGS":        "z,w",
+		"IDX_BY_NAME_main_HOST":     "main",
+		"IDX_BY_NAME_backup_HOST":   "backup",
+		"IDX_BY_NAME_backup_TAGS_0": "t",
+		"IDX_SERVER_HOST":           "single",
+		"IDX_SERVER_MAX_CONNS":      "5",
+		"IDX_LISTS_a_0":             "1",
+		"IDX_LISTS_b":               "2,3",
+		"IDX_NAME_0":                "ignored",
+	}
+	expected := config{
+		Hosts:  []string{"a,b", "c"},
+		Ports:  [2]int{80, 443},
+		Labels: map[string]string{"env": "prod", "TEAM_NAME": "core"},
+		Matrix: [][]int{{1, 2}, {3, 4}},
+		Servers: []server{
+			{Host: "a", HostName: "a.example.com", MaxConns: 10, Tags: []string{"x", "y"}},
+			{Host: "b", Tags: []string{"z", "w"}},
+		},
+		ByName: map[string]server{"main": {Host: "main"}, "backup": {Host: "backup", Tags: []string{"t"}}},
+		Server: &server{Host: "single", MaxConns: 5},
+		Lists:  map[string][]int{"a": {1}, "b": {2, 3}},
+	}
+
+	t.Run("indexed keys", func(t *testing.T) {
+		conf, err := parse(t, vars, WithIndexedKeys())
+		assert.NoError(t, err)
+		assert.Equal(t, expected, conf)
+	})
+
+	t.Run("disabled by default", func(t *testing.T) {
+		conf, err := parse(t, vars)
+		assert.NoError(t, err)
+		assert.Equal(t, config{}, conf)
+	})
+
+	t.Run("variable with the whole value has priority", func(t *testing.T) {
+		conf, err := parse(t, map[string]string{"IDX_HOSTS": "x", "IDX_HOSTS_0": "a"}, WithIndexedKeys())
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"x"}, conf.Hosts)
+	})
+
+	t.Run("with prefix and files isolation", func(t *testing.T) {
+		filePath := path.Join(t.TempDir(), ".env")
+		assert.NoError(t, os.WriteFile(filePath, []byte("APP_IDX_HOSTS_0=file\nAPP_IDX_HOSTS_1=file\n"), 0o600))
+		conf, err := parse(t, map[string]string{"APP_IDX_HOSTS_1": "env"},
+			WithIndexedKeys(), WithPrefix("APP_"), WithFiles(filePath), WithFilesIsolation())
+		assert.NoError(t, err)
+		assert.Equal(t, config{Hosts: []string{"file", "env"}}, conf)
+	})
+
+	t.Run("errors", func(t *testing.T) {
+		tests := map[string]map[string]string{
+			"missing index":        {"IDX_HOSTS_0": "a", "IDX_HOSTS_2": "c"},
+			"index not from zero":  {"IDX_HOSTS_1": "a"},
+			"incorrect array size": {"IDX_PORTS_0": "80"},
+			"incorrect item":       {"IDX_PORTS_0": "80", "IDX_PORTS_1": "https"},
+			"incorrect field":      {"IDX_SERVERS_0_MAX_CONNS": "many"},
+			"missing nested index": {"IDX_SERVERS_0_TAGS_1": "x"},
+		}
+		for name, vars := range tests {
+			t.Run(name, func(t *testing.T) {
+				_, err := parse(t, vars, WithIndexedKeys())
+				assert.Error(t, err)
+			})
+		}
+	})
+}

@@ -267,3 +267,28 @@ func TestDecodeJSON(t *testing.T) {
 	_, err = DecodeJSON([]byte(`{} {}`))
 	assert.Error(t, err)
 }
+
+func TestIsScalar(t *testing.T) {
+	tests := []struct {
+		name string
+		val  any
+		want bool
+	}{
+		{name: "int", val: 1, want: true},
+		{name: "pointer to string", val: ptr(""), want: true},
+		{name: "duration", val: time.Second, want: true},
+		{name: "time", val: time.Time{}, want: true},
+		{name: "bytes", val: []byte{}, want: true},
+		{name: "text unmarshaler slice type", val: net.IP{}, want: true},
+		{name: "slice", val: []string{}, want: false},
+		{name: "array", val: [2]int{}, want: false},
+		{name: "map", val: map[string]int{}, want: false},
+		{name: "struct", val: server{}, want: false},
+		{name: "pointer to struct", val: &server{}, want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, IsScalar(reflect.TypeOf(tt.val)))
+		})
+	}
+}
