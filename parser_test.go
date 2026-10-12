@@ -1,6 +1,7 @@
 package tinyconf
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"strings"
@@ -1108,4 +1109,167 @@ func (md *staticMockDriver) GetValue(field fmap.Field) (*Value, error) {
 		return nil, ErrValueNotFound
 	}
 	return &Value{Source: "static", Value: "static"}, nil
+}
+
+type watchMockDriver struct {
+	mu       sync.Mutex
+	value    string
+	changes  chan struct{}
+	watchErr error
+	started  chan struct{}
+}
+
+func newWatchMockDriver(value string) *watchMockDriver {
+	return &watchMockDriver{value: value, changes: make(chan struct{}), started: make(chan struct{}, 1)}
+}
+
+func (md *watchMockDriver) GenDoc(...*Registered) string { return "" }
+func (md *watchMockDriver) GetName() string              { return "watch" }
+func (md *watchMockDriver) GetValue(field fmap.Field) (*Value, error) {
+	md.mu.Lock()
+	defer md.mu.Unlock()
+	if field.GetStructPath() != "Name" && field.GetStructPath() != "Sub.Name" {
+		return nil, ErrValueNotFound
+	}
+	if md.value == "error" {
+		return nil, errors.New("random error")
+	}
+	return &Value{Source: "watch", Value: md.value}, nil
+}
+
+func (md *watchMockDriver) set(value string) {
+	md.mu.Lock()
+	md.value = value
+	md.mu.Unlock()
+	md.changes <- struct{}{}
+}
+
+func (md *watchMockDriver) Watch(ctx context.Context, onChange func()) error {
+	md.started <- struct{}{}
+	if md.watchErr != nil {
+		return md.watchErr
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-md.changes:
+			onChange()
+		}
+	}
+}
+
+func TestManager_Watch(t *testing.T) {
+	type Sub struct {
+		Name string
+	}
+	type Config struct {
+		Name    string
+		Default string
+		Sub     Sub
+	}
+	type change struct {
+		conf any
+		err  error
+	}
+	receive := func(t *testing.T, changes chan change) change {
+		select {
+		case c := <-changes:
+			return c
+		case <-time.After(5 * time.Second):
+			t.Fatal("change is not received")
+			return change{}
+		}
+	}
+	watch := func(t *testing.T, c *Manager, conf any) (chan change, chan error, context.CancelFunc) {
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
+		changes, done := make(chan change, 10), make(chan error, 1)
+		go func() {
+			done <- c.Watch(ctx, conf, func(conf any, err error) {
+				changes <- change{conf: conf, err: err}
+			})
+		}()
+		return changes, done, cancel
+	}
+
+	t.Run("changes", func(t *testing.T) {
+		driver := newWatchMockDriver("first")
+		c, err := New(WithDriver(driver))
+		assert.NoError(t, err)
+		conf := &Config{Default: "default"}
+		assert.NoError(t, c.Register(conf))
+		assert.NoError(t, c.Parse(conf))
+		assert.Equal(t, "first", conf.Name)
+
+		changes, done, cancel := watch(t, c, conf)
+		<-driver.started
+
+		driver.set("second")
+		got := receive(t, changes)
+		assert.NoError(t, got.err)
+		assert.Equal(t, "second", got.conf.(*Config).Name)
+		assert.Equal(t, "second", got.conf.(*Config).Sub.Name)
+		assert.Equal(t, "default", got.conf.(*Config).Default)
+		// original config is not changed
+		assert.Equal(t, "first", conf.Name)
+		assert.NotSame(t, conf, got.conf)
+
+		driver.set("error")
+		got = receive(t, changes)
+		assert.Error(t, got.err)
+		// values that are not provided by drivers are taken from the original config
+		assert.Equal(t, "first", got.conf.(*Config).Name)
+
+		driver.set("third")
+		got = receive(t, changes)
+		assert.NoError(t, got.err)
+		assert.Equal(t, "third", got.conf.(*Config).Name)
+
+		cancel()
+		assert.NoError(t, <-done)
+	})
+
+	t.Run("sub config", func(t *testing.T) {
+		driver := newWatchMockDriver("first")
+		c, err := New(WithDriver(driver))
+		assert.NoError(t, err)
+		assert.NoError(t, c.Register(&Config{}))
+
+		changes, done, cancel := watch(t, c, &Sub{})
+		<-driver.started
+		driver.set("second")
+		got := receive(t, changes)
+		assert.NoError(t, got.err)
+		assert.Equal(t, &Sub{Name: "second"}, got.conf)
+		cancel()
+		assert.NoError(t, <-done)
+	})
+
+	t.Run("watcher error", func(t *testing.T) {
+		driver := newWatchMockDriver("first")
+		driver.watchErr = errors.New("watch error")
+		c, err := New(WithDriver(driver), WithDriver(newWatchMockDriver("second")))
+		assert.NoError(t, err)
+		conf := &Config{}
+		assert.NoError(t, c.Register(conf))
+		_, done, _ := watch(t, c, conf)
+		select {
+		case err := <-done:
+			assert.ErrorIs(t, err, driver.watchErr)
+		case <-time.After(5 * time.Second):
+			t.Fatal("watch is not stopped")
+		}
+	})
+
+	t.Run("incorrect usage", func(t *testing.T) {
+		c, err := New(WithDriver(&staticMockDriver{}))
+		assert.NoError(t, err)
+		conf := &Config{}
+		assert.ErrorIs(t, c.Watch(context.Background(), conf, nil), ErrNotRegisteredConfig)
+		assert.NoError(t, c.Register(conf))
+		assert.ErrorIs(t, c.Watch(context.Background(), conf, nil), ErrNoWatchers)
+		assert.Error(t, c.Watch(context.Background(), nil, nil))
+		assert.Error(t, c.Watch(context.Background(), (*Config)(nil), nil))
+	})
 }

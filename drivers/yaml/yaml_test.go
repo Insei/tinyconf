@@ -1,6 +1,7 @@
 package yaml
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -437,4 +438,40 @@ func TestYamlDriver_GenDoc_Types(t *testing.T) {
 		assert.NoError(t, manager.Parse(parsed))
 		assert.Equal(t, conf, parsed)
 	})
+}
+
+func TestYamlDriver_Watch(t *testing.T) {
+	type config struct {
+		Name    string `yaml:"name"`
+		Default string
+	}
+	filePath := writeFile(t, "config.yaml", "name: first\n")
+	driver, err := New(filePath, WithWatchInterval(5*time.Millisecond))
+	assert.NoError(t, err)
+	manager, err := tinyconf.New(tinyconf.WithDriver(driver))
+	assert.NoError(t, err)
+
+	conf := &config{Default: "default"}
+	assert.NoError(t, manager.Register(conf))
+	assert.NoError(t, manager.Parse(conf))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	changes, done := make(chan *config, 10), make(chan error, 1)
+	go func() {
+		done <- manager.Watch(ctx, conf, func(newConf any, err error) {
+			assert.NoError(t, err)
+			changes <- newConf.(*config)
+		})
+	}()
+
+	assert.NoError(t, os.WriteFile(filePath, []byte("name: second value\n"), 0o600))
+	select {
+	case newConf := <-changes:
+		assert.Equal(t, &config{Name: "second value", Default: "default"}, newConf)
+		assert.Equal(t, "first", conf.Name)
+	case <-time.After(5 * time.Second):
+		t.Fatal("change is not detected")
+	}
+	cancel()
+	assert.NoError(t, <-done)
 }

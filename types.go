@@ -1,6 +1,7 @@
 package tinyconf
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -13,6 +14,7 @@ var (
 	ErrValueNotFound        = fmt.Errorf("value was not found")
 	ErrIncorrectTagSettings = fmt.Errorf("incorrect tag settings")
 	ErrRequired             = fmt.Errorf("required value is not set")
+	ErrNoWatchers           = fmt.Errorf("no drivers that can watch for changes")
 )
 
 // parseErrors contains all driver errors collected during Manager.Parse.
@@ -71,6 +73,12 @@ type Driver interface {
 // If Load returns an error, the driver is skipped and the error is returned from Manager.Parse.
 type Loader interface {
 	Load() error
+}
+
+// Watcher is an optional interface of the driver that can notify about changes of its source.
+// Watch should block until ctx is done and call onChange after every change of the source.
+type Watcher interface {
+	Watch(ctx context.Context, onChange func()) error
 }
 
 type Option interface {

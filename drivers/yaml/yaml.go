@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"reflect"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -186,6 +187,13 @@ func WithOptional() Option {
 func WithEnvExpansion() Option {
 	return func(o *tree.Options) {
 		o.ExpandEnv = true
+	}
+}
+
+// WithWatchInterval sets the interval of checking the config files for changes in Manager.Watch, 5 seconds by default.
+func WithWatchInterval(interval time.Duration) Option {
+	return func(o *tree.Options) {
+		o.WatchInterval = interval
 	}
 }
 
