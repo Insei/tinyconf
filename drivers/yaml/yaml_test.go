@@ -221,6 +221,36 @@ func TestYamlDriver_GetMapValue(t *testing.T) {
 			expectedValue: nil,
 			wantErr:       true,
 		},
+		{
+			name:    "NestedMissingParentDoesNotFallbackToRoot",
+			yamlMap: map[string]any{"nested": "root value"},
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test struct {
+						Nested string `yaml:"nested"`
+					} `yaml:"nonexistent"`
+				}]()
+				return storage.MustFind("Test.Nested")
+			},
+			expectedValue: nil,
+			wantErr:       true,
+		},
+		{
+			name:    "DeepNestedMissingParentDoesNotFallbackToGrandparent",
+			yamlMap: map[string]any{"existent": map[string]any{"nested": "parent value"}},
+			getField: func() fmap.Field {
+				storage, _ := fmap.Get[struct {
+					Test struct {
+						Middle struct {
+							Nested string `yaml:"nested"`
+						} `yaml:"nonexistent"`
+					} `yaml:"existent"`
+				}]()
+				return storage.MustFind("Test.Middle.Nested")
+			},
+			expectedValue: nil,
+			wantErr:       true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -427,4 +457,16 @@ func TestNew(t *testing.T) {
 	driver, err := New("anystring.yaml")
 	assert.NoError(t, err)
 	assert.NotNil(t, driver)
+}
+
+func TestYamlDriver_GenDoc_Hidden(t *testing.T) {
+	conf := &struct {
+		Password string `yaml:"password" doc:"password" hidden:"true"`
+	}{Password: "secret"}
+	storage, err := fmap.GetFrom(conf)
+	assert.NoError(t, err)
+
+	driver := &yamlDriver{name: "yaml"}
+	doc := driver.GenDoc(&tinyconf.Registered{Storage: storage, Config: conf})
+	assert.Equal(t, "#password\n#password: \n", doc)
 }
