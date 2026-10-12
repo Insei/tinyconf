@@ -12,6 +12,7 @@ var (
 	ErrNotRegisteredConfig  = fmt.Errorf("config is not registered")
 	ErrValueNotFound        = fmt.Errorf("value was not found")
 	ErrIncorrectTagSettings = fmt.Errorf("incorrect tag settings")
+	ErrRequired             = fmt.Errorf("required value is not set")
 )
 
 // parseErrors contains all driver errors collected during Manager.Parse.
@@ -41,6 +42,16 @@ func (e parseErrors) As(target any) bool {
 		}
 	}
 	return false
+}
+
+// FieldSource describes the source of the config field value.
+type FieldSource struct {
+	// Field is a struct path of the field in the config, HTTP.Port for example.
+	Field string
+	// Driver is a name of the driver that has set the value.
+	Driver string
+	// Source is a source of the value inside of the driver: name of the env variable, flag and so on.
+	Source string
 }
 
 type Value struct {

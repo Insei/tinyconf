@@ -3,6 +3,8 @@ package tinyconf
 import (
 	"errors"
 	"reflect"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -841,4 +843,269 @@ func TestManager_Parse_Loader(t *testing.T) {
 	// Load is called once per Parse
 	assert.Equal(t, 2, loaded.loaded)
 	assert.Equal(t, 2, failed.loaded)
+}
+
+type namedPathMockDriver struct {
+	pathMockDriver
+	name string
+}
+
+func (md *namedPathMockDriver) GetName() string {
+	return md.name
+}
+
+func (md *namedPathMockDriver) GetValue(field fmap.Field) (*Value, error) {
+	val, err := md.pathMockDriver.GetValue(field)
+	if val != nil {
+		val.Source = md.name + ":" + field.GetStructPath()
+	}
+	return val, err
+}
+
+func (md *namedPathMockDriver) GenDoc(registers ...*Registered) string {
+	doc := ""
+	for _, register := range registers {
+		doc += reflect.TypeOf(register.Config).String() + ";"
+	}
+	return doc
+}
+
+func TestManager_Parse_Required(t *testing.T) {
+	type HTTP struct {
+		Host  string   `required:"true"`
+		Port  int      `required:"true"`
+		Hosts []string `required:"true"`
+		Debug bool     `required:"false"`
+		Name  string
+	}
+	type Config struct {
+		HTTP  HTTP
+		Token *string `required:"true"`
+	}
+	token := "token"
+	testCases := []struct {
+		Name    string
+		Values  map[string]any
+		Config  Config
+		Missing []string
+	}{
+		{
+			Name:    "Nothing is set",
+			Missing: []string{"HTTP.Host", "HTTP.Port", "HTTP.Hosts", "Token"},
+		},
+		{
+			Name:   "Values from driver",
+			Values: map[string]any{"HTTP.Host": "localhost", "HTTP.Port": 80, "HTTP.Hosts": []string{"a"}, "Token": &token},
+		},
+		{
+			Name:   "Zero values from driver",
+			Values: map[string]any{"HTTP.Host": "", "HTTP.Port": 0, "HTTP.Hosts": []string{}, "Token": (*string)(nil)},
+		},
+		{
+			Name:   "Default values in config",
+			Config: Config{HTTP: HTTP{Host: "localhost", Port: 80, Hosts: []string{"a"}}, Token: &token},
+		},
+		{
+			Name:    "Empty slice in config",
+			Config:  Config{HTTP: HTTP{Host: "localhost", Port: 80, Hosts: []string{}}, Token: &token},
+			Missing: []string{"HTTP.Hosts"},
+		},
+		{
+			Name:    "Partially set",
+			Values:  map[string]any{"HTTP.Host": "localhost"},
+			Config:  Config{HTTP: HTTP{Hosts: []string{"a"}}},
+			Missing: []string{"HTTP.Port", "Token"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			c := newPathMockManager(&pathMockDriver{values: testCase.Values})
+			conf := testCase.Config
+			assert.NoError(t, c.Register(&conf))
+			err := c.Parse(&conf)
+			if len(testCase.Missing) == 0 {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorIs(t, err, ErrRequired)
+				assert.Len(t, err.(parseErrors), len(testCase.Missing))
+				for _, path := range testCase.Missing {
+					assert.Contains(t, err.Error(), "field "+path+": ")
+				}
+			}
+
+			t.Run("sub config", func(t *testing.T) {
+				sub := testCase.Config.HTTP
+				err := c.Parse(&sub)
+				var missing []string
+				for _, path := range testCase.Missing {
+					if strings.HasPrefix(path, "HTTP.") {
+						missing = append(missing, strings.TrimPrefix(path, "HTTP."))
+					}
+				}
+				if len(missing) == 0 {
+					assert.NoError(t, err)
+					return
+				}
+				assert.ErrorIs(t, err, ErrRequired)
+				assert.Len(t, err.(parseErrors), len(missing))
+				for _, path := range missing {
+					assert.Contains(t, err.Error(), "field "+path+": ")
+				}
+			})
+		})
+	}
+}
+
+func TestManager_Sources(t *testing.T) {
+	type HTTP struct {
+		Host string
+		Port int
+	}
+	type Config struct {
+		Name string
+		HTTP HTTP
+		Skip string
+	}
+	first := &namedPathMockDriver{name: "first", pathMockDriver: pathMockDriver{
+		values: map[string]any{"HTTP.Port": 80, "HTTP.Host": "localhost", "Name": "first"},
+		errs:   map[string]error{},
+	}}
+	second := &namedPathMockDriver{name: "second", pathMockDriver: pathMockDriver{
+		values: map[string]any{"HTTP.Port": 8080},
+	}}
+	c := &Manager{
+		drivers:    []Driver{first, second},
+		registered: make(map[reflect.Type]*Registered),
+		log:        &testLogger{},
+	}
+	conf := &Config{}
+	assert.NoError(t, c.Register(conf))
+	assert.Nil(t, c.Sources(conf))
+
+	assert.NoError(t, c.Parse(conf))
+	expected := []FieldSource{
+		{Field: "Name", Driver: "first", Source: "first:Name"},
+		{Field: "HTTP.Host", Driver: "first", Source: "first:HTTP.Host"},
+		{Field: "HTTP.Port", Driver: "second", Source: "second:HTTP.Port"},
+	}
+	sources := c.Sources(conf)
+	assert.Equal(t, expected, sources)
+
+	// returned slice is a copy
+	sources[0].Driver = "changed"
+	assert.Equal(t, expected, c.Sources(conf))
+
+	t.Run("sub config", func(t *testing.T) {
+		sub := &HTTP{}
+		assert.Nil(t, c.Sources(sub))
+		assert.NoError(t, c.Parse(sub))
+		assert.Equal(t, []FieldSource{
+			{Field: "Host", Driver: "first", Source: "first:HTTP.Host"},
+			{Field: "Port", Driver: "second", Source: "second:HTTP.Port"},
+		}, c.Sources(sub))
+		assert.Equal(t, expected, c.Sources(conf))
+	})
+
+	t.Run("sources are updated by the next parse", func(t *testing.T) {
+		delete(second.values, "HTTP.Port")
+		first.errs["Name"] = errors.New("random error")
+		assert.Error(t, c.Parse(conf))
+		assert.Equal(t, []FieldSource{
+			{Field: "HTTP.Host", Driver: "first", Source: "first:HTTP.Host"},
+			{Field: "HTTP.Port", Driver: "first", Source: "first:HTTP.Port"},
+		}, c.Sources(conf))
+	})
+
+	t.Run("not parsed config", func(t *testing.T) {
+		assert.Nil(t, c.Sources(&struct{}{}))
+		assert.Nil(t, c.Sources(nil))
+	})
+}
+
+func TestManager_RegistrationOrder(t *testing.T) {
+	type Shared struct {
+		Value string
+	}
+	type First struct {
+		Shared Shared
+	}
+	type Second struct {
+		Other  string
+		Shared Shared
+	}
+	type Third struct {
+		Nested struct {
+			Shared Shared
+		}
+	}
+	// map iteration order is random, so check it many times
+	for i := 0; i < 50; i++ {
+		driver := &namedPathMockDriver{name: "mock", pathMockDriver: pathMockDriver{values: map[string]any{
+			"Shared.Value":        "shared",
+			"Nested.Shared.Value": "nested",
+		}}}
+		c := &Manager{
+			drivers:    []Driver{driver},
+			registered: make(map[reflect.Type]*Registered),
+			log:        &testLogger{},
+		}
+		assert.NoError(t, c.Register(&Third{}))
+		assert.NoError(t, c.Register(&First{}))
+		assert.NoError(t, c.Register(&Second{}))
+		// repeated registration does not change the order
+		assert.NoError(t, c.Register(&Third{}))
+
+		// sub config is parsed from the first registered config with this type
+		sub := &Shared{}
+		assert.NoError(t, c.Parse(sub))
+		assert.Equal(t, "nested", sub.Value)
+		assert.Equal(t, []string{"Nested.Shared.Value"}, driver.requested)
+
+		// drivers receive configs in the registration order
+		assert.Equal(t, "*tinyconf.Third;*tinyconf.First;*tinyconf.Second;", c.GenDoc("mock"))
+	}
+}
+
+func TestManager_Concurrency(t *testing.T) {
+	type HTTP struct {
+		Host string
+	}
+	type Config struct {
+		HTTP HTTP
+	}
+	c, err := New(WithDriver(&staticMockDriver{}))
+	assert.NoError(t, err)
+	assert.NoError(t, c.Register(&Config{}))
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 50; j++ {
+				conf, sub := &Config{}, &HTTP{}
+				assert.NoError(t, c.Register(&struct{ Other string }{}))
+				assert.NoError(t, c.Register(conf))
+				assert.NoError(t, c.Parse(conf))
+				assert.NoError(t, c.Parse(sub))
+				assert.Equal(t, "static", conf.HTTP.Host)
+				assert.Equal(t, "static", sub.Host)
+				assert.Len(t, c.Sources(conf), 1)
+				assert.Equal(t, "doc", c.GenDoc("static"))
+			}
+		}()
+	}
+	wg.Wait()
+}
+
+// staticMockDriver has no state and can be used from many goroutines.
+type staticMockDriver struct{}
+
+func (md *staticMockDriver) GenDoc(...*Registered) string { return "doc" }
+func (md *staticMockDriver) GetName() string              { return "static" }
+func (md *staticMockDriver) GetValue(field fmap.Field) (*Value, error) {
+	if field.GetType().Kind() != reflect.String {
+		return nil, ErrValueNotFound
+	}
+	return &Value{Source: "static", Value: "static"}, nil
 }
