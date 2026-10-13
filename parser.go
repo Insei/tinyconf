@@ -327,15 +327,11 @@ func (c *Manager) Watch(ctx context.Context, conf any, onChange func(conf any, e
 		return ErrNoWatchers
 	}
 	// defaults for all next configs
-	storage, err := getStorage(conf)
-	if err != nil {
-		return err
-	}
 	// structs stored by pointer are copied, their fields are set by Parse
 	copyConf := func(src reflect.Value) reflect.Value {
 		dst := reflect.New(src.Type().Elem())
 		dst.Elem().Set(src.Elem())
-		convert.CopySections(storage, dst.Interface())
+		convert.CopySections(dst.Interface())
 		return dst
 	}
 	base := copyConf(reflect.ValueOf(conf))
