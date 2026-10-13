@@ -22,3 +22,6 @@ go.work
 
 # IDE's
 .idea
+
+# Documentation site build
+site/
