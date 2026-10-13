@@ -82,4 +82,5 @@ Polling works with everything that replaces the file: editors, `kubectl` updates
 * `onChange` is called from one goroutine, the next call starts after the previous one returns.
 * Several changes that happen while the config is being parsed are merged into one reload.
 * A [sub config](structs.md#sub-configs) can be watched the same way as the whole config.
+* [Structs stored by pointer](structs.md#structs-stored-by-pointer) are copied for every new config too, the structs of the original config are not changed.
 * What can be applied on the fly is up to the application: a log level can be changed at any time, a listening port requires restart of the server. Compare the old and the new config in `onChange` and act on the fields that matter.

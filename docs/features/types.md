@@ -15,8 +15,9 @@ Drivers get values in two forms:
 | `url.URL`, `[]byte`, any `encoding.TextUnmarshaler` (`net.IP`, `uuid.UUID`, ...) | `value` | scalar |
 | `[]T`, `[N]T` | `a,b,c` | list or string |
 | `map[K]V` | `a:1,b:2` | map or string |
-| structs, `[]Struct`, `map[K]Struct`, nested slices and maps | JSON: `[{"host":"a","port":1}]` | native |
+| `[]Struct`, `map[K]Struct`, nested slices and maps | JSON: `[{"host":"a","port":1}]` | native |
 | pointers to all types above | the same | the same |
+| `Struct`, `*Struct` | parsed by fields | parsed by fields |
 
 ## Slices and arrays
 
@@ -104,7 +105,7 @@ type Config struct {
 String values of slices, arrays, maps and structs are parsed as JSON if they start with `[` or `{`. Keys of such structs are taken from the `json` tag for string values and JSON files, from the `yaml` tag for YAML files and from the `toml` tag for TOML files, the field name is used if the tag is not set (case-insensitive).
 
 !!! note "Fields with struct type"
-    A field with struct type is not a single value: it is parsed by its fields, and every field has its own tags. See [Nested structs and sub configs](structs.md).
+    A field with struct type, stored by value or by pointer, is not a single value: it is parsed by its fields, and every field has its own tags. See [Nested structs and sub configs](structs.md).
 
 ## Several drivers
 
