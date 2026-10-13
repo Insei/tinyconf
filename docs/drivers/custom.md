@@ -55,6 +55,34 @@ func (d *kvDriver) Load() error {
 }
 ```
 
+## Watcher
+
+A driver can report changes of its source for [`Manager.Watch`](../features/reloading.md) by implementing the optional `tinyconf.Watcher` interface:
+
+```go
+type Watcher interface {
+    Watch(ctx context.Context, onChange func()) error
+}
+```
+
+`Watch` should block until the context is done and call `onChange` after every change of the source. The manager parses the config again after the call, so `Load` and `GetValue` should return the new values.
+
+```go
+func (d *kvDriver) Watch(ctx context.Context, onChange func()) error {
+    events := d.client.Subscribe(ctx)
+    for {
+        select {
+        case <-ctx.Done():
+            return nil
+        case <-events:
+            onChange()
+        }
+    }
+}
+```
+
+An error returned before the context is done stops `Manager.Watch`, it returns this error.
+
 ## Example
 
 A driver that reads values from a map, the name of the value is taken from the `kv` tag:

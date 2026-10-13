@@ -51,6 +51,7 @@ yamlDriver, err := yaml.New("config.yaml",
 | `WithData(name, data)` | in-memory content, the name is used in error messages |
 | `WithOptional()` | files can be absent |
 | `WithEnvExpansion()` | replaces `${VAR}` in the content with environment variables |
+| `WithWatchInterval(interval)` | interval of checking the files for changes in [`Watch`](../features/reloading.md), 5 seconds by default |
 
 The first argument of `New` can be an empty string, if all sources are set by options.
 

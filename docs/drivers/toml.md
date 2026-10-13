@@ -71,6 +71,7 @@ tomlDriver, err := toml.New("config.toml",
 | `WithData(name, data)` | in-memory content, the name is used in error messages |
 | `WithOptional()` | files can be absent |
 | `WithEnvExpansion()` | replaces `${VAR}` and `${VAR:-default}` in the content with environment variables |
+| `WithWatchInterval(interval)` | interval of checking the files for changes in [`Watch`](../features/reloading.md), 5 seconds by default |
 
 Several files are [merged](yaml.md#several-files) in the order of addition, tables are merged by keys. Files are read once per `Parse` call.
 
