@@ -43,6 +43,13 @@ err := config.Parse(c)
 
 `Parse` fills the registered config with values from drivers. The config can be a registered one or a field of the registered config with struct type, see [sub configs](structs.md#sub-configs). `tinyconf.ErrNotRegisteredConfig` is returned for all other configs.
 
+## Other methods
+
+| Method | Description |
+|---|---|
+| `GenDoc(driverName)` | generates a template of all registered configs, see [Documentation generation](gendoc.md) |
+| `Sources(conf)` | returns which driver has set the value of every field, see [Value sources](sources.md) |
+
 ## Errors
 
 `Parse` does not stop on the first error: all fields are parsed, and all errors are returned as one error. It can be checked with `errors.Is` and `errors.As`.
@@ -56,5 +63,13 @@ if err := config.Parse(c); err != nil {
 
 Fields that were parsed without errors are filled even if `Parse` returns an error.
 
+Missing [required fields](required.md) are reported in the same error and can be checked with `errors.Is(err, tinyconf.ErrRequired)`.
+
 !!! note "Not an error"
     A field without a value in the driver and a field without the tag of the driver are not errors, the manager just goes to the next driver.
+
+## Concurrency
+
+All methods of the manager are safe for concurrent use: configs can be registered and parsed from several goroutines. The config struct itself is not protected, do not read it while it is being parsed by another goroutine.
+
+Configs are documented by `GenDoc` and checked for [sub configs](structs.md#sub-configs) in the registration order.

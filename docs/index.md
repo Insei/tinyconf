@@ -100,7 +100,7 @@ and `HTTP_HOST=example.com` in the environment the program prints
 
 -   :material-book-open-variant:{ .lg } **[Features →](features/index.md)**
 
-    The manager, struct tags, supported types, nested structs and sub configs, documentation generation, logging.
+    The manager, struct tags, supported types, nested structs and sub configs, required fields, value sources, documentation generation, logging.
 
 -   :material-power-plug-outline:{ .lg } **[Drivers →](drivers/index.md)**
 
