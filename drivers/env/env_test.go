@@ -685,6 +685,7 @@ func TestEnvDriver_IndexedKeys(t *testing.T) {
 			"incorrect item":       {"IDX_PORTS_0": "80", "IDX_PORTS_1": "https"},
 			"incorrect field":      {"IDX_SERVERS_0_MAX_CONNS": "many"},
 			"missing nested index": {"IDX_SERVERS_0_TAGS_1": "x"},
+			"missing index in map": {"IDX_LISTS_a_1": "1"},
 		}
 		for name, vars := range tests {
 			t.Run(name, func(t *testing.T) {
