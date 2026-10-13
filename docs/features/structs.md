@@ -25,6 +25,41 @@ For the yaml driver the tag of the struct field is a key of the nested map, so `
 
 Types that are parsed from a single value — `time.Time`, `url.URL` and types with `UnmarshalText` — are not nested structs, see [Supported types](types.md).
 
+## Structs stored by pointer
+
+A struct stored by pointer is parsed the same way, by its fields:
+
+```go
+type TLS struct {
+    Cert string `yaml:"cert" env:"TLS_CERT"`
+    Key  string `yaml:"key" env:"TLS_KEY"`
+}
+
+type Config struct {
+    TLS *TLS `yaml:"tls"`
+}
+```
+
+The pointer makes the section **optional**:
+
+* the struct is created when the first value for its fields is found in any driver;
+* without values the pointer is not changed, so it stays `nil`;
+* an existing struct is filled in place, it is not replaced with a new one.
+
+```go
+if err := config.Parse(c); err != nil {
+    panic(err)
+}
+if c.TLS != nil {
+    // TLS_CERT, TLS_KEY or the tls section of the file is set
+}
+```
+
+[Required fields](required.md) inside such struct are checked even if the pointer is `nil`: a required field makes the whole section mandatory.
+
+!!! note "Parsed as a single value"
+    Pointers to pointers (`**Struct`) and recursive types (`Next *Node` inside `Node`) are not parsed by fields. They are single values: JSON in string values, a nested map in files.
+
 ## Sub configs
 
 A part of the registered config can be parsed separately, by the type of the field. It allows a package to get its own config without knowing about the whole one:
@@ -42,6 +77,6 @@ if err := config.Parse(http); err != nil {
 }
 ```
 
-Only the fields of the sub config are parsed, with the same tags and keys as in the whole config: `http.host` in the file, `HTTP_HOST` in the environment.
+The type can be a type of the struct stored by value or by pointer. Only the fields of the sub config are parsed, with the same tags and keys as in the whole config: `http.host` in the file, `HTTP_HOST` in the environment.
 
 If several registered configs have a field with this type, the configs are checked in the registration order and the first found field is used.
