@@ -75,6 +75,8 @@ nav:
       - Struct tags: features/tags.md
       - Supported types: features/types.md
       - Nested structs and sub configs: features/structs.md
+      - Required fields: features/required.md
+      - Value sources: features/sources.md
       - Documentation generation: features/gendoc.md
       - Logging: features/logging.md
   - Drivers:

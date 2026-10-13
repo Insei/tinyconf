@@ -44,4 +44,4 @@ if err := config.Parse(http); err != nil {
 
 Only the fields of the sub config are parsed, with the same tags and keys as in the whole config: `http.host` in the file, `HTTP_HOST` in the environment.
 
-If several registered configs have a field with this type, the field of one of them is used, so keep the types of sub configs unique.
+If several registered configs have a field with this type, the configs are checked in the registration order and the first found field is used.
