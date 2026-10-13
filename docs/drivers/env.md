@@ -39,6 +39,7 @@ envDriver, err := env.New(
     env.WithSecretFiles(),
     env.WithFiles(".env", ".env.local"),
     env.WithFilesIsolation(),
+    env.WithIndexedKeys(),
 )
 ```
 
@@ -49,6 +50,7 @@ envDriver, err := env.New(
 | `WithSecretFiles()` | reads the value from the file, if the variable with the `_FILE` suffix is set |
 | `WithFiles(files...)` | custom `.env` files instead of the default ones |
 | `WithFilesIsolation()` | does not export the values of the `.env` files to the process environment |
+| `WithIndexedKeys()` | reads slices, arrays, maps and structs from separate variables |
 
 ### Prefix
 
@@ -82,6 +84,42 @@ HTTP_TOKEN_FILE=/run/secrets/http_token
 ```
 
 The trailing line break of the file content is removed. The variable with the value itself has priority over the file.
+
+### Indexed keys
+
+By default, a slice, a map or a list of structs is set by one variable with the whole value: `HOSTS=a,b` or JSON. With `env.WithIndexedKeys()` every item can have its own variable. It is the form that is natural for Kubernetes manifests and Docker Compose files, where a long JSON in one variable is hard to read and to override.
+
+```go
+type Server struct {
+    Host     string `env:"HOST"`
+    MaxConns int
+    Tags     []string
+}
+
+type Config struct {
+    Hosts   []string          `env:"HOSTS"`
+    Labels  map[string]string `env:"LABELS"`
+    Servers []Server          `env:"SERVERS"`
+}
+```
+
+| Type | Variables |
+|---|---|
+| `Hosts []string` | `HOSTS_0=a`, `HOSTS_1=b` |
+| `Labels map[string]string` | `LABELS_env=prod`, `LABELS_team=core` |
+| `Servers []Server` | `SERVERS_0_HOST=a`, `SERVERS_0_MAX_CONNS=10`, `SERVERS_0_TAGS_0=x`, `SERVERS_1_HOST=b` |
+
+Rules:
+
+* **Slices and arrays** — the index is added to the name of the field. Indexes should be sequential and start from 0, a gap is an error.
+* **Maps** — the rest of the name after the prefix is a key, as is, case-sensitive.
+* **Structs** inside slices and maps — names of the fields are taken from their `env` tags or built from the field names: `MaxConns` is `MAX_CONNS`. Fields with `env:"-"` are skipped.
+* **Nesting** is not limited: `SERVERS_0_TAGS_0` is the first tag of the first server.
+* The variable with the **whole value has priority**: if `HOSTS` is set, `HOSTS_0` is ignored.
+* The [prefix](#prefix) is added to all names: `APP_HOSTS_0`.
+
+!!! warning "Names of the map fields"
+    For a map with simple values every variable started with the name of the field and `_` becomes an item of the map. With `Labels` read from `LABELS`, the variable `LABELS_FILE` is the `FILE` key. Choose the name of such field so that it is not a prefix of other variables.
 
 ## .env files
 

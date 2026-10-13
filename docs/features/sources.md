@@ -31,7 +31,7 @@ Password is set by env driver from PASSWORD
 |---|---|
 | tag | name of the tag, `initial` |
 | yaml, json, toml | name of the driver |
-| env | name of the variable, with the prefix |
+| env | name of the variable, with the prefix; `HOSTS_*` for the value from [indexed keys](../drivers/env.md#indexed-keys) |
 | flag | name of the flag, `-http-port` |
 
 ## Rules
