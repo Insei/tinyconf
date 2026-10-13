@@ -38,6 +38,8 @@ type field struct {
 	path  string
 	value any
 	tag   reflect.StructTag
+	// section - struct that is parsed by its fields, it has no value
+	section bool
 }
 
 func (f field) genDoc(driver string, depth int) string {
@@ -55,7 +57,7 @@ func (f field) genDoc(driver string, depth int) string {
 // formatValue returns field value in the yaml format, slices and maps are formatted in the flow style.
 func (f field) formatValue() string {
 	typeOf := reflect.TypeOf(f.value)
-	if typeOf == nil || f.tag.Get("hidden") == "true" || (typeOf.Kind() == reflect.Struct && !convert.IsLeaf(typeOf)) {
+	if typeOf == nil || f.tag.Get("hidden") == "true" || f.section {
 		return ""
 	}
 	switch tree := convert.ToTree(f.value, "yaml").(type) {
@@ -86,9 +88,10 @@ func (d *yamlDriver) getUniqueFields(registers []*tinyconf.Registered) []field {
 			}
 
 			member := field{
-				path:  fld.GetTagPath(d.name, false),
-				value: convert.GetFieldValue(fld, register.Config),
-				tag:   tag,
+				path:    fld.GetTagPath(d.name, false),
+				value:   convert.GetFieldValue(fld, register.Config),
+				tag:     tag,
+				section: !convert.IsValueField(register.Storage, fld),
 			}
 
 			if slices118.ContainsFunc(fields, func(item field) bool {

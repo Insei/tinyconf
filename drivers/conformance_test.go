@@ -57,6 +57,12 @@ type conformanceNested struct {
 	Hosts   []string      `env:"CONFORMANCE_NESTED_HOSTS" yaml:"hosts" flag:"hosts" json:"hosts" toml:"hosts" initial:"a,b"`
 }
 
+// conformanceNestedPtr is stored by pointer, it is parsed by its fields like the struct stored by value.
+type conformanceNestedPtr struct {
+	PtrName  string `env:"CONFORMANCE_NESTED_PTR_NAME" yaml:"name" flag:"ptr-name" json:"name" toml:"name" initial:"ptr"`
+	PtrPorts []int  `env:"CONFORMANCE_NESTED_PTR_PORTS" yaml:"ports" flag:"ptr-ports" json:"ports" toml:"ports" initial:"1,2"`
+}
+
 // conformanceConfig contains all types supported by tinyconf.
 // Every field should have tags for all drivers, value of the initial tag is also used as value of the env variable.
 // The same values in the yaml format are in the conformanceYAML.
@@ -109,9 +115,9 @@ type conformanceConfig struct {
 	MapOfSlices map[string][]string          `env:"CONFORMANCE_MAP_OF_SLICES" yaml:"map_of_slices" flag:"map-of-slices" json:"map_of_slices" toml:"map_of_slices" initial:"{\"a\":[\"b\",\"c\"]}"`
 	Servers     []conformanceServer          `env:"CONFORMANCE_SERVERS" yaml:"servers" flag:"servers" json:"servers" toml:"servers" initial:"[{\"host\":\"a\",\"port\":1,\"timeout\":\"1s\"},{\"host\":\"b\",\"port\":2}]"`
 	ServersMap  map[string]conformanceServer `env:"CONFORMANCE_SERVERS_MAP" yaml:"servers_map" flag:"servers-map" json:"servers_map" toml:"servers_map" initial:"{\"main\":{\"host\":\"a\",\"port\":1}}"`
-	ServerPtr   *conformanceServer           `env:"CONFORMANCE_SERVER_PTR" yaml:"server_ptr" flag:"server-ptr" json:"server_ptr" toml:"server_ptr" initial:"{\"host\":\"a\",\"port\":1}"`
 
-	Nested conformanceNested `yaml:"nested" json:"nested" toml:"nested"`
+	Nested    conformanceNested     `yaml:"nested" json:"nested" toml:"nested"`
+	NestedPtr *conformanceNestedPtr `yaml:"nested_ptr" json:"nested_ptr" toml:"nested_ptr"`
 }
 
 const conformanceYAML = `
@@ -170,12 +176,12 @@ servers_map:
   main:
     host: a
     port: 1
-server_ptr:
-  host: a
-  port: 1
 nested:
   timeout: 1m
   hosts: [a, b]
+nested_ptr:
+  name: ptr
+  ports: [1, 2]
 `
 
 func ptr[T any](val T) *T {
@@ -219,8 +225,8 @@ func conformanceExpected() conformanceConfig {
 		MapOfSlices:  map[string][]string{"a": {"b", "c"}},
 		Servers:      []conformanceServer{{Host: "a", Port: 1, Timeout: time.Second}, {Host: "b", Port: 2}},
 		ServersMap:   map[string]conformanceServer{"main": {Host: "a", Port: 1}},
-		ServerPtr:    &conformanceServer{Host: "a", Port: 1},
 		Nested:       conformanceNested{Timeout: time.Minute, Hosts: []string{"a", "b"}},
+		NestedPtr:    &conformanceNestedPtr{PtrName: "ptr", PtrPorts: []int{1, 2}},
 	}
 }
 
@@ -229,8 +235,12 @@ func conformanceFields(t *testing.T, typeOf reflect.Type) []reflect.StructField 
 	var fields []reflect.StructField
 	for i := 0; i < typeOf.NumField(); i++ {
 		field := typeOf.Field(i)
-		if field.Type == reflect.TypeOf(conformanceNested{}) {
+		switch field.Type {
+		case reflect.TypeOf(conformanceNested{}):
 			fields = append(fields, conformanceFields(t, field.Type)...)
+			continue
+		case reflect.TypeOf(&conformanceNestedPtr{}):
+			fields = append(fields, conformanceFields(t, field.Type.Elem())...)
 			continue
 		}
 		for _, tagName := range []string{"env", "yaml", "json", "toml", "flag", "initial"} {
@@ -311,6 +321,9 @@ func TestConformance(t *testing.T) {
 		if !value.IsValid() {
 			value = reflect.ValueOf(expected.Nested).FieldByName(field.Name)
 		}
+		if !value.IsValid() {
+			value = reflect.ValueOf(*expected.NestedPtr).FieldByName(field.Name)
+		}
 		for key, val := range indexedVars("INDEXED_"+field.Tag.Get("env"), value) {
 			t.Setenv(key, val)
 		}
@@ -349,6 +362,12 @@ func TestConformance(t *testing.T) {
 				sub := &conformanceNested{}
 				assert.NoError(t, manager.Parse(sub))
 				assert.Equal(t, expected.Nested, *sub)
+			})
+
+			t.Run("sub config stored by pointer", func(t *testing.T) {
+				sub := &conformanceNestedPtr{}
+				assert.NoError(t, manager.Parse(sub))
+				assert.Equal(t, *expected.NestedPtr, *sub)
 			})
 		})
 	}
