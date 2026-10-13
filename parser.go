@@ -336,8 +336,18 @@ func (c *Manager) Watch(ctx context.Context, conf any, onChange func(conf any, e
 		return ErrNoWatchers
 	}
 	// defaults for all next configs
-	base := reflect.New(reflect.TypeOf(conf).Elem())
-	base.Elem().Set(reflect.ValueOf(conf).Elem())
+	storage, err := getStorage(conf)
+	if err != nil {
+		return err
+	}
+	// structs stored by pointer are copied, their fields are set by Parse
+	copyConf := func(src reflect.Value) reflect.Value {
+		dst := reflect.New(src.Type().Elem())
+		dst.Elem().Set(src.Elem())
+		convert.CopySections(storage, dst.Interface())
+		return dst
+	}
+	base := copyConf(reflect.ValueOf(conf))
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -369,8 +379,7 @@ func (c *Manager) Watch(ctx context.Context, conf any, onChange func(conf any, e
 			cancel()
 			return err
 		case <-changes:
-			fresh := reflect.New(base.Type().Elem())
-			fresh.Elem().Set(base.Elem())
+			fresh := copyConf(base)
 			err := c.Parse(fresh.Interface())
 			onChange(fresh.Interface(), err)
 		}

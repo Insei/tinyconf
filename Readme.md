@@ -109,8 +109,24 @@ All drivers support the same set of types, it is checked by the conformance test
 | `url.URL`, `[]byte`, any `encoding.TextUnmarshaler` (`net.IP`, `uuid.UUID`, ...) | `value` | scalar |
 | `[]T`, `[N]T` | `a,b,c`, items can be quoted: `"a,b",c` | list or string |
 | `map[K]V` | `a:1,b:2` | map or string |
-| structs, `[]Struct`, `map[K]Struct`, nested slices and maps | JSON: `[{"host":"a","port":1}]` | native |
+| `[]Struct`, `map[K]Struct`, nested slices and maps | JSON: `[{"host":"a","port":1}]` | native |
 | pointers to all types above | the same | the same |
+| `Struct`, `*Struct` | parsed by fields | parsed by fields |
+
+Fields with struct type are parsed by their fields, every field of the nested struct has its own tags.
+It works the same way for structs stored by value and by pointer:
+```go
+type TLS struct {
+	Cert string `env:"TLS_CERT" yaml:"cert"`
+	Key  string `env:"TLS_KEY" yaml:"key"`
+}
+
+type Config struct {
+	TLS *TLS `yaml:"tls"` // nil if there are no values for its fields
+}
+```
+The struct stored by pointer is created when the first value for its fields is found, otherwise the pointer is not changed.
+Pointers to pointers (`**Struct`) and recursive types (`Next *Node` inside `Node`) are parsed as a single value.
 
 String values of slices, arrays, maps and structs are parsed as JSON if they start with `[` or `{`.
 Keys of the structs nested into slices and maps are taken from the `json` tag for string values and JSON files
