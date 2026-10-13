@@ -70,14 +70,17 @@ func SetFieldValue(field fmap.Field, obj any, val any) {
 	dest.Set(reflect.ValueOf(val))
 }
 
-// IsValueField reports whether the field value should be requested from drivers.
-// Structs are parsed by their fields, except the types that are parsed from a single value, time.Time for example.
-// Fields of such types are not value fields.
-func IsValueField(storage fmap.Storage, field fmap.Field) bool {
+// IsInsideValue reports whether the field is a part of the value that is parsed as a whole:
+// field of the struct stored by pointer or field of the type that is parsed from a single value, time.Time for example.
+// Such fields are not requested from drivers and not documented.
+func IsInsideValue(storage fmap.Storage, field fmap.Field) bool {
 	path := field.GetStructPath()
 	for i := strings.IndexByte(path, '.'); i >= 0; {
-		if parent, ok := storage.Find(path[:i]); ok && IsLeaf(parent.GetType()) {
-			return false
+		if parent, ok := storage.Find(path[:i]); ok {
+			// pointers to structs are parsed as a single value, even if fmap goes into them
+			if parent.GetType().Kind() == reflect.Ptr || IsLeaf(parent.GetType()) {
+				return true
+			}
 		}
 		next := strings.IndexByte(path[i+1:], '.')
 		if next < 0 {
@@ -85,6 +88,16 @@ func IsValueField(storage fmap.Storage, field fmap.Field) bool {
 		}
 		i += next + 1
 	}
-	// pointers to structs are parsed as a single value too, fmap does not go into them
+	return false
+}
+
+// IsValueField reports whether the field value should be requested from drivers.
+// Structs are parsed by their fields, except the types that are parsed from a single value, time.Time for example.
+// Fields of such types are not value fields.
+func IsValueField(storage fmap.Storage, field fmap.Field) bool {
+	if IsInsideValue(storage, field) {
+		return false
+	}
+	// pointers to structs are parsed as a single value too
 	return field.GetType().Kind() != reflect.Struct || IsLeaf(field.GetType())
 }

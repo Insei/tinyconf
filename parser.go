@@ -154,6 +154,10 @@ func (c *Manager) findRegister(confTypeOf reflect.Type) (register *Registered, r
 	for _, registered := range c.getRegisters() {
 		for _, path := range registered.Storage.GetAllPaths() {
 			field := registered.Storage.MustFind(path)
+			// fields of the values parsed as a whole are not parsed by drivers, so they can not be a sub config
+			if convert.IsInsideValue(registered.Storage, field) {
+				continue
+			}
 			// field.GetDereferencedType is not safe for concurrent use
 			fieldType := field.GetType()
 			for fieldType.Kind() == reflect.Ptr {
