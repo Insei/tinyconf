@@ -1,6 +1,6 @@
 # tinyconf
 
-**tinyconf** is a simple and universal library for parsing configs in Go. It fills your config structs with values from *drivers*: default values from struct tags, YAML and JSON files, environment variables. Every driver is a separate small package, and you can add your own.
+**tinyconf** is a simple and universal library for parsing configs in Go. It fills your config structs with values from *drivers*: default values from struct tags, YAML and JSON files, environment variables, command line flags. Every driver is a separate small package, and you can add your own.
 
 !!! tip "One-line ideology"
     *The config is a plain Go struct. Where the values come from is described by struct tags and by the list of drivers, the last driver wins.*

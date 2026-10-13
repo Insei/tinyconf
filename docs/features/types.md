@@ -4,7 +4,7 @@ All drivers support the same set of types. It is checked by the conformance test
 
 Drivers get values in two forms:
 
-* **string values** — environment variables and struct tags;
+* **string values** — environment variables, command line flags and struct tags;
 * **native values** — YAML and JSON, where lists and maps are a part of the format.
 
 | Types | String value | Native value |
