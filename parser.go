@@ -30,9 +30,8 @@ type Manager struct {
 	sources map[reflect.Type][]FieldSource
 }
 
-func getStorage(conf any) (fmap.Storage, error) {
-	return fmap.GetFrom(conf)
-}
+// getStorage returns fields of the config, it is a variable to check the storage errors in tests.
+var getStorage = fmap.GetFrom
 
 func checkConfig(conf any) error {
 	valOf := reflect.ValueOf(conf)
