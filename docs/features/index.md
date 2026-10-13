@@ -2,6 +2,9 @@
 
 Reference of tinyconf capabilities grouped by area.
 
+!!! tip "Looking for a recipe?"
+    The [Use cases](../use-cases.md) page shows how the features work together in typical setups: a twelve-factor service, a config file with overrides, a command line tool, a Kubernetes deployment.
+
 ## Configuration
 
 | Page | What's inside |

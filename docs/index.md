@@ -98,6 +98,10 @@ and `HTTP_HOST=example.com` in the environment the program prints
 
 <div class="grid cards" markdown>
 
+-   :material-rocket-launch-outline:{ .lg } **[Use cases →](use-cases.md)**
+
+    Recipes for typical tasks: environment only, file with overrides, files per environment, secrets, containers, command line tools, optional sections, reloading, tests.
+
 -   :material-book-open-variant:{ .lg } **[Features →](features/index.md)**
 
     The manager, struct tags, supported types, nested structs and sub configs, required fields, value sources, reloading, documentation generation, logging.
