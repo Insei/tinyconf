@@ -89,6 +89,11 @@ func (d *tomlDriver) GenDoc(registers ...*tinyconf.Registered) string {
 			node[keys[len(keys)-1]] = value
 		}
 	}
+	return encodeDoc(doc)
+}
+
+// encodeDoc encodes the document to TOML, empty string is returned if the document is empty or can not be encoded.
+func encodeDoc(doc map[string]any) string {
 	if len(doc) == 0 {
 		return ""
 	}
