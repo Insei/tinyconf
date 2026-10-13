@@ -5,7 +5,7 @@ All drivers support the same set of types. It is checked by the conformance test
 Drivers get values in two forms:
 
 * **string values** — environment variables, command line flags and struct tags;
-* **native values** — YAML and JSON, where lists and maps are a part of the format.
+* **native values** — YAML, JSON and TOML, where lists and maps are a part of the format.
 
 | Types | String value | Native value |
 |---|---|---|
@@ -72,7 +72,7 @@ type Config struct {
 
 ## Structs in slices and maps
 
-Nested values are set as JSON in string values and as is in YAML and JSON files:
+Nested values are set as JSON in string values and as is in YAML, JSON and TOML files:
 
 ```go
 type Server struct {
@@ -101,7 +101,7 @@ type Config struct {
         port: 2
     ```
 
-String values of slices, arrays, maps and structs are parsed as JSON if they start with `[` or `{`. Keys of such structs are taken from the `json` tag for string values and JSON files and from the `yaml` tag for YAML files, the field name is used if the tag is not set (case-insensitive).
+String values of slices, arrays, maps and structs are parsed as JSON if they start with `[` or `{`. Keys of such structs are taken from the `json` tag for string values and JSON files, from the `yaml` tag for YAML files and from the `toml` tag for TOML files, the field name is used if the tag is not set (case-insensitive).
 
 !!! note "Fields with struct type"
     A field with struct type is not a single value: it is parsed by its fields, and every field has its own tags. See [Nested structs and sub configs](structs.md).

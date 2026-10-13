@@ -7,6 +7,7 @@ A driver is a source of values. Every driver reads its own struct tag and knows 
 | [tag](tag.md) | `drivers/tag` | any, `initial` for example | default values from struct tags |
 | [yaml](yaml.md) | `drivers/yaml` | `yaml` | YAML files |
 | [json](json.md) | `drivers/json` | `json` | JSON files |
+| [toml](toml.md) | `drivers/toml` | `toml` | TOML files |
 | [env](env.md) | `drivers/env` | `env` | environment variables and `.env` files |
 | [flag](flag.md) | `drivers/flag` | `flag` | command line flags |
 

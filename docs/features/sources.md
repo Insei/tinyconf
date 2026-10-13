@@ -30,7 +30,7 @@ Password is set by env driver from PASSWORD
 | Driver | Source |
 |---|---|
 | tag | name of the tag, `initial` |
-| yaml, json | name of the driver |
+| yaml, json, toml | name of the driver |
 | env | name of the variable, with the prefix |
 | flag | name of the flag, `-http-port` |
 
