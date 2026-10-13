@@ -1,6 +1,7 @@
 package convert
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -113,5 +114,15 @@ func TestIsValueField(t *testing.T) {
 	}
 	for path, want := range tests {
 		assert.Equal(t, want, IsValueField(storage, storage.MustFind(path)), path)
+	}
+	assert.True(t, IsInsideValue(storage, storage.MustFind("At.wall")))
+	assert.False(t, IsInsideValue(storage, storage.MustFind("Nested.Inner.Value")))
+
+	// fmap can go into the structs stored by pointer, they are still parsed as a single value
+	for _, path := range storage.GetAllPaths() {
+		if strings.HasPrefix(path, "Ptr.") {
+			assert.False(t, IsValueField(storage, storage.MustFind(path)), path)
+			assert.True(t, IsInsideValue(storage, storage.MustFind(path)), path)
+		}
 	}
 }

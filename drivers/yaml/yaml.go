@@ -81,7 +81,7 @@ func (d *yamlDriver) getUniqueFields(registers []*tinyconf.Registered) []field {
 
 			tag := fld.GetTag()
 			tagDriver, ok := tag.Lookup(d.name)
-			if !ok {
+			if !ok || convert.IsInsideValue(register.Storage, fld) {
 				continue
 			}
 
