@@ -99,7 +99,12 @@ func isSection(storage fmap.Storage, field fmap.Field) bool {
 
 // CopySections replaces structs stored by pointer and parsed by their fields with their copies,
 // so the fields of the obj can be set without changing the object it was copied from.
-func CopySections(storage fmap.Storage, obj any) {
+// Obj should be a pointer to struct, other values are not changed.
+func CopySections(obj any) {
+	storage, err := fmap.GetFrom(obj)
+	if err != nil {
+		return
+	}
 	// parents are always before their fields
 	for _, path := range storage.GetAllPaths() {
 		field := storage.MustFind(path)

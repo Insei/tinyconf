@@ -197,7 +197,7 @@ func TestCopySections(t *testing.T) {
 	assert.NoError(t, err)
 
 	copied := *conf
-	CopySections(storage, &copied)
+	CopySections(&copied)
 	assert.Equal(t, *conf, copied)
 	assert.NotSame(t, conf.Backup, copied.Backup)
 	assert.NotSame(t, conf.Backup.TLS, copied.Backup.TLS)
@@ -206,6 +206,11 @@ func TestCopySections(t *testing.T) {
 	// values parsed as a whole are replaced by drivers, not changed in place
 	assert.Same(t, conf.Backup.At, copied.Backup.At)
 	assert.Same(t, conf.Backup.Node.Next, copied.Backup.Node.Next)
+
+	// not a struct is not changed
+	number := 5
+	CopySections(&number)
+	assert.Equal(t, 5, number)
 
 	SetFieldValue(storage.MustFind("Backup.TLS.Cert"), &copied, "changed")
 	SetFieldValue(storage.MustFind("Backup.Node.Value"), &copied, 5)
