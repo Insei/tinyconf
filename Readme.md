@@ -5,6 +5,8 @@
 # tinyconf
 tinyconf - a simple and universal library for parsing configs.
 
+Documentation: [insei.github.io/tinyconf](https://insei.github.io/tinyconf/) — get started, [use cases](https://insei.github.io/tinyconf/use-cases/), features and drivers.
+
 # Installation
 Install via go get. Note that Go 1.19 or newer is required.
 ```sh
