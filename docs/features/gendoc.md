@@ -59,7 +59,7 @@ the output is
 * The value is the current value of the field in the registered config, so call `GenDoc` after `Parse` to get the actual values, or before it to get a clean template.
 * Values of the fields with `hidden:"true"` are not shown.
 * Slices and maps are shown in the format of the driver: `hosts: ["a","b"]` for yaml, `HOSTS=a,b` for env, so the value can be copied from the template as is.
-* The name of the driver is the name of its tag: `yaml`, `json`, `env`.
+* The name of the driver is the name of its tag: `yaml`, `json`, `env`, `flag`.
 * The json driver generates a JSON document without descriptions, see [json](../drivers/json.md#documentation).
 
 A common way to use it is a command line flag of the application that prints the template and exits.
