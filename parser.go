@@ -30,12 +30,7 @@ type Manager struct {
 	sources map[reflect.Type][]FieldSource
 }
 
-// fmapMu protects the cache of the fmap storages, fmap.GetFrom is not safe for concurrent use.
-var fmapMu sync.Mutex
-
 func getStorage(conf any) (fmap.Storage, error) {
-	fmapMu.Lock()
-	defer fmapMu.Unlock()
 	return fmap.GetFrom(conf)
 }
 
@@ -158,11 +153,7 @@ func (c *Manager) findRegister(confTypeOf reflect.Type) (register *Registered, r
 			if convert.IsInsideValue(registered.Storage, field) {
 				continue
 			}
-			// field.GetDereferencedType is not safe for concurrent use
-			fieldType := field.GetType()
-			for fieldType.Kind() == reflect.Ptr {
-				fieldType = fieldType.Elem()
-			}
+			fieldType := field.GetDereferencedType()
 			if fieldType.Kind() == reflect.Struct && reflect.PointerTo(fieldType) == confTypeOf {
 				return registered, reflect.TypeOf(registered.Config), path
 			}

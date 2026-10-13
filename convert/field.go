@@ -3,7 +3,6 @@ package convert
 import (
 	"reflect"
 	"strings"
-	"unsafe"
 
 	"github.com/insei/fmap/v3"
 )
@@ -36,41 +35,25 @@ func TreeToField(v any, field fmap.Field, tag string) (any, error) {
 }
 
 // fieldValueOf returns addressable and settable value of the field in the obj.
-// Value is found by the struct path, because offsets of the nested struct fields in fmap are relative to the parent.
-// Nil pointers to the structs in the path are replaced with new structs if create is true, otherwise false is returned.
-func fieldValueOf(field fmap.Field, obj any, create bool) (reflect.Value, bool) {
-	val := reflect.ValueOf(obj)
-	for val.Kind() == reflect.Ptr {
-		val = val.Elem()
-	}
-	if !val.CanAddr() {
+// False is returned for the field of the struct stored by pointer, if that pointer is nil.
+func fieldValueOf(field fmap.Field, obj any) (reflect.Value, bool) {
+	if val := reflect.ValueOf(obj); val.Kind() != reflect.Ptr {
 		// obj is not a pointer, value can be only read from the copy
-		addressable := reflect.New(val.Type()).Elem()
-		addressable.Set(val)
-		val = addressable
+		addressable := reflect.New(val.Type())
+		addressable.Elem().Set(val)
+		obj = addressable.Interface()
 	}
-	for _, name := range strings.Split(field.GetStructPath(), ".") {
-		if val.Kind() == reflect.Ptr {
-			// struct stored by pointer
-			if val.IsNil() {
-				if !create {
-					return reflect.Value{}, false
-				}
-				val.Set(reflect.New(val.Type().Elem()))
-			}
-			val = val.Elem()
-		}
-		val = val.FieldByName(name)
-		// allows to work with unexported fields
-		val = reflect.NewAt(val.Type(), unsafe.Pointer(val.UnsafeAddr())).Elem()
+	ptr := reflect.ValueOf(field.GetPtr(obj))
+	if ptr.IsNil() {
+		return reflect.Value{}, false
 	}
-	return val, true
+	return ptr.Elem(), true
 }
 
 // GetFieldValue returns field value from the obj with exact field type.
 // Zero value is returned for the field of the struct stored by pointer, if that pointer is nil.
 func GetFieldValue(field fmap.Field, obj any) any {
-	val, ok := fieldValueOf(field, obj, false)
+	val, ok := fieldValueOf(field, obj)
 	if !ok {
 		return reflect.Zero(field.GetType()).Interface()
 	}
@@ -80,12 +63,14 @@ func GetFieldValue(field fmap.Field, obj any) any {
 // SetFieldValue sets field value in the obj, val should have exact field type, obj should be a pointer to struct.
 // Nil pointers to the structs in the path of the field are replaced with new structs.
 func SetFieldValue(field fmap.Field, obj any, val any) {
-	dest, _ := fieldValueOf(field, obj, true)
 	if val == nil {
-		dest.Set(reflect.Zero(dest.Type()))
+		// field of the struct that is not created is already zero
+		if dest, ok := fieldValueOf(field, obj); ok {
+			dest.Set(reflect.Zero(dest.Type()))
+		}
 		return
 	}
-	dest.Set(reflect.ValueOf(val))
+	field.Set(obj, val)
 }
 
 // hasNestedFields reports whether the storage has fields of the struct stored in the field by value or by pointer.
@@ -121,7 +106,7 @@ func CopySections(storage fmap.Storage, obj any) {
 		if field.GetType().Kind() != reflect.Ptr || !isSection(storage, field) || IsInsideValue(storage, field) {
 			continue
 		}
-		val, ok := fieldValueOf(field, obj, false)
+		val, ok := fieldValueOf(field, obj)
 		if !ok || val.IsNil() {
 			continue
 		}
