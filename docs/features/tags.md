@@ -17,6 +17,7 @@ Every driver reads its own tag, the value of the tag is the name of the value in
 |---|---|---|
 | [tag](../drivers/tag.md) | any, set in `tag.New` | the default value itself |
 | [yaml](../drivers/yaml.md) | `yaml` | key in the file |
+| [json](../drivers/json.md) | `json` | key in the file |
 | [env](../drivers/env.md) | `env` | name of the environment variable |
 
 A field without the tag of the driver is skipped by this driver.

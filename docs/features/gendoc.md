@@ -58,6 +58,7 @@ the output is
 * The description is taken from the `doc` tag.
 * The value is the current value of the field in the registered config, so call `GenDoc` after `Parse` to get the actual values, or before it to get a clean template.
 * Values of the fields with `hidden:"true"` are not shown.
-* The name of the driver is the name of its tag: `yaml`, `env`.
+* The name of the driver is the name of its tag: `yaml`, `json`, `env`.
+* The json driver generates a JSON document without descriptions, see [json](../drivers/json.md#documentation).
 
 A common way to use it is a command line flag of the application that prints the template and exits.
