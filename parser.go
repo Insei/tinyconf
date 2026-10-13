@@ -222,6 +222,9 @@ func (c *Manager) Parse(conf any) error {
 				log.Error("failed", LogField("details", err.Error()))
 				errs = append(errs, fmt.Errorf("%s driver: field %s: %w", d.GetName(), path, err))
 			default:
+				if driverValue.Warning != "" {
+					log.Warn("warning", LogField("details", driverValue.Warning))
+				}
 				if !reflect.DeepEqual(convert.GetFieldValue(field, confParse), driverValue.Value) {
 					log.Debug("override", LogField("value", getLoggerValue(field, driverValue.Value)))
 					convert.SetFieldValue(field, confParse, driverValue.Value)

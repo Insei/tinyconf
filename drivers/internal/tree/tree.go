@@ -239,10 +239,28 @@ func (d *Driver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert %s value to field type value: %w", d.name, err)
 	}
-	return &tinyconf.Value{Source: d.name, Value: val}, nil
+	return &tinyconf.Value{Source: d.name, Value: val, Warning: parentTagWarning(field, d.name)}, nil
+}
+
+// parentTagWarning returns the warning if some parents of the field have no tag:
+// the path is built without such parents and all parents above them,
+// so the value is read from the unexpected place of the config.
+func parentTagWarning(field fmap.Field, tag string) string {
+	var parents []string
+	for parent := field.GetParent(); parent != nil; parent = parent.GetParent() {
+		if name := strings.Split(parent.GetTag().Get(tag), ",")[0]; name == "" {
+			parents = append([]string{parent.GetStructPath()}, parents...)
+		}
+	}
+	if len(parents) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("parent fields %s have no '%s' tag, the value is read from the '%s' key",
+		strings.Join(parents, ", "), tag, field.GetTagPath(tag, true))
 }
 
 // Lookup returns raw value for the field from the tree, path to the value is built from the tags of the field and its parents.
+// If the parent has no tag, the path is built only from the tags below it.
 func Lookup(field fmap.Field, tag string, tree map[string]any) (any, error) {
 	pathKey := field.GetTagPath(tag, true)
 	if pathKey == "" {

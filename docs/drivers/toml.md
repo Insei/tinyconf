@@ -50,7 +50,7 @@ host = "b"
 port = 2
 ```
 
-A field is read only if it and all its parents have the `toml` tag. Native TOML dates are supported for `time.Time` fields.
+Set the `toml` tag on all parents of the field: without the tag of the parent the field is read from the root of the file, and the manager [logs a warning](../features/logging.md). Native TOML dates are supported for `time.Time` fields.
 
 ## Options
 

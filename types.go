@@ -59,6 +59,9 @@ type FieldSource struct {
 type Value struct {
 	Source string
 	Value  interface{}
+	// Warning is an optional message about the value that should be seen by the user,
+	// it is logged by Manager with the warn level: the value is found, but probably not where the user expects.
+	Warning string
 }
 
 type Driver interface {

@@ -25,6 +25,14 @@ The returned value should have exactly the type of the field. To support [the sa
 * `convert.StringToField(s, field)` — for sources with string values;
 * `convert.TreeToField(v, field, tag)` — for values decoded from formats like YAML or JSON.
 
+The returned `tinyconf.Value` has three fields:
+
+| Field | Description |
+|---|---|
+| `Value` | the value with the type of the field |
+| `Source` | where the value is found, it is returned by [`Manager.Sources`](../features/sources.md) |
+| `Warning` | optional message for the user, the manager logs it with the `Warn` level; use it when the value is found, but probably not where the user expects |
+
 Two errors have a special meaning, all other errors are returned from `Parse`:
 
 | Error | Meaning |
