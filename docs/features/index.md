@@ -7,7 +7,8 @@ Reference of tinyconf capabilities grouped by area.
 | Page | What's inside |
 |---|---|
 | [Manager](manager.md) | `New`, `WithDriver`, `WithLogger`, `Register`, `Parse`, priority of drivers, errors |
-| [Struct tags](tags.md) | Tags of drivers and common tags: `doc`, `hidden` |
+| [Struct tags](tags.md) | Tags of drivers and common tags: `doc`, `hidden`, `separator`, `kvseparator` |
+| [Supported types](types.md) | Scalars, durations, time, slices, arrays, maps, structs, pointers — the same for all drivers |
 | [Nested structs and sub configs](structs.md) | Grouping fields into structs, parsing a part of the config |
 
 ## Operations

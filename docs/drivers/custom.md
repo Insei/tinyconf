@@ -20,7 +20,10 @@ type Driver interface {
 
 The field is described by [`fmap.Field`](https://pkg.go.dev/github.com/insei/fmap/v3#Field): `GetTag()` returns its struct tags, `GetStructPath()` — its path in the config, `HTTP.Port` for example.
 
-The returned value should have exactly the type of the field. The bundled drivers convert strings with [`cast.ToReflect`](https://pkg.go.dev/github.com/insei/cast#ToReflect) from the `github.com/insei/cast` package, use it to support the same types.
+The returned value should have exactly the type of the field. To support [the same types](../features/types.md) as the bundled drivers, use the `convert` package:
+
+* `convert.StringToField(s, field)` — for sources with string values;
+* `convert.TreeToField(v, field, tag)` — for values decoded from formats like YAML or JSON.
 
 Two errors have a special meaning, all other errors are returned from `Parse`:
 
@@ -51,7 +54,7 @@ func (d *kvDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
     if !ok {
         return nil, tinyconf.ErrValueNotFound
     }
-    value, err := cast.ToReflect(raw, field.GetType())
+    value, err := convert.StringToField(raw, field)
     if err != nil {
         return nil, fmt.Errorf("failed to parse %s: %w", key, err)
     }
@@ -61,12 +64,12 @@ func (d *kvDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 
 ```go
 type Config struct {
-    Port  int  `kv:"port"`
-    Debug bool `kv:"debug"`
+    Port  int      `kv:"port"`
+    Hosts []string `kv:"hosts"`
 }
 
 config, err := tinyconf.New(tinyconf.WithDriver(&kvDriver{values: map[string]string{
     "port":  "8080",
-    "debug": "true",
+    "hosts": "a,b",
 }}))
 ```

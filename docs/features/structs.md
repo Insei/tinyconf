@@ -23,6 +23,8 @@ http:
 
 For the yaml driver the tag of the struct field is a key of the nested map, so `Host` is read from `http.host`. Names of environment variables are not built from the parent names: `Host` is read from `HTTP_HOST`, as it is written in its tag.
 
+Types that are parsed from a single value — `time.Time`, `url.URL` and types with `UnmarshalText` — are not nested structs, see [Supported types](types.md).
+
 ## Sub configs
 
 A part of the registered config can be parsed separately, by the type of the field. It allows a package to get its own config without knowing about the whole one:

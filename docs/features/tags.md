@@ -1,11 +1,11 @@
 # Struct tags
 
-Everything about a field is described by its struct tags: where the value comes from and how it is documented.
+Everything about a field is described by its struct tags: where the value comes from, how it is documented and how it is parsed.
 
 ```go
 type Config struct {
-    Token string `yaml:"token" env:"TOKEN" initial:"dev" doc:"API token" hidden:"true"`
-    Port  int    `yaml:"port" env:"PORT" initial:"8080" doc:"port to listen"`
+    Token string   `yaml:"token" env:"TOKEN" initial:"dev" doc:"API token" hidden:"true"`
+    Hosts []string `yaml:"hosts" env:"HOSTS" separator:";"`
 }
 ```
 
@@ -27,7 +27,7 @@ A field without the tag of the driver is skipped by this driver.
 |---|---|
 | `doc:"text"` | description of the field for [`GenDoc`](gendoc.md) |
 | `hidden:"true"` | the value is masked in logs and is not shown in `GenDoc`, use it for secrets |
+| `separator:";"` | separator of slice, array and map items in string values, `,` by default |
+| `kvseparator:"="` | separator of map key and value in string values, `:` by default |
 
-## Types of the fields
-
-Fields can be strings, bools, integers, floats and pointers to these types. Fields with struct type are parsed by their fields, see [Nested structs and sub configs](structs.md).
+See [Supported types](types.md) for the syntax of string values.

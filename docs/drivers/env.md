@@ -18,15 +18,17 @@ type Config struct {
         Host string `env:"HTTP_HOST"`
         Port int    `env:"HTTP_PORT"`
     }
-    Debug bool `env:"DEBUG"`
+    Hosts []string `env:"HOSTS"`
 }
 ```
 
 ```bash
 HTTP_HOST=example.com
 HTTP_PORT=9090
-DEBUG=true
+HOSTS=a.example.com,b.example.com
 ```
+
+Values are parsed by the rules of [string values](../features/types.md).
 
 ## .env files
 
