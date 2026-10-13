@@ -34,6 +34,8 @@ Options after the comma are ignored: `yaml:"port,omitempty"` is the `port` key.
 !!! warning "Set the tags of the parents"
     The path of the nested field is built from the `yaml` tags of its parents. If the `HTTP` field has no `yaml` tag, the `Host` field is read from the `host` key in the root of the file, not from `http.host`.
 
+    When a value is found this way, the manager [logs a warning](../features/logging.md) with the name of the parent without the tag and the key that was used.
+
 ## Options
 
 ```go
