@@ -73,6 +73,7 @@ nav:
       - features/index.md
       - Manager: features/manager.md
       - Struct tags: features/tags.md
+      - Supported types: features/types.md
       - Nested structs and sub configs: features/structs.md
       - Documentation generation: features/gendoc.md
       - Logging: features/logging.md

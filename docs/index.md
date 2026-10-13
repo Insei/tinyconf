@@ -20,6 +20,7 @@ package main
 
 import (
     "fmt"
+    "time"
 
     "github.com/insei/tinyconf"
     "github.com/insei/tinyconf/drivers/env"
@@ -29,14 +30,15 @@ import (
 )
 
 type HTTP struct {
-    Host string `initial:"localhost" yaml:"host" env:"HTTP_HOST" doc:"http host"`
-    Port int    `initial:"8080" yaml:"port" env:"HTTP_PORT" doc:"http port"`
+    Host    string        `initial:"localhost" yaml:"host" env:"HTTP_HOST" doc:"http host"`
+    Port    int           `initial:"8080" yaml:"port" env:"HTTP_PORT" doc:"http port"`
+    Timeout time.Duration `initial:"30s" yaml:"timeout" env:"HTTP_TIMEOUT" doc:"http timeout"`
 }
 
 type Config struct {
-    HTTP     HTTP   `yaml:"http"`
-    Debug    bool   `initial:"true" yaml:"debug" env:"DEBUG" doc:"debug mode"`
-    Password string `yaml:"password" env:"PASSWORD" hidden:"true"`
+    HTTP     HTTP     `yaml:"http"`
+    Hosts    []string `initial:"a,b" yaml:"hosts" env:"HOSTS" doc:"allowed hosts"`
+    Password string   `yaml:"password" env:"PASSWORD" hidden:"true"`
 }
 
 func main() {
@@ -87,10 +89,10 @@ password: secret
 and `HTTP_HOST=example.com` in the environment the program prints
 
 ```text
-{HTTP:{Host:example.com Port:9090} Debug:true Password:secret}
+{HTTP:{Host:example.com Port:9090 Timeout:30s} Hosts:[a b] Password:secret}
 ```
 
-`Host` came from the environment, `Port` and `Password` from the file, `Debug` from the defaults.
+`Host` came from the environment, `Port` and `Password` from the file, `Timeout` and `Hosts` from the defaults.
 
 ## What to read next
 
@@ -98,7 +100,7 @@ and `HTTP_HOST=example.com` in the environment the program prints
 
 -   :material-book-open-variant:{ .lg } **[Features →](features/index.md)**
 
-    The manager, struct tags, nested structs and sub configs, documentation generation, logging.
+    The manager, struct tags, supported types, nested structs and sub configs, documentation generation, logging.
 
 -   :material-power-plug-outline:{ .lg } **[Drivers →](drivers/index.md)**
 

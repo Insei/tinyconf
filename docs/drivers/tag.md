@@ -12,10 +12,10 @@ The argument is the name of the tag with values, any name can be used: `initial`
 
 ```go
 type Config struct {
-    Host  string  `initial:"localhost"`
-    Port  int     `initial:"8080"`
-    Debug bool    `initial:"true"`
-    Ratio float64 `initial:"0.5"`
+    Host    string        `initial:"localhost"`
+    Port    int           `initial:"8080"`
+    Timeout time.Duration `initial:"30s"`
+    Hosts   []string      `initial:"a,b"`
 }
 ```
 
@@ -29,6 +29,6 @@ config, err := tinyconf.New(
 )
 ```
 
-An incorrect default value is an error of `Parse`, so a typo in the tag is found at the first start.
+Values are parsed by the rules of [string values](../features/types.md). An incorrect default value is an error of `Parse`, so a typo in the tag is found at the first start.
 
 The driver has no own documentation format, `GenDoc` returns an empty string for it. Default values are visible in the documentation of other drivers as the values of the fields.
