@@ -32,6 +32,29 @@ Two errors have a special meaning, all other errors are returned from `Parse`:
 | `tinyconf.ErrIncorrectTagSettings` | the field has no settings for this driver, it is skipped |
 | `tinyconf.ErrValueNotFound` | the source has no value for the field, the value of the previous driver is kept |
 
+## Loader
+
+`GetValue` is called for every field. If the source should be read once — a file, a response of the remote service — implement the optional `tinyconf.Loader` interface:
+
+```go
+type Loader interface {
+    Load() error
+}
+```
+
+`Load` is called once at the start of every `Parse` call, before any `GetValue` call. If it returns an error, the driver is skipped in this `Parse` call and the error is returned from `Parse`.
+
+```go
+func (d *kvDriver) Load() error {
+    values, err := d.client.FetchAll()
+    if err != nil {
+        return err
+    }
+    d.values = values
+    return nil
+}
+```
+
 ## Example
 
 A driver that reads values from a map, the name of the value is taken from the `kv` tag:

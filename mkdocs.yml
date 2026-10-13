@@ -81,5 +81,6 @@ nav:
       - drivers/index.md
       - tag: drivers/tag.md
       - yaml: drivers/yaml.md
+      - json: drivers/json.md
       - env: drivers/env.md
       - Custom drivers: drivers/custom.md
