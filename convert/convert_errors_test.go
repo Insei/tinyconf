@@ -81,3 +81,13 @@ func TestScalarFromString_Unsupported(t *testing.T) {
 	_, err := scalarFromString("x", reflect.TypeOf(make(chan int)))
 	assert.Error(t, err)
 }
+
+type treeStringer struct{}
+
+func (treeStringer) String() string { return "stringer" }
+
+func TestFromTree_Stringer(t *testing.T) {
+	val, err := FromTree(treeStringer{}, reflect.TypeOf(""), Options{})
+	assert.NoError(t, err)
+	assert.Equal(t, "stringer", val)
+}
