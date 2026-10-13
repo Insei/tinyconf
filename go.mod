@@ -17,3 +17,5 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 )
+
+replace github.com/insei/fmap/v3 => ../fmap

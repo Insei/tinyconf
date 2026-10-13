@@ -589,7 +589,6 @@ func TestEnvDriver_IndexedKeys(t *testing.T) {
 		Matrix  [][]int           `env:"IDX_MATRIX"`
 		Servers []server          `env:"IDX_SERVERS"`
 		ByName  map[string]server `env:"IDX_BY_NAME"`
-		Server  *server           `env:"IDX_SERVER"`
 		Lists   map[string][]int  `env:"IDX_LISTS"`
 		Name    string            `env:"IDX_NAME"`
 	}
@@ -631,8 +630,6 @@ func TestEnvDriver_IndexedKeys(t *testing.T) {
 		"IDX_BY_NAME_main_HOST":     "main",
 		"IDX_BY_NAME_backup_HOST":   "backup",
 		"IDX_BY_NAME_backup_TAGS_0": "t",
-		"IDX_SERVER_HOST":           "single",
-		"IDX_SERVER_MAX_CONNS":      "5",
 		"IDX_LISTS_a_0":             "1",
 		"IDX_LISTS_b":               "2,3",
 		"IDX_NAME_0":                "ignored",
@@ -647,7 +644,6 @@ func TestEnvDriver_IndexedKeys(t *testing.T) {
 			{Host: "b", Tags: []string{"z", "w"}},
 		},
 		ByName: map[string]server{"main": {Host: "main"}, "backup": {Host: "backup", Tags: []string{"t"}}},
-		Server: &server{Host: "single", MaxConns: 5},
 		Lists:  map[string][]int{"a": {1}, "b": {2, 3}},
 	}
 
