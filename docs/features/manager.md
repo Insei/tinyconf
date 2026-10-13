@@ -49,6 +49,7 @@ err := config.Parse(c)
 |---|---|
 | `GenDoc(driverName)` | generates a template of all registered configs, see [Documentation generation](gendoc.md) |
 | `Sources(conf)` | returns which driver has set the value of every field, see [Value sources](sources.md) |
+| `Watch(ctx, conf, onChange)` | parses the config to the new copy after every change of the sources, see [Reloading](reloading.md) |
 
 ## Errors
 

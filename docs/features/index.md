@@ -18,4 +18,5 @@ Reference of tinyconf capabilities grouped by area.
 |---|---|
 | [Documentation generation](gendoc.md) | `GenDoc`: a config template in the format of the driver |
 | [Value sources](sources.md) | `Sources`: which driver has set the value of every field |
+| [Reloading](reloading.md) | `Watch`: parsing the config again after changes of the files |
 | [Logging](logging.md) | What the manager logs, bundled loggers, custom logger |
