@@ -41,6 +41,7 @@ with `errors.Is` and `errors.As`.
 | toml | `drivers/toml` | `toml` | TOML files |
 | env | `drivers/env` | `env` | environment variables and `.env` files |
 | flag | `drivers/flag` | `flag` | command line flags |
+| consul | `drivers/consul` | `consul` | Consul KV: a key per field, or a document for yaml, json and toml |
 
 Common struct tags:
 
@@ -99,6 +100,16 @@ flagDriver, err := flag.New() // os.Args[1:] by default, flag.WithArgs(args) for
 Supported forms: `-name=value`, `--name=value`, `-name value`, `--name value`, `-name` and `--name` for bool fields.
 Slices and arrays can be filled with repeated flags. The driver does not know all flags of the application,
 so unknown flags are ignored.
+
+## consul
+```go
+consulDriver, err := consul.New("app") // consul:"port" inside consul:"http" is read from app/http/port
+yamlDriver, err := yaml.New("config.yaml",
+	yaml.WithSource(consul.Document("app/config")), // YAML document from Consul KV, merged with the file
+)
+```
+The address and the token are taken from `CONSUL_HTTP_ADDR` and `CONSUL_HTTP_TOKEN` or set by options.
+Changes in Consul are reported to `Manager.Watch` right after they happen, by blocking queries.
 
 # Supported types
 All drivers support the same set of types, it is checked by the conformance tests in `drivers/conformance_test.go`.
@@ -234,7 +245,7 @@ go func() {
 	}
 }()
 ```
-Changes are reported by yaml, json and toml drivers for files from the OS file system.
+Changes are reported by yaml, json and toml drivers for files from the OS file system, and by the consul driver and Consul documents.
 
 # Custom drivers
 The driver should implement the `tinyconf.Driver` interface:

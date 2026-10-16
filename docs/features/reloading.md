@@ -52,11 +52,12 @@ port := current.Load().HTTP.Port
 
 ## What is watched
 
-Changes are reported by drivers. The bundled [yaml](../drivers/yaml.md), [json](../drivers/json.md) and [toml](../drivers/toml.md) drivers watch their files from the OS file system: the main file and the files from `WithFiles`.
+Changes are reported by drivers. The bundled [yaml](../drivers/yaml.md), [json](../drivers/json.md) and [toml](../drivers/toml.md) drivers watch their files from the OS file system: the main file and the files from `WithFiles`. The [consul](../drivers/consul.md) driver and Consul documents are notified by Consul right after the change.
 
 | Source | Watched |
 |---|---|
-| files from `New` and `WithFiles` | yes |
+| files from `New` and `WithFiles` | yes, polling |
+| Consul keys and documents | yes, notified by Consul |
 | files from `WithFS`, data from `WithData` | no |
 | environment variables, flags, tags | no |
 

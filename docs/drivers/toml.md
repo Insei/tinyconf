@@ -69,6 +69,7 @@ tomlDriver, err := toml.New("config.toml",
 | `WithFiles(files...)` | additional files from the OS file system |
 | `WithFS(fsys, files...)` | files from any `fs.FS`, `embed.FS` for example |
 | `WithData(name, data)` | in-memory content, the name is used in error messages |
+| `WithSource(source)` | content from a remote storage: [`consul.Document`](consul.md#document) |
 | `WithOptional()` | files can be absent |
 | `WithEnvExpansion()` | replaces `${VAR}` and `${VAR:-default}` in the content with environment variables |
 | `WithWatchInterval(interval)` | interval of checking the files for changes in [`Watch`](../features/reloading.md), 5 seconds by default |
