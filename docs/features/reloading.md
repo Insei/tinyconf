@@ -87,6 +87,37 @@ yamlDriver, err := yaml.New("config.yaml", yaml.WithWatchInterval(time.Minute))
 | a driver can not watch anymore, access is denied for example | the error is logged, other drivers continue watching |
 | the handler panics | the panic is logged as `subscriber panicked`, other subscribers are called |
 
+## Health checks
+
+The errors of the reloads are logged, the application keeps working with the last good config. `ReloadStatus` shows this state for the health checks:
+
+```go
+status := config.ReloadStatus()
+```
+
+| Field | Description |
+|---|---|
+| `Watching` | there are subscriptions and the sources are watched |
+| `LastReload` | the time of the last reload |
+| `LastError` | the error of the last reload, `nil` if the configs are applied |
+| `LastApplied` | the time of the last reload without errors |
+| `StoppedDrivers` | the drivers that can not watch anymore, with the errors: access is denied, for example |
+
+A readiness check that fails when the config is broken for a long time or a source is not watched:
+
+```go
+func configHealthy(config *tinyconf.Manager) error {
+    status := config.ReloadStatus()
+    if status.LastError != nil && time.Since(status.LastApplied) > 5*time.Minute {
+        return fmt.Errorf("config is not reloaded since %s: %w", status.LastApplied, status.LastError)
+    }
+    for driver, err := range status.StoppedDrivers {
+        return fmt.Errorf("%s driver does not watch for changes: %w", driver, err)
+    }
+    return nil
+}
+```
+
 ## Details
 
 * Handlers are called one by one in the order of subscription, from one goroutine. The next reload starts after all handlers return, so a slow handler delays the next reload.
