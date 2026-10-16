@@ -170,7 +170,7 @@ func (d *consulDriver) GenDoc(registers ...*tinyconf.Registered) string {
 //	yaml.New("config.yaml", yaml.WithSource(consul.Document("app/config")))
 //
 // Values are read by the tags of the format driver and merged with the files of the driver.
-// Absent key is an error, unless the driver has the optional option. Changes of the key are reported to Manager.Watch.
+// Absent key is an error, unless the driver has the optional option. Changes of the key are reported for the subscriptions of the manager.
 func Document(key string, opts ...Option) tree.Source {
 	c := newClient(opts)
 	key = strings.Trim(key, "/")
