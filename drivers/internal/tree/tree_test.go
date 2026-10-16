@@ -464,7 +464,7 @@ func TestDoc(t *testing.T) {
 	conf.HTTP.Port = 80
 	storage, err := fmap.GetFrom(conf)
 	assert.NoError(t, err)
-	doc := Doc([]*tinyconf.Registered{{Storage: storage, Config: conf}}, "test", func(v any) any {
+	doc := Doc([]*tinyconf.Registered{{Storage: storage, Config: conf}}, "test", func(v any, _ fmap.Field) any {
 		return convert.ToTree(v, "test")
 	})
 	// hidden values are empty, nil values and fields under the parents without the tag are skipped
@@ -580,4 +580,18 @@ func TestDriver_WatchFileEvents(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestSetPath(t *testing.T) {
+	doc := map[string]any{}
+	assert.NoError(t, SetPath(doc, []string{"http", "port"}, "80"))
+	assert.NoError(t, SetPath(doc, []string{"http", "host"}, "localhost"))
+	// the last value wins, nil value creates the object only
+	assert.NoError(t, SetPath(doc, []string{"http", "port"}, "8080"))
+	assert.NoError(t, SetPath(doc, []string{"empty"}, nil))
+	assert.NoError(t, SetPath(doc, []string{"http"}, nil))
+	assert.Equal(t, map[string]any{"http": map[string]any{"port": "8080", "host": "localhost"}, "empty": map[string]any{}}, doc)
+
+	assert.EqualError(t, SetPath(doc, []string{"http"}, "value"), "http is an object, it can not have a value")
+	assert.EqualError(t, SetPath(doc, []string{"http", "port", "number"}, "80"), "http.port has a value, it can not be an object")
 }
