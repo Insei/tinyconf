@@ -195,14 +195,13 @@ func (c *client) load(key string, recurse bool) ([]pair, uint64, error) {
 
 // watch blocks until ctx is done and calls onChange after every change of the data by the key or the prefix.
 // index is the index of the loaded data, changes made after the loading are reported too.
+// Zero index means that the data is not loaded or the last loading has failed, the change is reported at once.
 // Failed requests are retried, so the temporary unavailability of Consul does not stop watching.
 // After the failure the change is always reported: the data could be changed while Consul was not available,
 // and the indexes of Consul that has lost its data can be the same as the known ones.
 // Access denied stops watching with tinyconf.ErrAccessDenied, it is not fixed by retries.
 func (c *client) watch(ctx context.Context, key string, recurse bool, index uint64, onChange func()) error {
-	// without the loaded data the current index is taken, it is not a change
-	known := index > 0
-	failed := false
+	failed := index == 0
 	retry := retryInterval
 	for {
 		waitIndex := index
@@ -230,10 +229,10 @@ func (c *client) watch(ctx context.Context, key string, recurse bool, index uint
 			continue
 		}
 		retry = retryInterval
-		if known && (failed || result.index != index) {
+		if failed || result.index != index {
 			onChange()
 		}
-		known, failed = true, false
+		failed = false
 		// index should be greater than zero to wait for changes
 		index = result.index
 		if index == 0 {
