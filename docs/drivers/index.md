@@ -9,6 +9,7 @@ A driver is a source of values. Every driver reads its own struct tag and knows 
 | [json](json.md) | `drivers/json` | `json` | JSON files |
 | [toml](toml.md) | `drivers/toml` | `toml` | TOML files |
 | [ini](ini.md) | `drivers/ini` | `ini` | INI files |
+| [properties](properties.md) | `drivers/properties` | `properties` | `.properties` files of Java and Spring |
 | [env](env.md) | `drivers/env` | `env` | environment variables and `.env` files |
 | [flag](flag.md) | `drivers/flag` | `flag` | command line flags |
 | [consul](consul.md) | `drivers/consul` | `consul` | Consul KV: a key per field, or a document for yaml, json and toml |

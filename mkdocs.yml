@@ -88,6 +88,7 @@ nav:
       - json: drivers/json.md
       - toml: drivers/toml.md
       - ini: drivers/ini.md
+      - properties: drivers/properties.md
       - env: drivers/env.md
       - flag: drivers/flag.md
       - consul: drivers/consul.md
