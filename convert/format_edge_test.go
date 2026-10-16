@@ -106,3 +106,27 @@ func TestToString_Quotes(t *testing.T) {
 		assert.Equal(t, tt.value, parsed)
 	}
 }
+
+func TestMerge(t *testing.T) {
+	prevSlice, nextSlice := []string{"a"}, []string{"b", "c"}
+	assert.Equal(t, []string{"a", "b", "c"}, Merge(prevSlice, nextSlice))
+	// the previous value is not changed
+	assert.Equal(t, []string{"a"}, prevSlice)
+	assert.Equal(t, []string{"b"}, Merge([]string(nil), []string{"b"}))
+
+	prevMap := map[string]int{"a": 1, "b": 2}
+	assert.Equal(t, map[string]int{"a": 1, "b": 3, "c": 4}, Merge(prevMap, map[string]int{"b": 3, "c": 4}))
+	assert.Equal(t, map[string]int{"a": 1, "b": 2}, prevMap)
+
+	// pointers are merged by their values
+	prevPtr, nextPtr := &[]int{1}, &[]int{2}
+	assert.Equal(t, &[]int{1, 2}, Merge(prevPtr, nextPtr))
+	assert.Equal(t, nextPtr, Merge((*[]int)(nil), nextPtr))
+
+	// other values are replaced
+	assert.Equal(t, []byte("next"), Merge([]byte("prev"), []byte("next")))
+	assert.Equal(t, [2]int{3, 4}, Merge([2]int{1, 2}, [2]int{3, 4}))
+	assert.Equal(t, "next", Merge("prev", "next"))
+	assert.Equal(t, "next", Merge(nil, "next"))
+	assert.Equal(t, []int{1}, Merge([]string{"a"}, []int{1}))
+}
