@@ -40,7 +40,7 @@ Values are parsed by the rules of [string values](../features/types.md), like en
 All keys with the prefix are read by one request once per `Parse` call. A key that is absent is not an error, the field keeps its value from the previous driver.
 
 !!! warning "Set the tags of the parents"
-    The key of the nested field is built from the `consul` tags of its parents. If the `HTTP` field has no `consul` tag, the `Host` field is read from `app/host`, not from `app/http/host`. When a value is found this way, the manager [logs a warning](../features/logging.md).
+    The key of the nested field is built from the `consul` tags of its parents. If the `HTTP` field has no `consul` tag, the `Host` field is read from `app/host`, not from `app/http/host`. When a value is found this way, the manager [logs a warning](../features/logging.md). [Embedded structs](../features/structs.md#embedded-structs) without the tag are the exception, their fields are on the level of the embedding struct.
 
 ## Document
 

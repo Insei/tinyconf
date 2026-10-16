@@ -140,6 +140,7 @@ type Config struct {
 ```
 The struct stored by pointer is created when the first value for its fields is found, otherwise the pointer is not changed.
 Pointers to pointers (`**Struct`) and recursive types (`Next *Node` inside `Node`) are parsed as a single value.
+Fields of embedded structs without the tag are on the level of the embedding struct, like in `encoding/json`.
 
 String values of slices, arrays, maps and structs are parsed as JSON if they start with `[` or `{`.
 Keys of the structs nested into slices and maps are taken from the `json` tag for string values and JSON files

@@ -25,6 +25,36 @@ For the yaml driver the tag of the struct field is a key of the nested map, so `
 
 Types that are parsed from a single value — `time.Time`, `url.URL` and types with `UnmarshalText` — are not nested structs, see [Supported types](types.md).
 
+## Embedded structs
+
+Fields of an embedded struct without the tag are on the level of the embedding struct, like in `encoding/json`:
+
+```go
+type Timeouts struct {
+    Read  time.Duration `yaml:"read_timeout"`
+    Write time.Duration `yaml:"write_timeout"`
+}
+
+type Config struct {
+    HTTP struct {
+        Timeouts
+        Port int `yaml:"port"`
+    } `yaml:"http"`
+}
+```
+
+```yaml
+http:
+  port: 9090
+  read_timeout: 5s
+  write_timeout: 10s
+```
+
+* The yaml, json, toml and consul drivers read `Read` from `http.read_timeout`, the embedded struct adds no level. `yaml:",inline"` works the same way.
+* With the name in the tag, ``Timeouts `yaml:"timeouts"` ``, the embedded struct is a usual nested struct: `http.timeouts.read_timeout`.
+* An embedded struct without the tag is expected, the manager does not [warn](logging.md#warnings-of-drivers) about it.
+* [Auto keys](../drivers/env.md#auto-keys) and [indexed keys](../drivers/env.md#indexed-keys) of the env driver skip the name of the embedded struct too: `HTTP.Timeouts.Read` is `HTTP_READ` with auto keys, and `SERVERS_0_READ` for the struct in the slice.
+
 ## Structs stored by pointer
 
 A struct stored by pointer is parsed the same way, by its fields:
