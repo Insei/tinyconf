@@ -27,13 +27,11 @@ func TestJSONDriver_Watch(t *testing.T) {
 	assert.NoError(t, manager.Parse(conf))
 
 	ctx, cancel := context.WithCancel(context.Background())
-	changes, done := make(chan *config, 10), make(chan error, 1)
-	go func() {
-		done <- manager.Watch(ctx, conf, func(newConf any, err error) {
-			assert.NoError(t, err)
-			changes <- newConf.(*config)
-		})
-	}()
+	defer cancel()
+	changes := make(chan *config, 10)
+	assert.NoError(t, tinyconf.Subscribe(ctx, manager, func(prev, next *config) {
+		changes <- next
+	}))
 
 	assert.NoError(t, os.WriteFile(filePath, []byte(`{"name": "second value"}`), 0o600))
 	select {
@@ -43,6 +41,4 @@ func TestJSONDriver_Watch(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("change is not detected")
 	}
-	cancel()
-	assert.NoError(t, <-done)
 }

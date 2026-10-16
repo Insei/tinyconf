@@ -3,6 +3,8 @@ package tinyconf
 import (
 	"context"
 	"errors"
+	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -23,8 +25,15 @@ func newMapMockDriver(name string, values map[string]any) *mapMockDriver {
 	return &mapMockDriver{name: name, values: values, changes: make(chan struct{})}
 }
 
-func (md *mapMockDriver) GenDoc(...*Registered) string { return "" }
-func (md *mapMockDriver) GetName() string              { return md.name }
+// GenDoc returns the values of the registered configs.
+func (md *mapMockDriver) GenDoc(registers ...*Registered) string {
+	var doc strings.Builder
+	for _, register := range registers {
+		fmt.Fprintf(&doc, "%+v\n", reflect.ValueOf(register.Config).Elem())
+	}
+	return doc.String()
+}
+func (md *mapMockDriver) GetName() string { return md.name }
 func (md *mapMockDriver) GetValue(field fmap.Field) (*Value, error) {
 	md.mu.Lock()
 	defer md.mu.Unlock()
@@ -160,7 +169,7 @@ func TestManager_Parse_SubConfigLog(t *testing.T) {
 	}, log.take())
 }
 
-func TestManager_Watch_Log(t *testing.T) {
+func TestSubscribe_Log(t *testing.T) {
 	type Config struct {
 		Host     string
 		Port     int
@@ -176,17 +185,11 @@ func TestManager_Watch_Log(t *testing.T) {
 	assert.NoError(t, c.Register(conf))
 	assert.NoError(t, c.Parse(conf))
 	log.take()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	changed := make(chan error)
-	go func() {
-		_ = c.Watch(ctx, conf, func(_ any, err error) { changed <- err })
-	}()
+	configs, _ := subscribe[Config](t, c)
 
 	// only changed fields are logged with the driver that has set the new value
 	file.set(map[string]any{"Host": "example", "Password": "secret", "Name": "b"})
-	assert.NoError(t, <-changed)
+	receive(t, configs)
 	assert.Equal(t, []string{
 		"override: config=*tinyconf.Config driver=file field=Host key=host value=example",
 		"override: config=*tinyconf.Config driver=defaults field=Port key=port value=8080",
@@ -194,56 +197,21 @@ func TestManager_Watch_Log(t *testing.T) {
 		"override: config=*tinyconf.Config driver=file field=Name key=name value=b",
 	}, log.take())
 
-	// the config with the error is not applied, nothing is logged
+	// the config with the error is not applied, nothing is logged on the debug level
 	file.set(map[string]any{"Port": errors.New("broken value")})
-	assert.Error(t, <-changed)
+	nothing(t, configs)
 	assert.Empty(t, log.take())
 
 	// changes are relative to the last config without errors;
-	// Name has no value from drivers anymore and gets the value from the config passed to Watch
+	// Name has no value from drivers anymore and gets the initial value
 	file.set(map[string]any{"Host": "example", "Password": "secret"})
-	assert.NoError(t, <-changed)
+	receive(t, configs)
 	assert.Equal(t, []string{
-		"override: config=*tinyconf.Config field=Name value=a",
+		"override: config=*tinyconf.Config field=Name value=",
 	}, log.take())
 }
 
-func TestManager_Watch_LogIgnoresChangesOfApplication(t *testing.T) {
-	type Config struct {
-		Host string
-		Port int
-	}
-	log := newDebugLogger()
-	file := newMapMockDriver("file", map[string]any{"Host": "a", "Port": 80})
-	c, err := New(WithLogger(log), WithDriver(file))
-	assert.NoError(t, err)
-	conf := &Config{}
-	assert.NoError(t, c.Register(conf))
-	assert.NoError(t, c.Parse(conf))
-	log.take()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	changed := make(chan error)
-	go func() {
-		_ = c.Watch(ctx, conf, func(fresh any, err error) {
-			// the application changes the config it has received
-			fresh.(*Config).Host = "changed by the application"
-			changed <- err
-		})
-	}()
-	file.set(map[string]any{"Host": "a", "Port": 81})
-	assert.NoError(t, <-changed)
-	file.set(map[string]any{"Host": "a", "Port": 82})
-	assert.NoError(t, <-changed)
-	// only the changes of the sources are logged
-	assert.Equal(t, []string{
-		"override: config=*tinyconf.Config driver=file field=Port key=port value=81",
-		"override: config=*tinyconf.Config driver=file field=Port key=port value=82",
-	}, log.take())
-}
-
-func TestManager_Watch_SubConfigLog(t *testing.T) {
+func TestSubscribe_SubConfigLog(t *testing.T) {
 	type HTTP struct {
 		Port int
 	}
@@ -255,16 +223,12 @@ func TestManager_Watch_SubConfigLog(t *testing.T) {
 	c, err := New(WithLogger(log), WithDriver(file))
 	assert.NoError(t, err)
 	assert.NoError(t, c.Register(&Config{}))
+	https, _ := subscribe[HTTP](t, c)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	changed := make(chan error)
-	go func() {
-		_ = c.Watch(ctx, &HTTP{}, func(_ any, err error) { changed <- err })
-	}()
+	// the registered config is logged with the full paths of the fields
 	file.set(map[string]any{"HTTP.Port": 9001})
-	assert.NoError(t, <-changed)
+	assert.Equal(t, 9001, receive(t, https).next.Port)
 	assert.Equal(t, []string{
-		"override: config=*tinyconf.HTTP driver=file field=HTTP.Port key=http.port value=9001",
+		"override: config=*tinyconf.Config driver=file field=HTTP.Port key=http.port value=9001",
 	}, log.take())
 }

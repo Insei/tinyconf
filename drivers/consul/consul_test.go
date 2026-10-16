@@ -271,16 +271,13 @@ func TestDriver_Watch(t *testing.T) {
 	assert.NoError(t, manager.Parse(conf))
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	changes := make(chan *testConfig)
-	done := make(chan error)
-	go func() {
-		done <- manager.Watch(ctx, conf, func(c any, err error) {
-			assert.NoError(t, err)
-			changes <- c.(*testConfig)
-		})
-	}()
+	assert.NoError(t, tinyconf.Subscribe(ctx, manager, func(prev, next *testConfig) {
+		changes <- next
+	}))
 
-	// the change made after Parse and before Watch is reported too
+	// the change made after Parse and before the subscription is reported too
 	consul.put("app/name", str("second"))
 	assert.Equal(t, "second", (<-changes).Name)
 
@@ -290,15 +287,12 @@ func TestDriver_Watch(t *testing.T) {
 	assert.Equal(t, 9090, changed.Server.Port)
 
 	// keys out of the prefix are not watched;
-	// the deleted key gets the value from the config passed to Watch
+	// the deleted key gets the initial value
 	consul.put("other/name", str("other"))
 	consul.put("app/server/port", nil)
 	changed = <-changes
 	assert.Equal(t, "second", changed.Name)
 	assert.Equal(t, 0, changed.Server.Port)
-
-	cancel()
-	assert.NoError(t, <-done)
 }
 
 func TestDriver_WatchAfterFailedLoad(t *testing.T) {
@@ -322,19 +316,13 @@ func TestDriver_WatchAfterFailedLoad(t *testing.T) {
 	assert.Equal(t, config{}, *conf)
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	changes := make(chan *config, 10)
-	done := make(chan error)
-	go func() {
-		done <- manager.Watch(ctx, conf, func(c any, err error) {
-			if err == nil {
-				changes <- c.(*config)
-			}
-		})
-	}()
+	assert.NoError(t, tinyconf.Subscribe(ctx, manager, func(prev, next *config) {
+		changes <- next
+	}))
 	// Consul is available, the values are loaded without changes of the keys
 	assert.Equal(t, config{Name: "consul", Document: "document"}, *<-changes)
-	cancel()
-	assert.NoError(t, <-done)
 }
 
 func TestClient_Watch(t *testing.T) {
@@ -474,18 +462,13 @@ func TestDocument(t *testing.T) {
 	assert.Equal(t, config{Name: "consul", Server: yamlServer{Host: "localhost", Port: 9090}}, *conf)
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	changes := make(chan *config)
-	done := make(chan error)
-	go func() {
-		done <- manager.Watch(ctx, conf, func(c any, err error) {
-			assert.NoError(t, err)
-			changes <- c.(*config)
-		})
-	}()
+	assert.NoError(t, tinyconf.Subscribe(ctx, manager, func(prev, next *config) {
+		changes <- next
+	}))
 	consul.put("app/config", str("name: changed\n"))
 	assert.Equal(t, config{Name: "changed", Server: yamlServer{Host: "localhost", Port: 8080}}, *<-changes)
-	cancel()
-	assert.NoError(t, <-done)
 }
 
 func TestDocument_Absent(t *testing.T) {

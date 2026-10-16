@@ -95,26 +95,16 @@ func newManager(t *testing.T, drivers ...tinyconf.Driver) *tinyconf.Manager {
 	return manager
 }
 
-// watch runs Manager.Watch and returns the channel with the configs after every reload without errors.
-// Errors are logged: Consul can be not available for a moment, the next reload fixes the config.
-func watch[T any](t *testing.T, manager *tinyconf.Manager, conf *T) <-chan *T {
+// subscribe subscribes to the changes of the config and returns the channel with the new versions.
+// Reloads with errors are logged by the manager and are not reported.
+func subscribe[T any](t *testing.T, manager *tinyconf.Manager) <-chan *T {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
 	changes := make(chan *T, 10)
-	done := make(chan error, 1)
-	go func() {
-		done <- manager.Watch(ctx, conf, func(c any, err error) {
-			if err != nil {
-				t.Log("config is reloaded with the error:", err)
-				return
-			}
-			changes <- c.(*T)
-		})
-	}()
-	t.Cleanup(func() {
-		cancel()
-		assert.NoError(t, <-done)
-	})
+	require.NoError(t, tinyconf.Subscribe(ctx, manager, func(prev, next *T) {
+		changes <- next
+	}))
 	return changes
 }
 
@@ -249,7 +239,7 @@ func TestConsul(t *testing.T) {
 		conf := &config{}
 		require.NoError(t, manager.Register(conf))
 		require.NoError(t, manager.Parse(conf))
-		changes := watch(t, manager, conf)
+		changes := subscribe[config](t, manager)
 
 		srv.put(t, "watch/keys/level", "debug")
 		assert.Equal(t, config{Name: "first", Level: "debug"}, *next(t, changes))
@@ -260,7 +250,7 @@ func TestConsul(t *testing.T) {
 		srv.put(t, "watch/document", "name: second\n")
 		assert.Equal(t, config{Name: "second", Level: "debug", Port: 8080}, *next(t, changes))
 
-		// the deleted key gets the value from the config passed to Watch
+		// the deleted key gets the initial value
 		srv.delete(t, "watch/keys/port")
 		assert.Equal(t, config{Name: "second", Level: "debug"}, *next(t, changes))
 
@@ -347,7 +337,7 @@ func TestConsul_RestartWhileWatching(t *testing.T) {
 	conf := &config{}
 	require.NoError(t, manager.Register(conf))
 	require.NoError(t, manager.Parse(conf))
-	changes := watch(t, manager, conf)
+	changes := subscribe[config](t, manager)
 
 	// the dev agent keeps the data in memory, after the restart the keys and the indexes start from scratch,
 	// so the new indexes can be the same as the known ones: the driver reloads the config after the failure anyway
@@ -381,7 +371,7 @@ func TestConsul_RestartWhileWatching(t *testing.T) {
 	conf = &config{}
 	require.NoError(t, manager.Register(conf))
 	require.Error(t, manager.Parse(conf))
-	changes = watch(t, manager, conf)
+	changes = subscribe[config](t, manager)
 	require.NoError(t, srv.container.Start(ctx))
 	waitLeader()
 	srv.put(t, "restart/name", "started")

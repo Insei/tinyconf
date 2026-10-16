@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/insei/fmap/v3"
 	"github.com/stretchr/testify/assert"
@@ -85,13 +86,24 @@ func TestManager_AccessDenied(t *testing.T) {
 		"failed to load: source is not available",
 	}, logged)
 
-	logged = nil
-	driver.watchErr = fmt.Errorf("%w: no permission to watch", ErrAccessDenied)
-	assert.ErrorIs(t, c.Watch(context.Background(), conf, func(any, error) {}), ErrAccessDenied)
-	driver.watchErr = errors.New("watching is failed")
-	assert.Error(t, c.Watch(context.Background(), conf, func(any, error) {}))
-	assert.Equal(t, []string{
-		"access denied: access denied: no permission to watch",
-		"failed to watch: watching is failed",
-	}, logged)
+	for watchErr, message := range map[error]string{
+		fmt.Errorf("%w: no permission to watch", ErrAccessDenied): "access denied: access denied: no permission to watch",
+		errors.New("watching is failed"):                          "failed to watch: watching is failed",
+	} {
+		log.mu.Lock()
+		logged = nil
+		log.mu.Unlock()
+		// every case with its own manager, watching is started by the first subscription
+		c, err := New(WithDriver(&errorMockDriver{watchErr: watchErr}), WithLogger(log))
+		assert.NoError(t, err)
+		assert.NoError(t, c.Register(conf))
+		ctx, cancel := context.WithCancel(context.Background())
+		assert.NoError(t, Subscribe(ctx, c, func(prev, next *Config) {}))
+		assert.Eventually(t, func() bool {
+			log.mu.Lock()
+			defer log.mu.Unlock()
+			return len(logged) == 1 && logged[0] == message
+		}, 5*time.Second, 10*time.Millisecond)
+		cancel()
+	}
 }

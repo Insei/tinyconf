@@ -170,18 +170,13 @@ func TestStructPointers_Watch(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	changed := make(chan *pointersConfig, 1)
-	done := make(chan error, 1)
-	go func() {
-		done <- manager.Watch(ctx, conf, func(fresh any, err error) {
-			assert.NoError(t, err)
-			select {
-			case changed <- fresh.(*pointersConfig):
-			default:
-			}
-		})
-	}()
+	assert.NoError(t, tinyconf.Subscribe(ctx, manager, func(prev, next *pointersConfig) {
+		select {
+		case changed <- next:
+		default:
+		}
+	}))
 
-	time.Sleep(50 * time.Millisecond)
 	assert.NoError(t, os.WriteFile(yamlPath, []byte("server:\n  host: second\n  tls:\n    cert: second.pem\n"), 0o600))
 	select {
 	case fresh := <-changed:
@@ -193,9 +188,8 @@ func TestStructPointers_Watch(t *testing.T) {
 		t.Fatal("config change is not reported")
 	}
 	cancel()
-	<-done
 
-	// the config passed to Watch is not changed
+	// the registered config is not changed
 	assert.Same(t, server, conf.Server)
 	assert.Same(t, tls, conf.Server.TLS)
 	assert.Equal(t, "first", conf.Server.Host)
