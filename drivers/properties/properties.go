@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/insei/fmap/v3"
 
@@ -147,6 +148,13 @@ func decode(data []byte) (map[string]any, error) {
 func escape(s string, key bool) string {
 	var b strings.Builder
 	for i, r := range s {
+		if r == utf8.RuneError {
+			// the byte that is not UTF-8 is written as is
+			if _, size := utf8.DecodeRuneInString(s[i:]); size == 1 {
+				b.WriteByte(s[i])
+				continue
+			}
+		}
 		switch {
 		case r == '\\':
 			b.WriteString(`\\`)
