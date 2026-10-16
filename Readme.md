@@ -5,7 +5,7 @@
 # tinyconf
 tinyconf - a simple and universal library for parsing configs.
 
-Documentation: [insei.github.io/tinyconf](https://insei.github.io/tinyconf/) — get started, [why tinyconf](https://insei.github.io/tinyconf/why-tinyconf/), [use cases](https://insei.github.io/tinyconf/use-cases/), features and drivers.
+Documentation: [insei.github.io/tinyconf](https://insei.github.io/tinyconf/) — get started, [why tinyconf](https://insei.github.io/tinyconf/latest/why-tinyconf/), [use cases](https://insei.github.io/tinyconf/latest/use-cases/), features and drivers.
 
 # Installation
 Install via go get. Note that Go 1.19 or newer is required.
@@ -306,4 +306,4 @@ If the driver implements the optional `tinyconf.Loader` or `tinyconf.ContextLoad
 so the driver can read its source once and not for every field.
 If the driver implements the optional `tinyconf.Watcher` interface, it can report changes of its source for reloading.
 
-More examples: the service in the [`example`](example) directory, runnable examples on [pkg.go.dev](https://pkg.go.dev/github.com/insei/tinyconf#pkg-examples), recipes in the [documentation](https://insei.github.io/tinyconf/use-cases/).
+More examples: the service in the [`example`](example) directory, runnable examples on [pkg.go.dev](https://pkg.go.dev/github.com/insei/tinyconf#pkg-examples), recipes in the [documentation](https://insei.github.io/tinyconf/latest/use-cases/).
