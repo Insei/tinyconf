@@ -301,20 +301,68 @@ func TestDriver_Watch(t *testing.T) {
 	assert.NoError(t, <-done)
 }
 
+func TestDriver_WatchAfterFailedLoad(t *testing.T) {
+	consul := newFakeConsul(map[string]string{"app/name": "consul", "app/config": "name: document\n"})
+	defer consul.Close()
+	type config struct {
+		Name     string `consul:"name"`
+		Document string `yaml:"name"`
+	}
+	consulDriver, err := New("app", WithAddress(consul.URL))
+	assert.NoError(t, err)
+	yamlDriver, err := yaml.New("", yaml.WithSource(Document("app/config", WithAddress(consul.URL))))
+	assert.NoError(t, err)
+	manager, err := tinyconf.New(tinyconf.WithDriver(consulDriver), tinyconf.WithDriver(yamlDriver))
+	assert.NoError(t, err)
+	conf := &config{}
+	assert.NoError(t, manager.Register(conf))
+	// Consul is not available at the start
+	consul.setFails(2)
+	assert.Error(t, manager.Parse(conf))
+	assert.Equal(t, config{}, *conf)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	changes := make(chan *config, 10)
+	done := make(chan error)
+	go func() {
+		done <- manager.Watch(ctx, conf, func(c any, err error) {
+			if err == nil {
+				changes <- c.(*config)
+			}
+		})
+	}()
+	// Consul is available, the values are loaded without changes of the keys
+	assert.Equal(t, config{Name: "consul", Document: "document"}, *<-changes)
+	cancel()
+	assert.NoError(t, <-done)
+}
+
 func TestClient_Watch(t *testing.T) {
 	consul := newFakeConsul(map[string]string{"key": "value"})
 	defer consul.Close()
 	c := newClient([]Option{WithAddress(consul.URL), WithWaitTime(10 * time.Millisecond)})
 
+	t.Run("loaded index", func(t *testing.T) {
+		_, index, err := c.load("key", false)
+		assert.NoError(t, err)
+		ctx, cancel := context.WithCancel(context.Background())
+		changes := make(chan struct{}, 10)
+		done := make(chan error)
+		go func() { done <- c.watch(ctx, "key", false, index, func() { changes <- struct{}{} }) }()
+		// the wait time is over without changes
+		time.Sleep(50 * time.Millisecond)
+		assert.Len(t, changes, 0)
+		consul.put("key", str("new"))
+		<-changes
+		cancel()
+		assert.NoError(t, <-done)
+	})
 	t.Run("without loaded index", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		changes := make(chan struct{}, 10)
 		done := make(chan error)
 		go func() { done <- c.watch(ctx, "key", false, 0, func() { changes <- struct{}{} }) }()
-		// the current index is not a change, the wait time is over without changes
-		time.Sleep(50 * time.Millisecond)
-		assert.Len(t, changes, 0)
-		consul.put("key", str("new"))
+		// the data is not in the config, it is reported at once
 		<-changes
 		cancel()
 		assert.NoError(t, <-done)
