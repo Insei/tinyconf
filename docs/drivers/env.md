@@ -66,6 +66,7 @@ With `env.WithAutoKeys()` the `env` tag is not required. The name of the variabl
 | `HTTP.Port` | `HTTP_PORT` |
 | `HTTP.MaxConns` | `HTTP_MAX_CONNS` |
 | `DBName` | `DB_NAME` |
+| `HTTP.Timeouts.Read`, `Timeouts` is embedded | `HTTP_READ` |
 
 The `env` tag still has priority, and the field can be excluded with `env:"-"`.
 

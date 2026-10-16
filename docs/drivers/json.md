@@ -34,7 +34,7 @@ type Config struct {
 }
 ```
 
-Options after the comma are ignored: `json:"port,omitempty"` is the `port` key. Set the `json` tag on all parents of the field: without the tag of the parent the field is read from the root of the file, and the manager [logs a warning](../features/logging.md).
+Options after the comma are ignored: `json:"port,omitempty"` is the `port` key. Set the `json` tag on all parents of the field: without the tag of the parent the field is read from the root of the file, and the manager [logs a warning](../features/logging.md). [Embedded structs](../features/structs.md#embedded-structs) without the tag are the exception, their fields are on the level of the embedding struct.
 
 ## Options
 

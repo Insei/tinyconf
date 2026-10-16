@@ -36,6 +36,8 @@ Options after the comma are ignored: `yaml:"port,omitempty"` is the `port` key.
 
     When a value is found this way, the manager [logs a warning](../features/logging.md) with the name of the parent without the tag and the key that was used.
 
+    [Embedded structs](../features/structs.md#embedded-structs) are the exception: they do not need the tag, their fields are on the level of the embedding struct.
+
 ## Options
 
 ```go
