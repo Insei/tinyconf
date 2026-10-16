@@ -29,6 +29,7 @@ so the last driver has the highest priority. You can also add your own driver.
 | `Sources(conf any) []FieldSource` | returns which driver has set the value of every field in the last `Parse` call |
 | `tinyconf.Subscribe(ctx, m, onChange) error` | calls `onChange(prev, next *T)` after the changes of the config or the sub config `T` |
 | `tinyconf.Current[T](m) *T` | returns the current version of the config or the sub config `T` |
+| `ReloadStatus() ReloadStatus` | state of watching and reloading for the health checks: the last error, stopped drivers |
 
 `Parse` parses all fields even if some of them have errors, all errors are returned as one error that can be checked
 with `errors.Is` and `errors.As`.
