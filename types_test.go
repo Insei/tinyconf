@@ -1,6 +1,7 @@
 package tinyconf
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -37,27 +38,6 @@ type testAsError struct{}
 
 func (e *testAsError) Error() string { return "" }
 
-func Test_copyToSubConfig_Errors(t *testing.T) {
-	type Sub struct {
-		Name string
-	}
-	type Other struct {
-		Title string
-	}
-	type Config struct {
-		Sub Sub
-	}
-	// not structs
-	assert.Error(t, copyToSubConfig(new(int), &Sub{}, "Sub", nil))
-	assert.Error(t, copyToSubConfig(&Config{}, new(int), "Sub", nil))
-	// sub config has no parsed field
-	assert.Error(t, copyToSubConfig(&Config{}, &Other{}, "Sub", []string{"Sub.Name"}))
-
-	sub := &Sub{}
-	assert.NoError(t, copyToSubConfig(&Config{Sub: Sub{Name: "name"}}, sub, "Sub", []string{"Sub.Name"}))
-	assert.Equal(t, "name", sub.Name)
-}
-
 func TestManager_StorageErrors(t *testing.T) {
 	type Sub struct {
 		Name string
@@ -78,6 +58,7 @@ func TestManager_StorageErrors(t *testing.T) {
 		Name string
 	}
 	assert.ErrorIs(t, manager.Register(&Other{}), storageErr)
-	// parsed values can not be copied to the sub config
+	// fields of the sub config are not found
 	assert.ErrorIs(t, manager.Parse(&Sub{}), storageErr)
+	assert.ErrorIs(t, manager.Watch(context.Background(), &Config{}, func(any, error) {}), storageErr)
 }
