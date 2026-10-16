@@ -126,7 +126,7 @@ func WithEnvExpansion() Option {
 	}
 }
 
-// WithWatchInterval sets the interval of checking the config files for changes in Manager.Watch, 5 seconds by default.
+// WithWatchInterval sets the interval of checking the config files for changes while there are subscriptions, 5 seconds by default.
 func WithWatchInterval(interval time.Duration) Option {
 	return func(o *tree.Options) {
 		o.WatchInterval = interval

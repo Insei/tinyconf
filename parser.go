@@ -28,6 +28,14 @@ type Manager struct {
 	order []reflect.Type
 	// sources of the values from the last Parse call for every config type
 	sources map[reflect.Type][]FieldSource
+	// states of the registered configs: initial values and current versions
+	states map[reflect.Type]*configState
+
+	// subscribers to the changes of the configs, watching is running while there are subscribers
+	subMu        sync.Mutex
+	subscribers  []*subscriber
+	stopWatching context.CancelFunc
+	reloadMu     sync.Mutex
 }
 
 // getStorage returns fields of the config, it is a variable to check the storage errors in tests.
@@ -68,6 +76,10 @@ func (c *Manager) Register(conf any) error {
 		Storage: storage,
 		Config:  conf,
 	}
+	if c.states == nil {
+		c.states = make(map[reflect.Type]*configState)
+	}
+	c.states[typeOf] = &configState{}
 	return nil
 }
 
@@ -175,7 +187,7 @@ func (c *Manager) Parse(conf any) error {
 }
 
 // parse parses the config and returns sources of the values.
-// Debug messages about every field are logged only if reload is false, Watch logs only changed fields.
+// Debug messages about every field are logged only if reload is false, reloads log only changed fields.
 func (c *Manager) parse(conf any, reload bool) ([]FieldSource, error) {
 	if err := checkConfig(conf); err != nil {
 		return nil, fmt.Errorf("config can't be parsed: %w", err)
@@ -202,6 +214,17 @@ func (c *Manager) parse(conf any, reload bool) ([]FieldSource, error) {
 		confParse = reflect.New(registerTypeOf.Elem()).Interface()
 		// values of the sub config are initial values of the fields
 		copySubConfig(register.Storage, confParse, subStorage, conf, prefix, paths, false)
+	}
+	// the registered config is parsed by the application
+	isApplicationParse := !isSubConf && !reload
+	if isApplicationParse {
+		state := c.state(registerTypeOf)
+		c.mu.Lock()
+		if state.initial == nil {
+			// values before drivers, every reload starts from them
+			state.initial = copyConf(conf)
+		}
+		c.mu.Unlock()
 	}
 	if !reload {
 		for _, path := range paths {
@@ -284,6 +307,9 @@ func (c *Manager) parse(conf any, reload bool) ([]FieldSource, error) {
 	}
 	c.sources[confTypeOf] = fieldSources
 	c.mu.Unlock()
+	if isApplicationParse {
+		c.state(registerTypeOf).current.Store(copyConf(conf))
+	}
 
 	if len(errs) > 0 {
 		return fieldSources, errs
@@ -329,95 +355,6 @@ func (c *Manager) Sources(conf any) []FieldSource {
 	return append([]FieldSource{}, sources...)
 }
 
-// Watch watches for changes of the config sources and blocks until ctx is done.
-// After every change reported by drivers it parses the config to the new copy of conf
-// and calls onChange with the pointer to this copy and the error of parsing.
-// conf itself is never changed by Watch, its values at the moment of the call are used as defaults for every copy,
-// so the current config can be read concurrently and replaced with the new one in onChange, with atomic.Pointer for example.
-// Only fields with the new values are logged on the debug level, relative to the last config parsed without errors.
-//
-// Config should be registered, or it should be a field of the registered config (sub config).
-// Changes are reported only by drivers that implements Watcher, ErrNoWatchers is returned if there are no such drivers.
-func (c *Manager) Watch(ctx context.Context, conf any, onChange func(conf any, err error)) error {
-	if err := checkConfig(conf); err != nil {
-		return fmt.Errorf("config can't be watched: %w", err)
-	}
-	register, _, subPath := c.findRegister(reflect.TypeOf(conf))
-	if register == nil {
-		return ErrNotRegisteredConfig
-	}
-	storage, err := getStorage(conf)
-	if err != nil {
-		return fmt.Errorf("config can't be watched: %w", err)
-	}
-	prefix := ""
-	if subPath != "" {
-		prefix = subPath + "."
-	}
-	var watchers []Driver
-	for _, d := range c.drivers {
-		if _, ok := d.(Watcher); ok {
-			watchers = append(watchers, d)
-		}
-	}
-	if len(watchers) == 0 {
-		return ErrNoWatchers
-	}
-	// defaults for all next configs
-	// structs stored by pointer are copied, their fields are set by Parse
-	copyConf := func(src reflect.Value) reflect.Value {
-		dst := reflect.New(src.Type().Elem())
-		dst.Elem().Set(src.Elem())
-		convert.CopySections(dst.Interface())
-		return dst
-	}
-	base := copyConf(reflect.ValueOf(conf))
-	// copy of the last config passed to onChange without errors, changes are logged relative to it;
-	// configs passed to the application are not read, the application can change them
-	prev := base.Interface()
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	changes := make(chan struct{}, 1)
-	notify := func() {
-		select {
-		case changes <- struct{}{}:
-		default:
-			// change is already waiting for parsing
-		}
-	}
-	errs := make(chan error, len(watchers))
-	var wg sync.WaitGroup
-	for _, d := range watchers {
-		wg.Add(1)
-		go func(d Driver) {
-			defer wg.Done()
-			if err := d.(Watcher).Watch(ctx, notify); err != nil && ctx.Err() == nil {
-				c.log.Error(errorMessage(err, "failed to watch"), LogField("driver", d.GetName()), LogField("details", err.Error()))
-				errs <- fmt.Errorf("%s driver: %w", d.GetName(), err)
-			}
-		}(d)
-	}
-	defer wg.Wait()
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case err := <-errs:
-			cancel()
-			return err
-		case <-changes:
-			fresh := copyConf(base).Interface()
-			sources, err := c.parse(fresh, true)
-			if err == nil {
-				c.logChanges(storage, prev, fresh, prefix, sources)
-				prev = copyConf(reflect.ValueOf(fresh)).Interface()
-			}
-			onChange(fresh, err)
-		}
-	}
-}
-
 // logChanges logs fields with different values in prev and next configs, next config is parsed with sources.
 func (c *Manager) logChanges(storage fmap.Storage, prev, next any, prefix string, sources []FieldSource) {
 	fieldSources := make(map[string]FieldSource, len(sources))
@@ -444,8 +381,15 @@ func (c *Manager) logChanges(storage fmap.Storage, prev, next any, prefix string
 	}
 }
 
+// GenDoc generates the documentation of all registered configs in the format of the driver,
+// with the values of the current versions of the configs: after the last Parse or reload.
 func (c *Manager) GenDoc(driverName string) string {
 	registers := c.getRegisters()
+	for i, register := range registers {
+		if current := c.state(reflect.TypeOf(register.Config)).current.Load(); current != nil {
+			registers[i] = &Registered{Storage: register.Storage, Config: current}
+		}
+	}
 
 	var doc string
 	for _, driver := range c.drivers {

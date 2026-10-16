@@ -82,6 +82,7 @@ type Loader interface {
 
 // Watcher is an optional interface of the driver that can notify about changes of its source.
 // Watch should block until ctx is done and call onChange after every change of the source.
+// Manager calls it while there are subscriptions, see Subscribe; an error is logged and stops watching of the driver.
 type Watcher interface {
 	Watch(ctx context.Context, onChange func()) error
 }
