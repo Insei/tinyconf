@@ -1,10 +1,8 @@
-application:
-  name: example
 http:
-  host: localhost
-  port: 8080
-  auth:
-    issuer: example
-    audience: users
-    sign: HS256
-    key: secret
+  port: 8081
+  timeout: 10s
+database:
+  host: db.internal
+logging:
+  level: info
+hosts: [a.example.com]
