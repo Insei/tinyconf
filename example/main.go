@@ -1,120 +1,108 @@
+// The example service: the config is read from the defaults in the tags, config.yaml, environment variables and flags,
+// the packages subscribe to their parts of the config and get the changes of config.yaml without restart.
+//
+//	go run .                                 # run, change config.yaml while it is running, stop by Ctrl+C
+//	DB_PASSWORD=secret go run . -http-port 9090
+//	go run . -doc yaml                       # print the template of the config: yaml, env, flag
 package main
 
 import (
-	"flag"
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"time"
 
 	"github.com/insei/tinyconf"
 	"github.com/insei/tinyconf/drivers/env"
+	"github.com/insei/tinyconf/drivers/flag"
 	"github.com/insei/tinyconf/drivers/tag"
 	"github.com/insei/tinyconf/drivers/yaml"
 	"github.com/insei/tinyconf/logger"
 )
 
-const (
-	UsageDocFlag = "Show documentation in selected format. Supported formats: env, yaml.\nExample: go run ./example/main.go -doc yaml"
-)
-
-type Application struct {
-	Name string `env:"APPLICATION_NAME" yaml:"name" doc:"application name"`
-}
+// HTTP is the config of the HTTP server package.
 type HTTP struct {
-	Host string `env:"HTTP_HOST" yaml:"host" doc:"http host"`
-	Port int    `env:"HTTP_PORT" yaml:"port" doc:"http port"`
-}
-type HTTPAuth struct {
-	Auth struct {
-		Issuer   string `env:"HTTP_AUTH_ISSUER" yaml:"issuer" doc:"http authentication issuer"`
-		Audience string `env:"HTTP_AUTH_AUDIENCE" yaml:"audience" doc:"http authentication audience"`
-	} `yaml:"auth"`
-}
-type HTTPAuthSign struct {
-	Middleware struct {
-		Sign string `env:"HTTP_AUTH_SIGN" yaml:"sign" doc:"http middleware sign"`
-		Key  string `env:"HTTP_AUTH_KEY" yaml:"key" doc:"http middleware key"`
-	} `yaml:"auth"`
+	Host    string        `initial:"localhost" yaml:"host" env:"HTTP_HOST" flag:"http-host" doc:"host of the HTTP server"`
+	Port    int           `initial:"8080" yaml:"port" env:"HTTP_PORT" flag:"http-port" doc:"port of the HTTP server"`
+	Timeout time.Duration `initial:"30s" yaml:"timeout" env:"HTTP_TIMEOUT" doc:"timeout of the requests"`
 }
 
-type sharedConfig struct {
-	HTTP HTTP `yaml:"http"`
+// Database is the config of the database package.
+type Database struct {
+	Host     string          `initial:"localhost" yaml:"host" env:"DB_HOST" doc:"host of the database"`
+	User     string          `initial:"app" yaml:"user" env:"DB_USER" doc:"user of the database"`
+	Password tinyconf.Secret `yaml:"password" env:"DB_PASSWORD" required:"true" doc:"password of the database"`
 }
-type sharedAuthConfig struct {
-	HTTP HTTPAuth `yaml:"http"`
+
+// Logging is the config of the logging package.
+type Logging struct {
+	Level string `initial:"info" yaml:"level" env:"LOG_LEVEL" flag:"log-level" doc:"log level: debug, info, warn, error"`
 }
-type sharedApplicationConfig struct {
-	HTTP Application `yaml:"application"`
+
+// Config is the config of the whole application, the packages know only their parts.
+type Config struct {
+	HTTP     HTTP     `yaml:"http"`
+	Database Database `yaml:"database"`
+	Logging  Logging  `yaml:"logging"`
+	// the hosts from the defaults, the file and the environment are merged
+	Hosts []string `initial:"localhost" yaml:"hosts" env:"HOSTS" merge:"true" doc:"allowed hosts"`
+	// the flag of the application itself is a field of the config too
+	Doc string `flag:"doc" doc:"print the template of the config and exit: yaml, env, flag"`
 }
-type sharedAuthSignConfig struct {
-	HTTP HTTPAuthSign `yaml:"http"`
+
+func must[T any](value T, err error) T {
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	return value
 }
 
 func main() {
-	driverName := flag.String("doc", "", UsageDocFlag)
-	flag.Parse()
-
-	yamlDriver, err := yaml.New("config.yaml")
-	if err != nil {
-		panic(err)
-	}
-	envDriver, err := env.New()
-	if err != nil {
-		panic(err)
-	}
-	tagDriver, err := tag.New("initial")
-	if err != nil {
-		panic(err)
-	}
-
-	config, err := tinyconf.New(
+	config := must(tinyconf.New(
 		tinyconf.WithLogger(logger.NewFmtLogger(logger.ERROR)),
-		tinyconf.WithDriver(tagDriver),
-		tinyconf.WithDriver(yamlDriver),
-		tinyconf.WithDriver(envDriver),
-	)
+		// the next driver overrides the values of the previous one
+		tinyconf.WithDriver(must(tag.New("initial"))),
+		tinyconf.WithDriver(must(yaml.New("config.yaml", yaml.WithOptional()))),
+		tinyconf.WithDriver(must(env.New(env.WithFiles()))),
+		tinyconf.WithDriver(must(flag.New())),
+	))
+	conf := &Config{}
+	if err := config.Register(conf); err != nil {
+		panic(err)
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	parseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	err := config.ParseContext(parseCtx, conf)
+	if conf.Doc != "" {
+		fmt.Print(config.GenDoc(conf.Doc))
+		return
+	}
 	if err != nil {
-		panic(err)
-	}
-
-	c1 := &sharedAuthSignConfig{}
-	if err = config.Register(c1); err != nil {
-		panic(err)
-	}
-
-	c2 := &sharedConfig{}
-	if err = config.Register(c2); err != nil {
-		panic(err)
-	}
-
-	c3 := &sharedAuthConfig{}
-	if err = config.Register(c3); err != nil {
-		panic(err)
-	}
-
-	c4 := &sharedApplicationConfig{}
-	if err = config.Register(c4); err != nil {
-		panic(err)
-	}
-
-	switch *driverName {
-	case "":
-		if err = config.Parse(c1); err != nil {
-			panic(err)
-		}
-		if err = config.Parse(c2); err != nil {
-			panic(err)
-		}
-		if err = config.Parse(c3); err != nil {
-			panic(err)
-		}
-		if err = config.Parse(c4); err != nil {
-			panic(err)
-		}
-		fmt.Printf("%+v\n%+v\n%+v\n%+v\n", *c1, *c2, *c3, *c4)
-	case "env", "yaml":
-		fmt.Println(config.GenDoc(*driverName))
-	default:
-		flag.Usage()
+		fmt.Fprintln(os.Stderr, "config is not parsed:", err)
 		os.Exit(1)
 	}
+
+	// the password is masked when the config is printed
+	fmt.Printf("config: %+v\n", *conf)
+	for _, source := range config.Sources(conf) {
+		fmt.Printf("%s is set by %s driver from %s\n", source.Field, source.Driver, source.Source)
+	}
+
+	// the packages subscribe to their parts and get only their changes
+	must(0, tinyconf.Subscribe(ctx, config, func(prev, next *HTTP) {
+		fmt.Printf("http config is changed: %+v -> %+v\n", *prev, *next)
+	}))
+	must(0, tinyconf.Subscribe(ctx, config, func(prev, next *Logging) {
+		fmt.Printf("log level is changed: %s -> %s\n", prev.Level, next.Level)
+	}))
+	fmt.Println("change config.yaml to see the changes, stop by Ctrl+C")
+	<-ctx.Done()
+
+	// the current version is available anywhere
+	fmt.Println("the last http config:", *tinyconf.Current[HTTP](config))
 }
