@@ -69,6 +69,7 @@ extra:
 
 nav:
   - Get started: index.md
+  - Why tinyconf?: why-tinyconf.md
   - Use cases: use-cases.md
   - Features:
       - features/index.md

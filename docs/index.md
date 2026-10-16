@@ -98,6 +98,10 @@ and `HTTP_HOST=example.com` in the environment the program prints
 
 <div class="grid cards" markdown>
 
+-   :material-scale-balance:{ .lg } **[Why tinyconf? →](why-tinyconf.md)**
+
+    Where it fits, what it gives up, and how it compares to viper, koanf, cleanenv and others.
+
 -   :material-rocket-launch-outline:{ .lg } **[Use cases →](use-cases.md)**
 
     Recipes for typical tasks: environment only, file with overrides, files per environment, secrets, containers, command line tools, optional sections, reloading, tests.
