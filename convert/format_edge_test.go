@@ -57,6 +57,24 @@ func TestFieldToString(t *testing.T) {
 	assert.Equal(t, "a;b", FieldToString([]string{"a", "b"}, storage.MustFind("Hosts")))
 }
 
+func TestFieldToTagString(t *testing.T) {
+	type server struct {
+		Host string `ini:"host"`
+	}
+	type config struct {
+		Servers []server
+	}
+	storage, err := fmap.Get[config]()
+	assert.NoError(t, err)
+	field := storage.MustFind("Servers")
+	// keys of the nested structs are taken from the tag, the value is parsed back by TreeToField with the tag
+	value := FieldToTagString([]server{{Host: "a"}}, field, "ini")
+	assert.Equal(t, `[{"host":"a"}]`, value)
+	parsed, err := TreeToField(value, field, "ini")
+	assert.NoError(t, err)
+	assert.Equal(t, []server{{Host: "a"}}, parsed)
+}
+
 func TestNormalizeJSON_BigNumber(t *testing.T) {
 	// number that is not fit into int and float64 is kept as a string
 	assert.Equal(t, "1e999", normalizeJSON(json.Number("1e999")))
