@@ -56,7 +56,7 @@ yamlDriver, err := yaml.New("config.yaml",
 | `WithSource(source)` | content from a remote storage: [`consul.Document`](consul.md#document) |
 | `WithOptional()` | files can be absent |
 | `WithEnvExpansion()` | replaces `${VAR}` in the content with environment variables |
-| `WithWatchInterval(interval)` | interval of checking the files for changes in [`Watch`](../features/reloading.md), 5 seconds by default |
+| `WithWatchInterval(interval)` | interval of polling the files for [reloading](../features/reloading.md), 5 seconds by default; changes are detected by the events of the file system without waiting for it |
 
 The first argument of `New` can be an empty string, if all sources are set by options.
 

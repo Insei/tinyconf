@@ -72,7 +72,7 @@ tomlDriver, err := toml.New("config.toml",
 | `WithSource(source)` | content from a remote storage: [`consul.Document`](consul.md#document) |
 | `WithOptional()` | files can be absent |
 | `WithEnvExpansion()` | replaces `${VAR}` and `${VAR:-default}` in the content with environment variables |
-| `WithWatchInterval(interval)` | interval of checking the files for changes in [`Watch`](../features/reloading.md), 5 seconds by default |
+| `WithWatchInterval(interval)` | interval of polling the files for [reloading](../features/reloading.md), 5 seconds by default; changes are detected by the events of the file system without waiting for it |
 
 Several files are [merged](yaml.md#several-files) in the order of addition, tables are merged by keys. Files are read once per `Parse` call.
 

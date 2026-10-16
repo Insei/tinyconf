@@ -60,20 +60,22 @@ Changes are reported by drivers. The bundled [yaml](../drivers/yaml.md), [json](
 
 | Source | Watched |
 |---|---|
-| files from `New` and `WithFiles` | yes, polling |
+| files from `New` and `WithFiles` | yes, events of the file system and polling |
 | Consul keys and documents | yes, notified by Consul |
 | Vault secrets | yes, polling, every 30 seconds by default |
 | etcd keys and documents | yes, notified by etcd |
 | files from `WithFS`, data from `WithData` | no |
 | environment variables, flags, tags | no |
 
-Files are checked by polling, every 5 seconds by default. The interval is set with the `WithWatchInterval` option of the driver:
+Files are watched by the events of the file system: inotify on Linux, kqueue on macOS and BSD, ReadDirectoryChangesW on Windows. The change is detected right after the file is written: the driver waits 100 milliseconds for the next events, so the several writes of an editor are one change.
+
+The directories of the files are watched, not the files themselves, so everything that replaces the file works: editors, atomic renames, `kubectl` updates of ConfigMap volumes that replace symlinks. A file that appears or disappears is a change too.
+
+The files are also checked by polling, every 5 seconds by default: it detects the changes when the events are not available — the limit of inotify watches is reached, the directory does not exist yet, the file system does not support events (some network file systems). The interval is set with the `WithWatchInterval` option of the driver:
 
 ```go
-yamlDriver, err := yaml.New("config.yaml", yaml.WithWatchInterval(time.Second))
+yamlDriver, err := yaml.New("config.yaml", yaml.WithWatchInterval(time.Minute))
 ```
-
-Polling works with everything that replaces the file: editors, `kubectl` updates of ConfigMap volumes, atomic renames. A file that appears or disappears is a change too.
 
 ## Errors
 
