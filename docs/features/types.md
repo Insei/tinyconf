@@ -130,4 +130,24 @@ db.Connect(conf.Database.User, conf.Database.Password.Value())
 
 ## Several drivers
 
-If the value of a slice or map is provided by several drivers, the last driver replaces the whole value, items are not merged.
+If the value of a slice or map is provided by several drivers, the last driver replaces the whole value. With the `merge:"true"` tag the values are merged:
+
+```go
+type Config struct {
+    Hosts  []string          `initial:"default" yaml:"hosts" env:"HOSTS" merge:"true"`
+    Labels map[string]string `initial:"team:core" yaml:"labels" env:"LABELS" merge:"true"`
+}
+```
+
+```bash
+# config.yaml: hosts: [from-file], labels: {env: dev}
+HOSTS=from-env LABELS=env:prod
+# Hosts:  [default from-file from-env]
+# Labels: map[env:prod team:core]
+```
+
+* Slices are appended in the order of the drivers, pointers to slices too.
+* Maps get the keys of the next drivers, the same key is overridden by the next driver.
+* The values of the drivers in one `Parse` call are merged: the first driver with the value replaces the value of the struct, so the next `Parse` does not duplicate the items.
+* Arrays, `[]byte` and other types are replaced.
+* [`Sources`](sources.md) reports the last driver, the [log](logging.md) has every step.
