@@ -627,6 +627,7 @@ func TestEnvDriver_IndexedKeys(t *testing.T) {
 		"IDX_SERVERS_0_UNKNOWN":     "ignored",
 		"IDX_SERVERS_1_HOST":        "b",
 		"IDX_SERVERS_1_TAGS":        "z,w",
+		"IDX_SERVERS_1_MAX_CONNS_X": "ignored, simple values have no nested keys",
 		"IDX_BY_NAME_main_HOST":     "main",
 		"IDX_BY_NAME_backup_HOST":   "backup",
 		"IDX_BY_NAME_backup_TAGS_0": "t",
