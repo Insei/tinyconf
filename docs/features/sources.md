@@ -13,7 +13,7 @@ for _, source := range config.Sources(c) {
 
 ```text
 HTTP.Host is set by env driver from HTTP_HOST
-HTTP.Port is set by yaml driver from yaml
+HTTP.Port is set by yaml driver from http.port
 Password is set by env driver from PASSWORD
 ```
 
@@ -30,7 +30,7 @@ Password is set by env driver from PASSWORD
 | Driver | Source |
 |---|---|
 | tag | name of the tag, `initial` |
-| yaml, json, toml | name of the driver |
+| yaml, json, toml | path by the tags, `http.port` |
 | env | name of the variable, with the prefix; `HOSTS_*` for the value from [indexed keys](../drivers/env.md#indexed-keys) |
 | flag | name of the flag, `-http-port` |
 
