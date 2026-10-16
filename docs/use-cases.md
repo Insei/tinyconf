@@ -17,6 +17,7 @@ Recipes for typical tasks. Every recipe is a small, complete piece: take the one
 | give every package its own config | [Config per package](#config-per-package) |
 | stop at start if something is missing | [Fail fast](#fail-fast) |
 | apply changes without restart | [Reload without restart](#reload-without-restart) |
+| keep the config in Consul | [Config in Consul](#config-in-consul) |
 | generate an example of the config | [Config template](#config-template) |
 | find out where a value came from | [Debugging](#debugging) |
 | test the code that uses the config | [Tests](#tests) |
@@ -446,6 +447,30 @@ go func() {
 ```
 
 Readers call `current.Load()` and always see a consistent config: the old one is never modified.
+
+## Config in Consul
+
+The defaults are in the file next to the binary, the settings of the environment are in Consul, and the changes in Consul are applied without restart.
+
+```go
+type Config struct {
+    LogLevel string `yaml:"log_level" consul:"log_level"`
+    HTTP     struct {
+        Port int `yaml:"port" consul:"port"`
+    } `yaml:"http" consul:"http"`
+}
+
+config := must(tinyconf.New(
+    // the defaults and the shared document of all instances
+    tinyconf.WithDriver(must(yaml.New("config.yaml",
+        yaml.WithSource(consul.Document("app/config")),
+    ))),
+    // separate keys for quick changes: consul kv put app/log_level debug
+    tinyconf.WithDriver(must(consul.New("app"))),
+))
+```
+
+The address and the token are taken from `CONSUL_HTTP_ADDR` and `CONSUL_HTTP_TOKEN`, the same variables the Consul CLI uses. Run [`Watch`](#reload-without-restart) to apply the changes: Consul notifies the driver right after the change. See [consul](drivers/consul.md).
 
 ## Config template
 

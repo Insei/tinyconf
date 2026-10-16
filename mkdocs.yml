@@ -89,4 +89,5 @@ nav:
       - toml: drivers/toml.md
       - env: drivers/env.md
       - flag: drivers/flag.md
+      - consul: drivers/consul.md
       - Custom drivers: drivers/custom.md
