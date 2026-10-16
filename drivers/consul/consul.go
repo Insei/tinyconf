@@ -29,7 +29,7 @@ type consulDriver struct {
 	mu     sync.RWMutex
 	loaded bool
 	values map[string]string
-	// index of the values at the moment of the last Load
+	// index of the values at the moment of the last Load, zero if it has failed
 	index uint64
 }
 
@@ -60,6 +60,10 @@ func (d *consulDriver) key(tagPath string) string {
 func (d *consulDriver) Load() error {
 	pairs, index, err := d.client.load(d.listPrefix(), true)
 	if err != nil {
+		// the values from Consul are not in the config, Watch reports the change as soon as Consul is available
+		d.mu.Lock()
+		d.index = 0
+		d.mu.Unlock()
 		return err
 	}
 	values := make(map[string]string, len(pairs))
@@ -170,13 +174,14 @@ func (d *consulDriver) GenDoc(registers ...*tinyconf.Registered) string {
 func Document(key string, opts ...Option) tree.Source {
 	c := newClient(opts)
 	key = strings.Trim(key, "/")
-	// index of the document at the moment of the last reading
+	// index of the document at the moment of the last reading, zero if it has failed
 	var index atomic.Uint64
 	return tree.Source{
 		Name: "consul key " + key,
 		Open: func() (io.ReadCloser, error) {
 			pairs, newIndex, err := c.load(key, false)
 			if err != nil {
+				index.Store(0)
 				return nil, err
 			}
 			index.Store(newIndex)
