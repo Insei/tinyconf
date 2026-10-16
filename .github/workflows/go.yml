@@ -45,3 +45,23 @@ jobs:
       if: matrix.go-version == 'stable'
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+
+  # end-to-end tests with the real external systems in Docker, see e2e/README.md
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: e2e/go.mod
+        cache-dependency-path: e2e/go.sum
+
+    - name: Vet
+      working-directory: e2e
+      run: go vet ./...
+
+    - name: Test
+      working-directory: e2e
+      run: go test -v -race ./...
