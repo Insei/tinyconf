@@ -163,13 +163,13 @@ func TestDriver_KVv1(t *testing.T) {
 
 	// the version is the hash of the data, the id of the request is not a change
 	c := newClient(options{address: vault.URL, kv1: true})
-	_, first, err := c.read("app")
+	_, first, err := c.read(context.Background(), "app")
 	assert.NoError(t, err)
-	_, second, err := c.read("app")
+	_, second, err := c.read(context.Background(), "app")
 	assert.NoError(t, err)
 	assert.Equal(t, first, second)
 	vault.put("app", map[string]any{"name": "changed"})
-	_, third, err := c.read("app")
+	_, third, err := c.read(context.Background(), "app")
 	assert.NoError(t, err)
 	assert.NotEqual(t, first, third)
 }
@@ -386,4 +386,22 @@ func TestDriver_Watch(t *testing.T) {
 		t.Fatalf("the config with the error is applied: %+v", *c)
 	case <-time.After(50 * time.Millisecond):
 	}
+}
+
+func TestDriver_ParseContext(t *testing.T) {
+	vault := newFakeVault(map[string]map[string]any{"app": {"name": "app"}})
+	defer vault.Close()
+	driver, err := New("app", WithAddress(vault.URL))
+	assert.NoError(t, err)
+	manager, err := tinyconf.New(tinyconf.WithDriver(driver))
+	assert.NoError(t, err)
+	conf := &testConfig{}
+	assert.NoError(t, manager.Register(conf))
+	assert.NoError(t, manager.ParseContext(context.Background(), conf))
+	assert.Equal(t, "app", conf.Name)
+
+	// the requests are stopped by the context of ParseContext
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	assert.ErrorIs(t, manager.ParseContext(ctx, &testConfig{}), context.Canceled)
 }

@@ -233,7 +233,7 @@ type countSource struct {
 }
 
 func (s *countSource) source() Source {
-	return Source{Name: "count", Open: func() (io.ReadCloser, error) {
+	return Source{Name: "count", Open: func(context.Context) (io.ReadCloser, error) {
 		s.opened++
 		return io.NopCloser(strings.NewReader(s.data)), nil
 	}}
@@ -408,7 +408,9 @@ func TestDriver_WatchSources(t *testing.T) {
 	options := &Options{WatchInterval: time.Hour}
 	options.AddSource(Source{
 		Name: "notified",
-		Open: func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader("name=value")), nil },
+		Open: func(context.Context) (io.ReadCloser, error) {
+			return io.NopCloser(strings.NewReader("name=value")), nil
+		},
 		Watch: func(ctx context.Context, onChange func()) error {
 			for {
 				select {
@@ -422,7 +424,7 @@ func TestDriver_WatchSources(t *testing.T) {
 	})
 	options.AddSource(Source{
 		Name: "failed",
-		Open: func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader("")), nil },
+		Open: func(context.Context) (io.ReadCloser, error) { return io.NopCloser(strings.NewReader("")), nil },
 		Watch: func(ctx context.Context, onChange func()) error {
 			select {
 			case <-ctx.Done():
