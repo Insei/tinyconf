@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/convert"
 )
 
 func TestLookup(t *testing.T) {
@@ -444,4 +445,27 @@ func TestDriver_WatchSources(t *testing.T) {
 	fail <- struct{}{}
 	err := <-done
 	assert.EqualError(t, err, "failed to watch failed: connection lost")
+}
+
+func TestDoc(t *testing.T) {
+	type config struct {
+		Name   string `test:"name"`
+		Secret string `test:"secret" hidden:"true"`
+		Skip   *int   `test:"skip"`
+		HTTP   struct {
+			Port int `test:"port"`
+		} `test:"http"`
+		NoTag struct {
+			Port int `test:"port"`
+		}
+	}
+	conf := &config{Name: "app", Secret: "secret"}
+	conf.HTTP.Port = 80
+	storage, err := fmap.GetFrom(conf)
+	assert.NoError(t, err)
+	doc := Doc([]*tinyconf.Registered{{Storage: storage, Config: conf}}, "test", func(v any) any {
+		return convert.ToTree(v, "test")
+	})
+	// hidden values are empty, nil values and fields under the parents without the tag are skipped
+	assert.Equal(t, map[string]any{"name": "app", "secret": "", "http": map[string]any{"port": 80}}, doc)
 }
