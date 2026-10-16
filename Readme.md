@@ -64,7 +64,7 @@ yamlDriver, err := yaml.New("config.yaml",
 	yaml.WithEnvExpansion(),             // replace ${VAR} and ${VAR:-default} with environment variables
 	yaml.WithFS(embedFS, "defaults.yaml"),
 	yaml.WithData("inline", []byte("name: app")),
-	yaml.WithWatchInterval(time.Second), // interval of checking the files for changes in Manager.Watch, 5 seconds by default
+	yaml.WithWatchInterval(time.Second), // files are watched by the events of the file system and by polling, 5 seconds by default
 )
 ```
 The json and toml drivers have the same options. Files are read once per `Parse` call, so the next `Parse` call rereads them.
