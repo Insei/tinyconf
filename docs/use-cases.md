@@ -236,7 +236,7 @@ env:
     value: b.example.com
 ```
 
-A ConfigMap volume is updated by Kubernetes without restart of the pod, so [`Watch`](#reload-without-restart) picks up the changes of the file.
+A ConfigMap volume is updated by Kubernetes without restart of the pod, so the [reloading](#reload-without-restart) picks up the changes of the file.
 
 ## Command line tools
 
@@ -415,11 +415,9 @@ env driver: field HTTP.Port: failed to parse ... "abc": invalid syntax; field Da
 
 ## Reload without restart
 
-The current config is stored in an atomic pointer, [`Watch`](features/reloading.md) replaces it after every change of the files.
+Every package subscribes to its own part of the config, the manager calls it only when this part is changed. See [Reloading](features/reloading.md).
 
 ```go
-var current atomic.Pointer[Config]
-
 c := &Config{}
 if err := config.Register(c); err != nil {
     panic(err)
@@ -427,26 +425,15 @@ if err := config.Register(c); err != nil {
 if err := config.Parse(c); err != nil {
     panic(err)
 }
-current.Store(c)
 
-go func() {
-    err := config.Watch(ctx, c, func(conf any, err error) {
-        if err != nil {
-            log.Println("config is not reloaded:", err)
-            return
-        }
-        fresh := conf.(*Config)
-        if old := current.Swap(fresh); old.LogLevel != fresh.LogLevel {
-            setLogLevel(fresh.LogLevel)
-        }
-    })
-    if err != nil {
-        log.Println("config watching is stopped:", err)
+err := tinyconf.Subscribe(ctx, config, func(prev, next *Logging) {
+    if prev.Level != next.Level {
+        setLogLevel(next.Level)
     }
-}()
+})
 ```
 
-Readers call `current.Load()` and always see a consistent config: the old one is never modified.
+Code that only reads the values takes the current version: `tinyconf.Current[HTTP](config).Timeout`. The versions are never modified, so they are read from any goroutine without locks.
 
 ## Config in Consul
 
@@ -470,7 +457,7 @@ config := must(tinyconf.New(
 ))
 ```
 
-The address and the token are taken from `CONSUL_HTTP_ADDR` and `CONSUL_HTTP_TOKEN`, the same variables the Consul CLI uses. Run [`Watch`](#reload-without-restart) to apply the changes: Consul notifies the driver right after the change. See [consul](drivers/consul.md).
+The address and the token are taken from `CONSUL_HTTP_ADDR` and `CONSUL_HTTP_TOKEN`, the same variables the Consul CLI uses. [Subscribe](#reload-without-restart) to apply the changes: Consul notifies the driver right after the change. See [consul](drivers/consul.md).
 
 ## Config template
 
@@ -582,4 +569,4 @@ func (d *kvDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 }
 ```
 
-Add the `Watch` method, and the driver takes part in [reloading](features/reloading.md).
+Add the `Watch` method of the `tinyconf.Watcher` interface, and the driver takes part in [reloading](features/reloading.md).

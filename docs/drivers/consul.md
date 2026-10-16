@@ -7,7 +7,7 @@ The consul package reads the config from [Consul KV](https://developer.hashicorp
 | [key per field](#key-per-field) | every value in its own key: `app/http/port` | `consul` |
 | [document](#document) | YAML, JSON or TOML document in one key: `app/config` | of the format: `yaml`, `json`, `toml` |
 
-Both ways report changes to [`Watch`](../features/reloading.md) as soon as they happen: the driver uses [blocking queries](https://developer.hashicorp.com/consul/api-docs/features/blocking) of Consul, not polling. The package talks to the HTTP API of Consul directly and adds no dependencies.
+Both ways report changes for [reloading](../features/reloading.md) as soon as they happen: the driver uses [blocking queries](https://developer.hashicorp.com/consul/api-docs/features/blocking) of Consul, not polling. The package talks to the HTTP API of Consul directly and adds no dependencies.
 
 ## Key per field
 
@@ -89,15 +89,15 @@ With ACL Consul hides the keys that the token can not read, and answers as if th
 | the token can not read the prefix | error of `Parse`: `403 Forbidden` |
 | the token can read only some keys with the prefix | error of `Parse`: some keys are hidden by ACL |
 | the token can not read the key of the document | error of `Parse`: `403 Forbidden` |
-| access is denied while watching | `Watch` stops with the error, retries do not fix the permissions |
+| access is denied while watching | the driver stops watching, the error is logged: retries do not fix the permissions |
 
 All these errors wrap `tinyconf.ErrAccessDenied`: the manager [logs](../features/logging.md) them as `access denied`, and they can be checked with `errors.Is`. The token needs `read` on the prefix: `key_prefix "app/" { policy = "read" }`.
 
 ## Watching
 
-`Watch` of the manager receives the changes of the keys with the prefix, or of the key of the document, right after they are written to Consul. Keys outside of the prefix do not cause reloads.
+The manager receives the changes of the keys with the prefix, or of the key of the document, right after they are written to Consul. Keys outside of the prefix do not cause reloads.
 
-If Consul is not available, the driver keeps retrying the requests, with the interval that grows from 1 to 30 seconds, so a restart of Consul does not stop watching. After the failure the config is always reloaded: the changes made while Consul was not available are picked up, even if Consul has lost its data and started its indexes from scratch. The same is true for the start of the application: if Consul is not available at the first `Parse`, the values are loaded by `Watch` as soon as Consul is available.
+If Consul is not available, the driver keeps retrying the requests, with the interval that grows from 1 to 30 seconds, so a restart of Consul does not stop watching. After the failure the config is always reloaded: the changes made while Consul was not available are picked up, even if Consul has lost its data and started its indexes from scratch. The same is true for the start of the application: if Consul is not available at the first `Parse`, the values are loaded by the reloading as soon as Consul is available, and the subscribers are called.
 
 ## Documentation
 
