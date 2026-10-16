@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/insei/fmap/v3"
 
@@ -133,6 +134,10 @@ func (c *Manager) subscribe(ctx context.Context, sub *subscriber) {
 	if c.stopWatching == nil {
 		var watchCtx context.Context
 		watchCtx, c.stopWatching = context.WithCancel(context.Background())
+		c.setStatus(func(s *ReloadStatus) {
+			s.Watching = true
+			s.StoppedDrivers = nil
+		})
 		go c.watch(watchCtx)
 	}
 	c.subMu.Unlock()
@@ -150,6 +155,7 @@ func (c *Manager) subscribe(ctx context.Context, sub *subscriber) {
 		if len(c.subscribers) == 0 {
 			c.stopWatching()
 			c.stopWatching = nil
+			c.setStatus(func(s *ReloadStatus) { s.Watching = false })
 		}
 	}()
 }
@@ -177,6 +183,12 @@ func (c *Manager) watch(ctx context.Context) {
 			// the driver can not watch anymore, other drivers continue
 			if err := watcher.Watch(ctx, notify); err != nil && ctx.Err() == nil {
 				c.log.Error(errorMessage(err, "failed to watch"), LogField("driver", d.GetName()), LogField("details", err.Error()))
+				c.setStatus(func(s *ReloadStatus) {
+					if s.StoppedDrivers == nil {
+						s.StoppedDrivers = make(map[string]error)
+					}
+					s.StoppedDrivers[d.GetName()] = err
+				})
 			}
 		}(d, watcher)
 	}
@@ -203,17 +215,28 @@ func (c *Manager) reload(ctx context.Context) {
 	c.subMu.Unlock()
 
 	reloaded := make(map[reflect.Type]bool)
+	// the first error of the configs is the error of the reload
+	var reloadErr error
 	for _, sub := range subscribers {
 		if reloaded[sub.root] {
 			continue
 		}
 		reloaded[sub.root] = true
-		c.reloadConfig(ctx, sub.root, subscribers)
+		if err := c.reloadConfig(ctx, sub.root, subscribers); err != nil && reloadErr == nil {
+			reloadErr = err
+		}
 	}
+	now := time.Now()
+	c.setStatus(func(s *ReloadStatus) {
+		s.LastReload, s.LastError = now, reloadErr
+		if reloadErr == nil {
+			s.LastApplied = now
+		}
+	})
 }
 
 // reloadConfig parses again the registered config and notifies its subscribers about the changes.
-func (c *Manager) reloadConfig(ctx context.Context, typeOf reflect.Type, subscribers []*subscriber) {
+func (c *Manager) reloadConfig(ctx context.Context, typeOf reflect.Type, subscribers []*subscriber) error {
 	c.mu.RLock()
 	register := c.registered[typeOf]
 	c.mu.RUnlock()
@@ -230,7 +253,7 @@ func (c *Manager) reloadConfig(ctx context.Context, typeOf reflect.Type, subscri
 	sources, err := c.parse(ctx, fresh, true)
 	if err != nil {
 		c.log.Error(errorMessage(err, "failed to reload"), LogField("config", typeOf.String()), LogField("details", err.Error()))
-		return
+		return fmt.Errorf("config %s: %w", typeOf, err)
 	}
 	prev := state.current.Load()
 	if prev == nil {
@@ -245,6 +268,7 @@ func (c *Manager) reloadConfig(ctx context.Context, typeOf reflect.Type, subscri
 			c.callSubscriber(sub, prev, fresh)
 		}
 	}
+	return nil
 }
 
 // callSubscriber calls the handler of the subscriber, the panic of the handler is logged.
@@ -266,4 +290,42 @@ func changed(storage fmap.Storage, prefix string, prev, next any) bool {
 		}
 	}
 	return false
+}
+
+// ReloadStatus is the state of watching for changes and reloading of the configs, for the health checks of the application.
+type ReloadStatus struct {
+	// Watching is true while there are subscriptions and the sources are watched.
+	Watching bool
+	// LastReload is the time of the last reload, zero if there were no reloads.
+	LastReload time.Time
+	// LastError is the error of the last reload, nil if the configs are reloaded and applied:
+	// the configs with errors are not applied, the subscribers keep the previous versions.
+	LastError error
+	// LastApplied is the time of the last reload without errors.
+	LastApplied time.Time
+	// StoppedDrivers are the drivers that can not watch anymore, with the errors, access is denied for example.
+	// Their changes are not reloaded until the next start of watching.
+	StoppedDrivers map[string]error
+}
+
+// setStatus changes the reload status under the lock.
+func (c *Manager) setStatus(change func(s *ReloadStatus)) {
+	c.statusMu.Lock()
+	defer c.statusMu.Unlock()
+	change(&c.status)
+}
+
+// ReloadStatus returns the state of watching and reloading of the configs, it can be used by the health checks:
+// the config that is not reloaded for a long time because of the errors, the drivers that stopped watching.
+func (c *Manager) ReloadStatus() ReloadStatus {
+	c.statusMu.Lock()
+	defer c.statusMu.Unlock()
+	status := c.status
+	if c.status.StoppedDrivers != nil {
+		status.StoppedDrivers = make(map[string]error, len(c.status.StoppedDrivers))
+		for name, err := range c.status.StoppedDrivers {
+			status.StoppedDrivers[name] = err
+		}
+	}
+	return status
 }
