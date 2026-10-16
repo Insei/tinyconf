@@ -177,3 +177,12 @@ wait=1m0s
 	assert.NoError(t, manager.Register(&nilConfig{}))
 	assert.Equal(t, "", manager.GenDoc("properties"))
 }
+
+// the case found by FuzzDecode: the bytes that are not UTF-8 are written as is
+func TestEscape_NotUTF8(t *testing.T) {
+	// the byte is kept, the backslash after it is escaped
+	assert.Equal(t, "\xfe\\\\", escape("\xfe\\", false))
+	doc, err := decode([]byte(escape("\xfe", true) + "=" + escape("\xff", false)))
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]any{"\xfe": "\xff"}, doc)
+}

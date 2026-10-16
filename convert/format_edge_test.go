@@ -3,6 +3,7 @@ package convert
 import (
 	"encoding/json"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/insei/fmap/v3"
@@ -78,4 +79,30 @@ func TestFieldToTagString(t *testing.T) {
 func TestNormalizeJSON_BigNumber(t *testing.T) {
 	// number that is not fit into int and float64 is kept as a string
 	assert.Equal(t, "1e999", normalizeJSON(json.Number("1e999")))
+}
+
+// the cases found by FuzzFromString
+func TestToString_Quotes(t *testing.T) {
+	tests := []struct {
+		value     any
+		formatted string
+	}{
+		// an empty string is an empty list, so the empty item is quoted
+		{[]string{""}, `""`},
+		// the values that start with [ and { are parsed as JSON
+		{[]string{"[a", "b"}, `"[a",b`},
+		{map[string]string{"{": ""}, `"{":""`},
+		// the separator of the key and the value inside of the value
+		{map[string]string{"": `0:"`}, `"":'0:"'`},
+		// both quotes can not be quoted without escapes, the value is JSON
+		{[]string{`"',0"`}, `["\"',0\""]`},
+		{map[string]string{"a": `"',`}, `{"a":"\"',"}`},
+	}
+	for _, tt := range tests {
+		formatted := ToString(tt.value, Options{})
+		assert.Equal(t, tt.formatted, formatted)
+		parsed, err := FromString(formatted, reflect.TypeOf(tt.value), Options{})
+		assert.NoError(t, err)
+		assert.Equal(t, tt.value, parsed)
+	}
 }

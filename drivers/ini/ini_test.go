@@ -210,3 +210,11 @@ cert = cert.pem
 	assert.NoError(t, manager.Register(&nested{}))
 	assert.Equal(t, "[inner]\nvalue = \"\"\n", manager.GenDoc("ini"))
 }
+
+// the case found by FuzzDecode: the key of the value can not start with the comment or the section
+func TestDecode_KeyStart(t *testing.T) {
+	for _, content := range []string{"a.# = 1", "a.; = 1", "a.[b = 1"} {
+		_, err := decode([]byte(content))
+		assert.ErrorContains(t, err, "line 1: key", content)
+	}
+}
