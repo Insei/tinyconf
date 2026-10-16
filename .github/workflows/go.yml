@@ -41,10 +41,18 @@ jobs:
         go vet ./...
         go build -o /dev/null ./...
 
+    - name: Test zap logger module
+      if: matrix.go-version == 'stable'
+      working-directory: logger/zaplogger
+      run: |
+        go vet ./...
+        go test -v -race -coverprofile=../../coverage-zaplogger.txt -covermode=atomic ./...
+
     - uses: codecov/codecov-action@v4
       if: matrix.go-version == 'stable'
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.txt,./coverage-zaplogger.txt
 
   # end-to-end tests with the real external systems in Docker, see e2e/README.md
   e2e:
