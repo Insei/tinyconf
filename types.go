@@ -15,6 +15,8 @@ var (
 	ErrIncorrectTagSettings = fmt.Errorf("incorrect tag settings")
 	ErrRequired             = fmt.Errorf("required value is not set")
 	ErrNoWatchers           = fmt.Errorf("no drivers that can watch for changes")
+	// ErrAccessDenied is returned by drivers if the source denies access to the values: the token has no permission, for example.
+	ErrAccessDenied = fmt.Errorf("access denied")
 )
 
 // parseErrors contains all driver errors collected during Manager.Parse.
