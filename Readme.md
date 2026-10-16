@@ -265,6 +265,20 @@ timeout := tinyconf.Current[HTTP](config).Timeout // the current version, it mus
 Watching starts with the first subscription and stops when the contexts of all subscriptions are done.
 Changes are reported by yaml, json and toml drivers for files from the OS file system, by the consul and etcd drivers and their documents, and by the vault driver.
 
+# Custom formats
+Config files of any format with nested objects are read by the format driver with the decoder of the format,
+with the same features as yaml, json and toml: several files, merging, reloading, documentation.
+```go
+driver, err := format.New("hujson", func(data []byte) (map[string]any, error) {
+	var doc map[string]any
+	data, err := hujson.Standardize(data) // JSON with comments
+	if err != nil {
+		return nil, err
+	}
+	return doc, json.Unmarshal(data, &doc)
+}, "config.hujson") // hujson:"port" inside hujson:"http" is read from http.port
+```
+
 # Custom drivers
 The driver should implement the `tinyconf.Driver` interface:
 ```go

@@ -16,4 +16,4 @@ A driver is a source of values. Every driver reads its own struct tag and knows 
 
 Drivers are added to the [manager](../features/manager.md) with `tinyconf.WithDriver`, the next driver overrides values of the previous one. All drivers support the same [set of types](../features/types.md).
 
-Need another source? See [Custom drivers](custom.md).
+Need another file format? See [Custom formats](format.md): a decoder function is enough. Another source? See [Custom drivers](custom.md).

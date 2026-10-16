@@ -92,4 +92,5 @@ nav:
       - consul: drivers/consul.md
       - vault: drivers/vault.md
       - etcd: drivers/etcd.md
+      - Custom formats: drivers/format.md
       - Custom drivers: drivers/custom.md
