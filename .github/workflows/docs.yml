@@ -55,11 +55,12 @@ jobs:
 
       - name: Checkout the site
         run: |
+          # mike builds the version into the site directory, the published site is checked out to another one
           git fetch origin gh-pages --depth=1
-          git worktree add site origin/gh-pages
+          git worktree add pages origin/gh-pages
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: pages
 
   deploy:
     needs: build
