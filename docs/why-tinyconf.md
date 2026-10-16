@@ -62,7 +62,6 @@ Checked against the current documentation of the libraries on 2026-10-16.
 - **Vault: token authentication only.** Kubernetes, AppRole and cloud login are delegated to Vault Agent; changes are detected by polling, because Vault does not notify.
 - **No HCL out of the box.** The [format driver](drivers/format.md) accepts any decoder, but the conversion of HCL to a map is up to you.
 - **Own flag parser.** It ignores unknown flags, so it lives next to cobra or any CLI framework, but it is not a pflag integration.
-- **A list from two drivers is replaced, not merged.** The last driver with a value wins for the whole slice or map.
 - **Subscriptions are package functions,** `tinyconf.Subscribe(ctx, config, ...)`, to keep Go 1.19 support; methods with type parameters need Go 1.27.
 - **zap is a dependency of the core** because of the bundled logger adapter, even if you use another logger.
 - **A younger and smaller project** than viper and koanf.
