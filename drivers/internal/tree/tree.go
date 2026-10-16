@@ -279,7 +279,8 @@ func (d *Driver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 func ParentTagWarning(field fmap.Field, tag, key string) string {
 	var parents []string
 	for parent := field.GetParent(); parent != nil; parent = parent.GetParent() {
-		if name := strings.Split(parent.GetTag().Get(tag), ",")[0]; name == "" {
+		// embedded structs without the tag are on the level of the embedding struct, it is expected
+		if name := strings.Split(parent.GetTag().Get(tag), ",")[0]; name == "" && !parent.GetAnonymous() {
 			parents = append([]string{parent.GetStructPath()}, parents...)
 		}
 	}
@@ -292,6 +293,7 @@ func ParentTagWarning(field fmap.Field, tag, key string) string {
 
 // Lookup returns raw value for the field from the tree, path to the value is built from the tags of the field and its parents.
 // If the parent has no tag, the path is built only from the tags below it.
+// Fields of embedded structs without the tag are on the level of the embedding struct, like in encoding/json.
 func Lookup(field fmap.Field, tag string, tree map[string]any) (any, error) {
 	pathKey := field.GetTagPath(tag, true)
 	if pathKey == "" {

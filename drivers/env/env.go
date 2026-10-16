@@ -40,7 +40,19 @@ func (d envDriver) getKey(field fmap.Field) (string, bool) {
 	if !d.autoKeys {
 		return "", false
 	}
-	return autoKey(field.GetStructPath()), true
+	return autoKey(autoPath(field)), true
+}
+
+// autoPath returns the struct path of the field without the embedded structs:
+// their fields are on the level of the embedding struct, like in encoding/json.
+func autoPath(field fmap.Field) string {
+	path := field.GetName()
+	for parent := field.GetParent(); parent != nil; parent = parent.GetParent() {
+		if !parent.GetAnonymous() {
+			path = parent.GetName() + "." + path
+		}
+	}
+	return path
 }
 
 // autoKey converts struct path to the env variable name: HTTP.MaxConns -> HTTP_MAX_CONNS.
@@ -221,6 +233,19 @@ func indexedTree(t reflect.Type, vars map[string]string) (any, bool, error) {
 		for i := 0; i < t.NumField(); i++ {
 			fld := t.Field(i)
 			envKey, treeKey := fld.Tag.Get("env"), fld.Tag.Get("env")
+			if envKey == "" && fld.Anonymous && derefType(fld.Type).Kind() == reflect.Struct && !convert.IsLeaf(fld.Type) {
+				// fields of the embedded struct are on the level of the embedding struct, like in encoding/json
+				embedded, found, err := indexedTree(fld.Type, vars)
+				if err != nil {
+					return nil, false, err
+				}
+				if found {
+					for key, item := range embedded.(map[string]any) {
+						items[key] = item
+					}
+				}
+				continue
+			}
 			if fld.PkgPath != "" || envKey == "-" {
 				continue
 			}
