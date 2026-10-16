@@ -76,6 +76,7 @@ Polling works with everything that replaces the file: editors, `kubectl` updates
 | the config is not registered | `Watch` returns `tinyconf.ErrNotRegisteredConfig` |
 | no driver can watch for changes | `Watch` returns `tinyconf.ErrNoWatchers` |
 | the new config is parsed with errors | `onChange` is called with the error, `Watch` continues |
+| a driver can not watch anymore, access is denied for example | the error is logged, `Watch` returns it |
 | the context is done | `Watch` returns `nil` |
 
 ## Details
