@@ -12,6 +12,7 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/insei/fmap/v3"
 	"github.com/stretchr/testify/assert"
 
@@ -468,4 +469,115 @@ func TestDoc(t *testing.T) {
 	})
 	// hidden values are empty, nil values and fields under the parents without the tag are skipped
 	assert.Equal(t, map[string]any{"name": "app", "secret": "", "http": map[string]any{"port": 80}}, doc)
+}
+
+func TestDriver_WatchFileEvents(t *testing.T) {
+	watch := func(t *testing.T, driver *Driver) <-chan struct{} {
+		t.Helper()
+		ctx, cancel := context.WithCancel(context.Background())
+		changes, done := make(chan struct{}, 10), make(chan error, 1)
+		go func() { done <- driver.Watch(ctx, func() { changes <- struct{}{} }) }()
+		t.Cleanup(func() {
+			cancel()
+			assert.NoError(t, <-done)
+		})
+		// the watcher is started
+		time.Sleep(50 * time.Millisecond)
+		return changes
+	}
+	wait := func(t *testing.T, changes <-chan struct{}) {
+		t.Helper()
+		select {
+		case <-changes:
+		case <-time.After(5 * time.Second):
+			t.Fatal("change is not detected")
+		}
+	}
+	nothing := func(t *testing.T, changes <-chan struct{}) {
+		t.Helper()
+		select {
+		case <-changes:
+			t.Fatal("unexpected change")
+		case <-time.After(300 * time.Millisecond):
+		}
+	}
+
+	t.Run("changes are detected by the events without polling", func(t *testing.T) {
+		filePath := filepath.Join(t.TempDir(), "config")
+		assert.NoError(t, os.WriteFile(filePath, []byte("name=first"), 0o600))
+		options := &Options{WatchInterval: time.Hour}
+		options.AddFiles(filePath)
+		changes := watch(t, options.NewDriver("test", testDecode))
+
+		// several writes of the editor are one change
+		for _, content := range []string{"name=", "name=sec", "name=second"} {
+			assert.NoError(t, os.WriteFile(filePath, []byte(content), 0o600))
+		}
+		wait(t, changes)
+		nothing(t, changes)
+
+		// other files of the directory do not change the state
+		assert.NoError(t, os.WriteFile(filepath.Join(filepath.Dir(filePath), "other"), []byte("other"), 0o600))
+		nothing(t, changes)
+	})
+
+	t.Run("symlinks are replaced like in ConfigMap volumes", func(t *testing.T) {
+		dir := t.TempDir()
+		write := func(version, content string) {
+			assert.NoError(t, os.MkdirAll(filepath.Join(dir, version), 0o700))
+			assert.NoError(t, os.WriteFile(filepath.Join(dir, version, "config"), []byte(content), 0o600))
+			// ..data is replaced atomically by the rename of the new symlink
+			assert.NoError(t, os.Symlink(version, filepath.Join(dir, "..data_tmp")))
+			assert.NoError(t, os.Rename(filepath.Join(dir, "..data_tmp"), filepath.Join(dir, "..data")))
+		}
+		write("v1", "name=first")
+		assert.NoError(t, os.Symlink(filepath.Join("..data", "config"), filepath.Join(dir, "config")))
+		options := &Options{WatchInterval: time.Hour}
+		options.AddFiles(filepath.Join(dir, "config"))
+		driver := options.NewDriver("test", testDecode)
+		assert.NoError(t, driver.Load())
+		changes := watch(t, driver)
+
+		write("v2", "name=second value")
+		wait(t, changes)
+	})
+
+	t.Run("polling without the events", func(t *testing.T) {
+		filePath := filepath.Join(t.TempDir(), "config")
+		assert.NoError(t, os.WriteFile(filePath, []byte("name=first"), 0o600))
+		for name, setup := range map[string]func(t *testing.T) []string{
+			"watcher is not created": func(t *testing.T) []string {
+				original := newFileWatcher
+				newFileWatcher = func() (*fsnotify.Watcher, error) { return nil, errors.New("too many open files") }
+				t.Cleanup(func() { newFileWatcher = original })
+				return []string{filePath}
+			},
+			"directory is absent": func(t *testing.T) []string {
+				return []string{filepath.Join(t.TempDir(), "absent", "config")}
+			},
+			"watcher is closed": func(t *testing.T) []string {
+				original := newFileWatcher
+				newFileWatcher = func() (*fsnotify.Watcher, error) {
+					watcher, err := original()
+					go func() {
+						time.Sleep(10 * time.Millisecond)
+						_ = watcher.Close()
+					}()
+					return watcher, err
+				}
+				t.Cleanup(func() { newFileWatcher = original })
+				return []string{filePath}
+			},
+		} {
+			t.Run(name, func(t *testing.T) {
+				files := setup(t)
+				options := &Options{WatchInterval: 5 * time.Millisecond, Optional: true}
+				options.AddFiles(files...)
+				changes := watch(t, options.NewDriver("test", testDecode))
+				assert.NoError(t, os.MkdirAll(filepath.Dir(files[0]), 0o700))
+				assert.NoError(t, os.WriteFile(files[0], []byte("name="+name), 0o600))
+				wait(t, changes)
+			})
+		}
+	})
 }
