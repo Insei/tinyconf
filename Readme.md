@@ -40,6 +40,7 @@ with `errors.Is` and `errors.As`.
 | yaml | `drivers/yaml` | `yaml` | YAML files |
 | json | `drivers/json` | `json` | JSON files |
 | toml | `drivers/toml` | `toml` | TOML files |
+| ini | `drivers/ini` | `ini` | INI files |
 | env | `drivers/env` | `env` | environment variables and `.env` files |
 | flag | `drivers/flag` | `flag` | command line flags |
 | consul | `drivers/consul` | `consul` | Consul KV: a key per field, or a document for yaml, json and toml |
@@ -56,7 +57,7 @@ Common struct tags:
 | `separator:";"` | separator of slice, array and map items in string values, `,` by default |
 | `kvseparator:"="` | separator of map key and value in string values, `:` by default |
 
-## yaml, json and toml
+## yaml, json, toml and ini
 ```go
 yamlDriver, err := yaml.New("config.yaml",
 	yaml.WithFiles("config.local.yaml"), // additional files, the next file overrides the previous, nested maps are merged
@@ -67,7 +68,7 @@ yamlDriver, err := yaml.New("config.yaml",
 	yaml.WithWatchInterval(time.Second), // files are watched by the events of the file system and by polling, 5 seconds by default
 )
 ```
-The json and toml drivers have the same options. Files are read once per `Parse` call, so the next `Parse` call rereads them.
+The json, toml and ini drivers have the same options. Files are read once per `Parse` call, so the next `Parse` call rereads them.
 
 ## env
 ```go
@@ -263,7 +264,7 @@ err := tinyconf.Subscribe(ctx, config, func(prev, next *HTTP) {
 timeout := tinyconf.Current[HTTP](config).Timeout // the current version, it must not be changed
 ```
 Watching starts with the first subscription and stops when the contexts of all subscriptions are done.
-Changes are reported by yaml, json and toml drivers for files from the OS file system, by the consul and etcd drivers and their documents, and by the vault driver.
+Changes are reported by yaml, json, toml and ini drivers for files from the OS file system, by the consul and etcd drivers and their documents, and by the vault driver.
 
 # Custom formats
 Config files of any format with nested objects are read by the format driver with the decoder of the format,
