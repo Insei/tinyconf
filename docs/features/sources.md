@@ -35,6 +35,7 @@ Password is set by env driver from PASSWORD
 | flag | name of the flag, `-http-port` |
 | consul | the key, `app/http/port` |
 | vault | path by the tags, `database.password` |
+| etcd | the key, `app/http/port` |
 
 ## Rules
 
