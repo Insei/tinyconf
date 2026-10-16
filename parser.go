@@ -91,36 +91,29 @@ func getLoggerValue(field fmap.Field, val any) string {
 	return valueLog
 }
 
-func copyToSubConfig(conf, subConf any, subpath string, parsedPaths []string) error {
-	confFields, err := getStorage(conf)
-	if err != nil {
-		return err
-	}
-	subConfFields, err := getStorage(subConf)
-	if err != nil {
-		return err
-	}
-	prefix := subpath + "."
-	for _, path := range confFields.GetAllPaths() {
-		// exclude paths that is not parsed by tinyconf drivers
-		skip := true
-		for _, parsedPath := range parsedPaths {
-			if path == parsedPath {
-				skip = false
-				break
-			}
-		}
-		if skip || !strings.HasPrefix(path, prefix) {
-			continue
-		}
+// copySubConfig copies values of the fields by paths between the config and its sub config.
+// The sub config has the same type as the field of the config with the prefix, so all fields are found.
+func copySubConfig(confFields fmap.Storage, conf any, subFields fmap.Storage, subConf any, prefix string, paths []string, toSub bool) {
+	for _, path := range paths {
 		field := confFields.MustFind(path)
-		subField, ok := subConfFields.Find(strings.TrimPrefix(path, prefix))
-		if !ok {
-			return fmt.Errorf("subconf field %s not found", path)
+		subField := subFields.MustFind(strings.TrimPrefix(path, prefix))
+		if toSub {
+			convert.SetFieldValue(subField, subConf, convert.GetFieldValue(field, conf))
+		} else {
+			convert.SetFieldValue(field, conf, convert.GetFieldValue(subField, subConf))
 		}
-		convert.SetFieldValue(subField, subConf, convert.GetFieldValue(field, conf))
 	}
-	return nil
+}
+
+// valuePaths returns paths of the fields with prefix, whose values are parsed by drivers.
+func valuePaths(storage fmap.Storage, prefix string) []string {
+	var paths []string
+	for _, path := range storage.GetAllPaths() {
+		if strings.HasPrefix(path, prefix) && convert.IsValueField(storage, storage.MustFind(path)) {
+			paths = append(paths, path)
+		}
+	}
+	return paths
 }
 
 // getRegisters returns all registered configs in the registration order.
@@ -169,21 +162,47 @@ func (c *Manager) findRegister(confTypeOf reflect.Type) (register *Registered, r
 // Fields with required:"true" tag should have a value from any driver or non-zero value in the config,
 // otherwise ErrRequired is returned.
 func (c *Manager) Parse(conf any) error {
+	_, err := c.parse(conf, false)
+	return err
+}
+
+// parse parses the config and returns sources of the values.
+// Debug messages about every field are logged only if reload is false, Watch logs only changed fields.
+func (c *Manager) parse(conf any, reload bool) ([]FieldSource, error) {
 	if err := checkConfig(conf); err != nil {
-		return fmt.Errorf("config can't be parsed: %w", err)
+		return nil, fmt.Errorf("config can't be parsed: %w", err)
 	}
 	confParse := conf
 	confTypeOf := reflect.TypeOf(conf)
 	register, registerTypeOf, subPath := c.findRegister(confTypeOf)
 	if register == nil {
-		return ErrNotRegisteredConfig
+		return nil, ErrNotRegisteredConfig
 	}
 	// only for sub configs
 	isSubConf := subPath != ""
 	prefix := ""
 	if isSubConf {
-		confParse = reflect.New(registerTypeOf.Elem()).Interface()
 		prefix = subPath + "."
+	}
+	paths := valuePaths(register.Storage, prefix)
+	var subStorage fmap.Storage
+	if isSubConf {
+		var err error
+		if subStorage, err = getStorage(conf); err != nil {
+			return nil, fmt.Errorf("config can't be parsed: %w", err)
+		}
+		confParse = reflect.New(registerTypeOf.Elem()).Interface()
+		// values of the sub config are initial values of the fields
+		copySubConfig(register.Storage, confParse, subStorage, conf, prefix, paths, false)
+	}
+	if !reload {
+		for _, path := range paths {
+			field := register.Storage.MustFind(path)
+			c.log.Debug("initial",
+				LogField("config", confTypeOf.String()),
+				LogField("field", path),
+				LogField("value", getLoggerValue(field, convert.GetFieldValue(field, confParse))))
+		}
 	}
 	sources := make(map[string]FieldSource)
 
@@ -200,14 +219,8 @@ func (c *Manager) Parse(conf any) error {
 		drivers = append(drivers, d)
 	}
 	for _, d := range drivers {
-		for _, path := range register.Storage.GetAllPaths() {
-			if !strings.HasPrefix(path, prefix) {
-				continue
-			}
+		for _, path := range paths {
 			field := register.Storage.MustFind(path)
-			if !convert.IsValueField(register.Storage, field) {
-				continue
-			}
 			log := c.log.With(
 				LogField("config", confTypeOf.String()),
 				LogField("driver", d.GetName()),
@@ -217,7 +230,9 @@ func (c *Manager) Parse(conf any) error {
 			case errors.Is(err, ErrIncorrectTagSettings):
 				log.Warn("ignore", LogField("details", err.Error()))
 			case errors.Is(err, ErrValueNotFound):
-				log.Debug("skip", LogField("details", err.Error()))
+				if !reload {
+					log.Debug("skip", LogField("details", err.Error()))
+				}
 			case err != nil:
 				log.Error("failed", LogField("details", err.Error()))
 				errs = append(errs, fmt.Errorf("%s driver: field %s: %w", d.GetName(), path, err))
@@ -226,7 +241,11 @@ func (c *Manager) Parse(conf any) error {
 					log.Warn("warning", LogField("details", driverValue.Warning))
 				}
 				if !reflect.DeepEqual(convert.GetFieldValue(field, confParse), driverValue.Value) {
-					log.Debug("override", LogField("value", getLoggerValue(field, driverValue.Value)))
+					if !reload {
+						log.Debug("override",
+							LogField("key", driverValue.Source),
+							LogField("value", getLoggerValue(field, driverValue.Value)))
+					}
 					convert.SetFieldValue(field, confParse, driverValue.Value)
 				}
 				sources[path] = FieldSource{
@@ -240,16 +259,14 @@ func (c *Manager) Parse(conf any) error {
 	// sources in the order of the config fields
 	fieldSources := make([]FieldSource, 0, len(sources))
 	parsedPaths := make([]string, 0, len(sources))
-	for _, path := range register.Storage.GetAllPaths() {
+	for _, path := range paths {
 		if source, ok := sources[path]; ok {
 			fieldSources = append(fieldSources, source)
 			parsedPaths = append(parsedPaths, path)
 		}
 	}
 	if isSubConf {
-		if err := copyToSubConfig(confParse, conf, subPath, parsedPaths); err != nil {
-			errs = append(errs, err)
-		}
+		copySubConfig(register.Storage, confParse, subStorage, conf, prefix, parsedPaths, true)
 	}
 	errs = append(errs, checkRequired(conf, sources, prefix)...)
 
@@ -261,9 +278,9 @@ func (c *Manager) Parse(conf any) error {
 	c.mu.Unlock()
 
 	if len(errs) > 0 {
-		return errs
+		return fieldSources, errs
 	}
-	return nil
+	return fieldSources, nil
 }
 
 // checkRequired checks that all fields with required:"true" tag has a value from drivers or non-zero value in the config.
@@ -309,6 +326,7 @@ func (c *Manager) Sources(conf any) []FieldSource {
 // and calls onChange with the pointer to this copy and the error of parsing.
 // conf itself is never changed by Watch, its values at the moment of the call are used as defaults for every copy,
 // so the current config can be read concurrently and replaced with the new one in onChange, with atomic.Pointer for example.
+// Only fields with the new values are logged on the debug level, relative to the last config parsed without errors.
 //
 // Config should be registered, or it should be a field of the registered config (sub config).
 // Changes are reported only by drivers that implements Watcher, ErrNoWatchers is returned if there are no such drivers.
@@ -316,8 +334,17 @@ func (c *Manager) Watch(ctx context.Context, conf any, onChange func(conf any, e
 	if err := checkConfig(conf); err != nil {
 		return fmt.Errorf("config can't be watched: %w", err)
 	}
-	if register, _, _ := c.findRegister(reflect.TypeOf(conf)); register == nil {
+	register, _, subPath := c.findRegister(reflect.TypeOf(conf))
+	if register == nil {
 		return ErrNotRegisteredConfig
+	}
+	storage, err := getStorage(conf)
+	if err != nil {
+		return fmt.Errorf("config can't be watched: %w", err)
+	}
+	prefix := ""
+	if subPath != "" {
+		prefix = subPath + "."
 	}
 	var watchers []Driver
 	for _, d := range c.drivers {
@@ -337,6 +364,8 @@ func (c *Manager) Watch(ctx context.Context, conf any, onChange func(conf any, e
 		return dst
 	}
 	base := copyConf(reflect.ValueOf(conf))
+	// the last config passed to onChange without errors, changes are logged relative to it
+	prev := conf
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -368,10 +397,40 @@ func (c *Manager) Watch(ctx context.Context, conf any, onChange func(conf any, e
 			cancel()
 			return err
 		case <-changes:
-			fresh := copyConf(base)
-			err := c.Parse(fresh.Interface())
-			onChange(fresh.Interface(), err)
+			fresh := copyConf(base).Interface()
+			sources, err := c.parse(fresh, true)
+			if err == nil {
+				c.logChanges(storage, prev, fresh, prefix, sources)
+				prev = fresh
+			}
+			onChange(fresh, err)
 		}
+	}
+}
+
+// logChanges logs fields with different values in prev and next configs, next config is parsed with sources.
+func (c *Manager) logChanges(storage fmap.Storage, prev, next any, prefix string, sources []FieldSource) {
+	fieldSources := make(map[string]FieldSource, len(sources))
+	for _, source := range sources {
+		fieldSources[source.Field] = source
+	}
+	for _, path := range valuePaths(storage, "") {
+		field := storage.MustFind(path)
+		value := convert.GetFieldValue(field, next)
+		if reflect.DeepEqual(convert.GetFieldValue(field, prev), value) {
+			continue
+		}
+		fields := []Field{LogField("config", reflect.TypeOf(next).String())}
+		source, ok := fieldSources[path]
+		if ok {
+			fields = append(fields, LogField("driver", source.Driver))
+		}
+		fields = append(fields, LogField("field", prefix+path))
+		if ok {
+			fields = append(fields, LogField("key", source.Source))
+		}
+		fields = append(fields, LogField("value", getLoggerValue(field, value)))
+		c.log.Debug("override", fields...)
 	}
 }
 

@@ -81,14 +81,14 @@ func TestStructPointers_Parse(t *testing.T) {
 
 	sources := map[string]string{}
 	for _, source := range manager.Sources(conf) {
-		sources[source.Field] = source.Driver
+		sources[source.Field] = source.Driver + " " + source.Source
 	}
 	assert.Equal(t, map[string]string{
-		"Name":            "yaml",
-		"Server.Host":     "env",
-		"Server.Timeout":  "tag",
-		"Server.TLS.Cert": "yaml",
-		"Server.TLS.Key":  "env",
+		"Name":            "yaml name",
+		"Server.Host":     "env POINTERS_HOST",
+		"Server.Timeout":  "tag initial",
+		"Server.TLS.Cert": "yaml server.tls.cert",
+		"Server.TLS.Key":  "env POINTERS_TLS_KEY",
 	}, sources)
 
 	// existing structs are filled, not replaced
