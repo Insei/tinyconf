@@ -44,6 +44,7 @@ with `errors.Is` and `errors.As`.
 | flag | `drivers/flag` | `flag` | command line flags |
 | consul | `drivers/consul` | `consul` | Consul KV: a key per field, or a document for yaml, json and toml |
 | vault | `drivers/vault` | `vault` | secrets from the KV secrets engine of HashiCorp Vault |
+| etcd | `drivers/etcd` | `etcd` | etcd: a key per field, or a document for yaml, json and toml |
 
 Common struct tags:
 
@@ -122,6 +123,19 @@ vaultDriver, err := vault.New("app/config", // vault:"password" inside vault:"da
 ```
 The address and the token are taken from `VAULT_ADDR` and `VAULT_TOKEN` or set by options, KV version 2 at `secret/` by default.
 The secrets are checked for changes every 30 seconds while there are subscriptions.
+
+## etcd
+```go
+etcdDriver, err := etcd.New("app", // etcd:"port" inside etcd:"http" is read from app/http/port
+	etcd.WithEndpoints("etcd-1:2379", "etcd-2:2379", "etcd-3:2379"), // the next endpoint is used if the current one is not available
+	etcd.WithAuth("app", password),
+)
+yamlDriver, err := yaml.New("config.yaml",
+	yaml.WithSource(etcd.Document("app/config")), // YAML document from etcd, merged with the file
+)
+```
+The endpoints and the user are taken from `ETCDCTL_ENDPOINTS`, `ETCDCTL_USER` and `ETCDCTL_PASSWORD` or set by options.
+Changes in etcd are reported for reloading right after they happen, by the stream of the events.
 
 # Supported types
 All drivers support the same set of types, it is checked by the conformance tests in `drivers/conformance_test.go`.
@@ -249,7 +263,7 @@ err := tinyconf.Subscribe(ctx, config, func(prev, next *HTTP) {
 timeout := tinyconf.Current[HTTP](config).Timeout // the current version, it must not be changed
 ```
 Watching starts with the first subscription and stops when the contexts of all subscriptions are done.
-Changes are reported by yaml, json and toml drivers for files from the OS file system, by the consul driver and Consul documents, and by the vault driver.
+Changes are reported by yaml, json and toml drivers for files from the OS file system, by the consul and etcd drivers and their documents, and by the vault driver.
 
 # Custom drivers
 The driver should implement the `tinyconf.Driver` interface:

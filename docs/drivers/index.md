@@ -12,6 +12,7 @@ A driver is a source of values. Every driver reads its own struct tag and knows 
 | [flag](flag.md) | `drivers/flag` | `flag` | command line flags |
 | [consul](consul.md) | `drivers/consul` | `consul` | Consul KV: a key per field, or a document for yaml, json and toml |
 | [vault](vault.md) | `drivers/vault` | `vault` | secrets from the KV secrets engine of HashiCorp Vault |
+| [etcd](etcd.md) | `drivers/etcd` | `etcd` | etcd: a key per field, or a document for yaml, json and toml |
 
 Drivers are added to the [manager](../features/manager.md) with `tinyconf.WithDriver`, the next driver overrides values of the previous one. All drivers support the same [set of types](../features/types.md).
 

@@ -91,4 +91,5 @@ nav:
       - flag: drivers/flag.md
       - consul: drivers/consul.md
       - vault: drivers/vault.md
+      - etcd: drivers/etcd.md
       - Custom drivers: drivers/custom.md
