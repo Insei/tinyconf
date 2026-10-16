@@ -482,10 +482,10 @@ for _, source := range config.Sources(c) {
 
 ```text
 HTTP.Host is set by env driver from HTTP_HOST
-HTTP.Port is set by yaml driver from yaml
+HTTP.Port is set by yaml driver from http.port
 ```
 
-The [logger](features/logging.md) on the debug level shows every step: which driver had no value, which one has overridden it.
+The [logger](features/logging.md) on the debug level shows the [history](features/logging.md#history-of-a-field) of every field: the initial value and every driver that has overridden it, then every change after reloads.
 
 ```go
 tinyconf.WithLogger(logger.NewFmtLogger(logger.DEBUG))

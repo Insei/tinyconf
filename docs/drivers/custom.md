@@ -30,7 +30,7 @@ The returned `tinyconf.Value` has three fields:
 | Field | Description |
 |---|---|
 | `Value` | the value with the type of the field |
-| `Source` | where the value is found, it is returned by [`Manager.Sources`](../features/sources.md) |
+| `Source` | the key of the value in the source, `HTTP_PORT` or `http.port` for example; it is returned by [`Manager.Sources`](../features/sources.md) and logged as `key` |
 | `Warning` | optional message for the user, the manager logs it with the `Warn` level; use it when the value is found, but probably not where the user expects |
 
 Two errors have a special meaning, all other errors are returned from `Parse`:
@@ -117,7 +117,7 @@ func (d *kvDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
     if err != nil {
         return nil, fmt.Errorf("failed to parse %s: %w", key, err)
     }
-    return &tinyconf.Value{Source: "kv", Value: value}, nil
+    return &tinyconf.Value{Source: key, Value: value}, nil
 }
 ```
 
