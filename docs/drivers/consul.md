@@ -97,7 +97,7 @@ All these errors wrap `tinyconf.ErrAccessDenied`: the manager [logs](../features
 
 `Watch` of the manager receives the changes of the keys with the prefix, or of the key of the document, right after they are written to Consul. Keys outside of the prefix do not cause reloads.
 
-If Consul is not available, the driver keeps retrying the requests, with the interval that grows from 1 to 30 seconds, so a restart of Consul does not stop watching. After the failure the config is always reloaded: the changes made while Consul was not available are picked up, even if Consul has lost its data and started its indexes from scratch.
+If Consul is not available, the driver keeps retrying the requests, with the interval that grows from 1 to 30 seconds, so a restart of Consul does not stop watching. After the failure the config is always reloaded: the changes made while Consul was not available are picked up, even if Consul has lost its data and started its indexes from scratch. The same is true for the start of the application: if Consul is not available at the first `Parse`, the values are loaded by `Watch` as soon as Consul is available.
 
 ## Documentation
 
