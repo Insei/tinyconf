@@ -9,6 +9,11 @@ import (
 	"github.com/insei/fmap/v3"
 )
 
+// MergeTag is the struct tag of the slices and maps that are merged from several drivers: merge:"true".
+// Slices of the next drivers are appended, maps of the next drivers add and override the keys.
+// Without the tag the value of the last driver replaces the whole slice or map.
+const MergeTag = "merge"
+
 var (
 	ErrNotRegisteredConfig  = fmt.Errorf("config is not registered")
 	ErrValueNotFound        = fmt.Errorf("value was not found")

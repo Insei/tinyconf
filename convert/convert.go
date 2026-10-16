@@ -540,3 +540,42 @@ func splitKeyValue(item, kvSep string) (string, string, bool) {
 	}
 	return unquote(strings.TrimSpace(item[:idx])), unquote(strings.TrimSpace(item[idx+len(kvSep):])), true
 }
+
+// Merge merges the next value of the field with the previous one: slices are appended, maps get the keys of the next map,
+// pointers to slices and maps are merged by their values. []byte and all other values are replaced by the next one.
+// The previous value is not changed, the merged value is a new slice or map.
+func Merge(prev, next any) any {
+	prevOf, nextOf := reflect.ValueOf(prev), reflect.ValueOf(next)
+	if !prevOf.IsValid() || !nextOf.IsValid() || prevOf.Type() != nextOf.Type() {
+		return next
+	}
+	isPtr := nextOf.Kind() == reflect.Ptr
+	if isPtr {
+		if prevOf.IsNil() || nextOf.IsNil() {
+			return next
+		}
+		prevOf, nextOf = prevOf.Elem(), nextOf.Elem()
+	}
+	var merged reflect.Value
+	switch {
+	case nextOf.Kind() == reflect.Slice && nextOf.Type().Elem().Kind() != reflect.Uint8:
+		merged = reflect.MakeSlice(nextOf.Type(), 0, prevOf.Len()+nextOf.Len())
+		merged = reflect.AppendSlice(reflect.AppendSlice(merged, prevOf), nextOf)
+	case nextOf.Kind() == reflect.Map:
+		merged = reflect.MakeMapWithSize(nextOf.Type(), prevOf.Len()+nextOf.Len())
+		for _, m := range []reflect.Value{prevOf, nextOf} {
+			iter := m.MapRange()
+			for iter.Next() {
+				merged.SetMapIndex(iter.Key(), iter.Value())
+			}
+		}
+	default:
+		return next
+	}
+	if isPtr {
+		ptr := reflect.New(merged.Type())
+		ptr.Elem().Set(merged)
+		return ptr.Interface()
+	}
+	return merged.Interface()
+}
