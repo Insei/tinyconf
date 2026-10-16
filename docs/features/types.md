@@ -107,6 +107,27 @@ String values of slices, arrays, maps and structs are parsed as JSON if they sta
 !!! note "Fields with struct type"
     A field with struct type, stored by value or by pointer, is not a single value: it is parsed by its fields, and every field has its own tags. See [Nested structs and sub configs](structs.md).
 
+## Secrets
+
+`tinyconf.Secret` is a string that is not printed. `hidden:"true"` masks the value in the logs of tinyconf, but the application can print or log the whole config itself; the `Secret` type masks the value there too:
+
+```go
+type Config struct {
+    Database struct {
+        User     string          `env:"DB_USER"`
+        Password tinyconf.Secret `env:"DB_PASSWORD"`
+    }
+}
+
+log.Printf("config: %+v", conf)            // {Database:{User:app Password:******}}
+db.Connect(conf.Database.User, conf.Database.Password.Value())
+```
+
+* `String`, `GoString` and `MarshalText` return `******` for a not empty value, so `fmt`, `encoding/json`, yaml, zap and slog print the mask. The length of the value is not shown; an empty value is shown as empty, so it is visible that the secret is not set.
+* The value is parsed like a usual string by all drivers, slices and pointers of secrets work too.
+* `Value()` or `string(secret)` returns the value.
+* [`GenDoc`](gendoc.md) shows `******` as the value of the field.
+
 ## Several drivers
 
 If the value of a slice or map is provided by several drivers, the last driver replaces the whole value, items are not merged.

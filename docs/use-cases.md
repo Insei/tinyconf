@@ -173,6 +173,7 @@ type Config struct {
 ```
 
 * `hidden:"true"` masks the value in [logs](features/logging.md) and removes it from [`GenDoc`](features/gendoc.md).
+* [`tinyconf.Secret`](features/types.md#secrets) instead of `string` masks the value when the application prints or logs the config itself: `%+v`, JSON, zap, slog.
 * `required:"true"` makes `Parse` [fail](features/required.md) without the value.
 
 Where the value comes from:
