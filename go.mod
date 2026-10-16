@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/insei/cast v1.1.1
-	github.com/insei/fmap/v3 v3.2.0
+	github.com/insei/fmap/v3 v3.3.0
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1
