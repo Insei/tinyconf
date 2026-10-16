@@ -317,13 +317,18 @@ func (c *Manager) parse(ctx context.Context, conf any, reload bool) ([]FieldSour
 				if driverValue.Warning != "" {
 					log.Warn("warning", LogField("details", driverValue.Warning))
 				}
-				if !reflect.DeepEqual(convert.GetFieldValue(field, confParse), driverValue.Value) {
+				value := driverValue.Value
+				if _, found := sources[path]; found && field.GetTag().Get(MergeTag) == "true" {
+					// the value of the previous driver in this Parse call is merged with the value of the next one
+					value = convert.Merge(convert.GetFieldValue(field, confParse), value)
+				}
+				if !reflect.DeepEqual(convert.GetFieldValue(field, confParse), value) {
 					if !reload {
 						log.Debug("override",
 							LogField("key", driverValue.Source),
-							LogField("value", getLoggerValue(field, driverValue.Value)))
+							LogField("value", getLoggerValue(field, value)))
 					}
-					convert.SetFieldValue(field, confParse, driverValue.Value)
+					convert.SetFieldValue(field, confParse, value)
 				}
 				sources[path] = FieldSource{
 					Field:  strings.TrimPrefix(path, prefix),
