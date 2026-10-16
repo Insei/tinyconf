@@ -29,7 +29,7 @@ A field without the tag of the driver is skipped by this driver.
 | Tag | Description |
 |---|---|
 | `doc:"text"` | description of the field for [`GenDoc`](gendoc.md) |
-| `hidden:"true"` | the value is masked in logs and is not shown in `GenDoc`, use it for secrets |
+| `hidden:"true"` | the value is masked in logs and is not shown in `GenDoc`, use it for secrets; see also the [`Secret`](types.md#secrets) type |
 | `required:"true"` | `Parse` returns an error if the field has no value, see [Required fields](required.md) |
 | `separator:";"` | separator of slice, array and map items in string values, `,` by default |
 | `kvseparator:"="` | separator of map key and value in string values, `:` by default |

@@ -54,7 +54,7 @@ Common struct tags:
 | Tag | Description |
 |---|---|
 | `doc:"text"` | field description for `GenDoc` |
-| `hidden:"true"` | value is masked in logs and is not shown in `GenDoc` |
+| `hidden:"true"` | value is masked in logs and is not shown in `GenDoc`; `tinyconf.Secret` type masks the value in `fmt`, JSON, zap and slog of the application too |
 | `required:"true"` | `Parse` returns `tinyconf.ErrRequired` if the field has no value from drivers and has zero value in the config |
 | `separator:";"` | separator of slice, array and map items in string values, `,` by default |
 | `kvseparator:"="` | separator of map key and value in string values, `:` by default |
