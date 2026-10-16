@@ -6,7 +6,7 @@ The manager logs what happens with every field during `Parse`.
 |---|---|
 | `Debug` | `initial`: the value of the field before drivers; `override`: the value is overridden by the driver; `skip`: the driver has no value for the field |
 | `Warn` | the field has no tag of the driver; the driver has found the value in an unexpected place |
-| `Error` | the driver failed to get or to parse the value |
+| `Error` | `access denied`: the source denies access to the values, `tinyconf.ErrAccessDenied`; `failed`, `failed to load`, `failed to watch`: the driver failed to get, to parse or to watch the values |
 
 Messages have the fields `config`, `driver`, `field`, `key` and `details` or `value`. Values of the fields with `hidden:"true"` are masked.
 

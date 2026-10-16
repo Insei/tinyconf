@@ -40,6 +40,8 @@ Two errors have a special meaning, all other errors are returned from `Parse`:
 | `tinyconf.ErrIncorrectTagSettings` | the field has no settings for this driver, it is skipped |
 | `tinyconf.ErrValueNotFound` | the source has no value for the field, the value of the previous driver is kept |
 
+Wrap `tinyconf.ErrAccessDenied` into the error if the source denies access: the token has no permission to read the values. It is still an error of `Parse`, but the manager logs it as `access denied`, so the problem with permissions is not lost among network errors, and the application can check it with `errors.Is`. Return it from `Load`, `GetValue` and `Watch`; `Watch` should stop on it, retries do not fix the permissions.
+
 ## Loader
 
 `GetValue` is called for every field. If the source should be read once — a file, a response of the remote service — implement the optional `tinyconf.Loader` interface:
