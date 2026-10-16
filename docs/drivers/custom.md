@@ -1,5 +1,7 @@
 # Custom drivers
 
+Reading config files of another format? A decoder function and the [format driver](format.md) are enough, no custom driver is needed.
+
 A driver is any type that implements the `tinyconf.Driver` interface:
 
 ```go
