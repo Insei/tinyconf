@@ -9,11 +9,13 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/insei/fmap/v3"
 
 	"github.com/insei/tinyconf"
@@ -36,12 +38,15 @@ type Source struct {
 	Watch func(ctx context.Context, onChange func()) error
 	// Optional source can be absent.
 	Optional bool
+	// File is the path of the file in the OS file system, the events of its directory are watched.
+	File string
 }
 
 // FileSource returns source that reads the file from the OS file system.
 func FileSource(filePath string) Source {
 	return Source{
 		Name: filePath,
+		File: filePath,
 		Open: func() (io.ReadCloser, error) {
 			return os.Open(filePath)
 		},
@@ -194,7 +199,53 @@ func (d *Driver) stat() string {
 	return state.String()
 }
 
-// Watch checks the sources for changes with the watch interval and calls onChange if any source is changed.
+var (
+	// newFileWatcher creates the watcher of the file system events, it is a variable to check its errors in tests.
+	newFileWatcher = fsnotify.NewWatcher
+	// eventsDelay is the time of waiting for the next events after the event of the file system:
+	// editors write the file by several operations, the file is checked when they are finished.
+	eventsDelay = 100 * time.Millisecond
+)
+
+// fileEvents returns the channel of the events of the directories with the files of the sources and the function
+// that stops watching. Nil channel is returned if the directories can not be watched, the files are checked by polling then.
+// Directories are watched instead of the files, so the replaced files and symlinks are watched too:
+// editors, atomic renames, updates of ConfigMap volumes in Kubernetes.
+func (d *Driver) fileEvents() (<-chan fsnotify.Event, func()) {
+	dirs := make(map[string]bool)
+	for _, source := range d.sources {
+		if source.File != "" {
+			dirs[filepath.Dir(source.File)] = true
+		}
+	}
+	if len(dirs) == 0 {
+		return nil, func() {}
+	}
+	watcher, err := newFileWatcher()
+	if err != nil {
+		return nil, func() {}
+	}
+	added := false
+	for dir := range dirs {
+		// absent directories are checked by polling
+		if watcher.Add(dir) == nil {
+			added = true
+		}
+	}
+	if !added {
+		_ = watcher.Close()
+		return nil, func() {}
+	}
+	go func() {
+		// errors should be read, otherwise the watcher is blocked; the files are checked by polling anyway
+		for range watcher.Errors {
+		}
+	}()
+	return watcher.Events, func() { _ = watcher.Close() }
+}
+
+// Watch checks the sources for changes and calls onChange if any source is changed.
+// Files are checked after the events of the file system and with the watch interval, if the events are lost.
 // Sources with Watch report their changes by themselves. It blocks until ctx is done.
 func (d *Driver) Watch(ctx context.Context, onChange func()) error {
 	// watchers of the sources are stopped and finished before return
@@ -217,6 +268,8 @@ func (d *Driver) Watch(ctx context.Context, onChange func()) error {
 	}
 	ticker := time.NewTicker(d.watchInterval)
 	defer ticker.Stop()
+	events, stopEvents := d.fileEvents()
+	defer stopEvents()
 	// changes made after the last Load should be detected too
 	d.mu.RLock()
 	state, loaded := d.state, d.loaded
@@ -224,6 +277,13 @@ func (d *Driver) Watch(ctx context.Context, onChange func()) error {
 	if !loaded {
 		state = d.stat()
 	}
+	check := func() {
+		if newState := d.stat(); newState != state {
+			state = newState
+			onChange()
+		}
+	}
+	var delay <-chan time.Time
 	for {
 		select {
 		case <-ctx.Done():
@@ -231,10 +291,17 @@ func (d *Driver) Watch(ctx context.Context, onChange func()) error {
 		case err := <-errs:
 			return err
 		case <-ticker.C:
-			if newState := d.stat(); newState != state {
-				state = newState
-				onChange()
+			check()
+		case _, ok := <-events:
+			if !ok {
+				// the watcher is closed, the files are checked by polling
+				events = nil
+				continue
 			}
+			delay = time.After(eventsDelay)
+		case <-delay:
+			delay = nil
+			check()
 		}
 	}
 }

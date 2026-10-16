@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/BurntSushi/toml v1.5.0
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/insei/cast v1.1.1
 	github.com/insei/fmap/v3 v3.3.0
 	github.com/stretchr/testify v1.9.0
@@ -16,4 +17,5 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 )

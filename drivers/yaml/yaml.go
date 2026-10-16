@@ -201,7 +201,8 @@ func WithEnvExpansion() Option {
 	}
 }
 
-// WithWatchInterval sets the interval of checking the config files for changes while there are subscriptions, 5 seconds by default.
+// WithWatchInterval sets the interval of polling the config files for changes while there are subscriptions, 5 seconds by default.
+// The files are watched by the events of the file system too, polling detects the changes if the events are lost.
 func WithWatchInterval(interval time.Duration) Option {
 	return func(o *tree.Options) {
 		o.WatchInterval = interval
