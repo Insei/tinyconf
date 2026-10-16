@@ -2,7 +2,6 @@ package convert
 
 import (
 	"reflect"
-	"strings"
 
 	"github.com/insei/fmap/v3"
 )
@@ -124,16 +123,10 @@ func CopySections(obj any) {
 // IsInsideValue reports whether the field is a part of the value that is parsed as a whole,
 // time.Time for example. Such fields are not requested from drivers and not documented.
 func IsInsideValue(storage fmap.Storage, field fmap.Field) bool {
-	path := field.GetStructPath()
-	for i := strings.IndexByte(path, '.'); i >= 0; {
-		if parent, ok := storage.Find(path[:i]); ok && !isSection(storage, parent) {
+	for parent := field.GetParent(); parent != nil; parent = parent.GetParent() {
+		if !isSection(storage, parent) {
 			return true
 		}
-		next := strings.IndexByte(path[i+1:], '.')
-		if next < 0 {
-			break
-		}
-		i += next + 1
 	}
 	return false
 }
