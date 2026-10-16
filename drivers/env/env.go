@@ -88,7 +88,8 @@ func (d envDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 			envKey, envVal, ok = envKey+secretFileSuffix, strings.TrimRight(string(data), "\r\n"), true
 		}
 	}
-	if !ok && d.indexedKeys {
+	// values of simple types are not built from the separate variables, the environment is not scanned for them
+	if !ok && d.indexedKeys && !convert.IsScalar(derefType(field.GetType())) {
 		tree, found, err := indexedTree(field.GetType(), d.environ(envKey+"_"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse env values from keys %s_* for %s config field: %w", envKey, field.GetStructPath(), err)
@@ -139,14 +140,20 @@ func cutSegment(name string) (string, string) {
 	return name, ""
 }
 
+// derefType returns the type without pointers.
+func derefType(t reflect.Type) reflect.Type {
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return t
+}
+
 // indexedTree builds the value with type t from the separate variables:
 // HOSTS_0, HOSTS_1 for slices and arrays, LABELS_key for maps, SERVER_HOST for structs
 // and their combinations like SERVERS_0_HOST. Keys of vars are the names of the variables without the name of the field,
 // empty key is used for the value of the whole type. Variables that do not match the type are ignored.
 func indexedTree(t reflect.Type, vars map[string]string) (any, bool, error) {
-	for t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
+	t = derefType(t)
 	if val, ok := vars[""]; ok {
 		return val, true, nil
 	}
