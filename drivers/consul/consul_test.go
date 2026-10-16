@@ -3,6 +3,7 @@ package consul
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
@@ -145,12 +146,40 @@ func TestDriver_Errors(t *testing.T) {
 		assert.NoError(t, err)
 		_, err = driver.GetValue(storage.MustFind("Name"))
 		assert.ErrorContains(t, err, "403 Forbidden: Permission denied")
+		assert.ErrorIs(t, err, tinyconf.ErrAccessDenied)
 
 		driver, err = New("app", WithAddress(consul.URL), WithToken("token"), WithDatacenter("dc2"))
 		assert.NoError(t, err)
 		_, err = driver.GetValue(storage.MustFind("Name"))
 		assert.ErrorIs(t, err, tinyconf.ErrValueNotFound)
 		assert.Equal(t, "dc2", consul.lastRequest().URL.Query().Get("dc"))
+	})
+	t.Run("keys hidden by ACL", func(t *testing.T) {
+		srv := newFakeConsul(map[string]string{"app/name": "app", "app/password": "secret", "empty/": ""})
+		defer srv.Close()
+		srv.denied = []string{"app/password"}
+		driver, err := New("app", WithAddress(srv.URL))
+		assert.NoError(t, err)
+		_, err = driver.GetValue(storage.MustFind("Name"))
+		assert.EqualError(t, err, "access denied: failed to read app/: some keys are hidden by ACL, the token has no permission to read them")
+		assert.ErrorIs(t, err, tinyconf.ErrAccessDenied)
+
+		// without the permission to read the prefix the empty list is returned, the prefix is checked
+		srv.denied = []string{"app/"}
+		driver, err = New("app", WithAddress(srv.URL))
+		assert.NoError(t, err)
+		_, err = driver.GetValue(storage.MustFind("Name"))
+		assert.ErrorContains(t, err, "failed to read app/: 403 Forbidden: Permission denied")
+		assert.ErrorIs(t, err, tinyconf.ErrAccessDenied)
+
+		// the prefix without keys is not an error
+		srv.denied = nil
+		for _, prefix := range []string{"absent", "empty"} {
+			driver, err = New(prefix, WithAddress(srv.URL))
+			assert.NoError(t, err)
+			_, err = driver.GetValue(storage.MustFind("Name"))
+			assert.ErrorIs(t, err, tinyconf.ErrValueNotFound)
+		}
 	})
 	t.Run("invalid response", func(t *testing.T) {
 		srv := newFakeConsul(nil)
@@ -291,15 +320,36 @@ func TestClient_Watch(t *testing.T) {
 		assert.NoError(t, <-done)
 	})
 	t.Run("failed requests are retried", func(t *testing.T) {
+		consul := newFakeConsul(map[string]string{"key": "value"})
+		defer consul.Close()
+		c := newClient([]Option{WithAddress(consul.URL), WithWaitTime(10 * time.Millisecond)})
+		_, index, err := c.load("key", false)
+		assert.NoError(t, err)
 		consul.setFails(2)
 		ctx, cancel := context.WithCancel(context.Background())
 		changes := make(chan struct{}, 10)
 		done := make(chan error)
-		go func() { done <- c.watch(ctx, "key", false, 1, func() { changes <- struct{}{} }) }()
-		// the index of the key is changed after the index 1
+		go func() { done <- c.watch(ctx, "key", false, index, func() { changes <- struct{}{} }) }()
+		// the index is the same, but the data could be changed while Consul was not available
 		<-changes
+		consul.mu.Lock()
+		indexes := make([]string, 0, len(consul.requests))
+		for _, r := range consul.requests[:4] {
+			indexes = append(indexes, r.URL.Query().Get("index"))
+		}
+		consul.mu.Unlock()
+		// load, failed waiting, failed and successful requests of the current state without waiting
+		assert.Equal(t, []string{"", fmt.Sprint(index), "", ""}, indexes)
 		cancel()
 		assert.NoError(t, <-done)
+	})
+	t.Run("access denied stops watching", func(t *testing.T) {
+		srv := newFakeConsul(nil)
+		defer srv.Close()
+		srv.denied = []string{"key"}
+		c := newClient([]Option{WithAddress(srv.URL)})
+		err := c.watch(context.Background(), "key", false, 1, func() {})
+		assert.ErrorIs(t, err, tinyconf.ErrAccessDenied)
 	})
 	t.Run("zero index of the response", func(t *testing.T) {
 		srv := newFakeConsul(nil)

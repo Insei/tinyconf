@@ -22,6 +22,8 @@ type fakeConsul struct {
 	// modify indexes of the keys, deleted keys are kept like tombstones in Consul
 	modify map[string]uint64
 	token  string
+	// denied are the prefixes of the keys that the token can not read, like ACL rules of Consul
+	denied []string
 	// fails is a number of the next requests that fail with 500 status
 	fails    int
 	requests []*http.Request
@@ -81,6 +83,12 @@ func (f *fakeConsul) handle(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	key := strings.TrimPrefix(r.URL.Path, "/v1/kv/")
 	recurse := query.Get("recurse") == "true"
+	// permissions are checked before waiting for changes
+	if !recurse && f.isDenied(key) {
+		f.mu.Unlock()
+		http.Error(w, "Permission denied", http.StatusForbidden)
+		return
+	}
 	if index, _ := strconv.ParseUint(query.Get("index"), 10, 64); index > 0 {
 		wait, _ := time.ParseDuration(query.Get("wait"))
 		timeout := time.After(wait)
@@ -98,6 +106,11 @@ func (f *fakeConsul) handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	defer f.mu.Unlock()
+	if recurse && f.isDenied(key) {
+		// all keys are hidden, Consul answers as if there are no keys
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	type pair struct {
 		Key   string
 		Value *[]byte
@@ -105,6 +118,10 @@ func (f *fakeConsul) handle(w http.ResponseWriter, r *http.Request) {
 	var pairs []pair
 	for k, v := range f.values {
 		if k == key || (recurse && strings.HasPrefix(k, key)) {
+			if f.isDenied(k) {
+				w.Header().Set("X-Consul-Results-Filtered-By-ACLs", "true")
+				continue
+			}
 			p := pair{Key: k}
 			if v != nil {
 				data := []byte(*v)
@@ -135,4 +152,13 @@ func (f *fakeConsul) queryIndex(key string, recurse bool) uint64 {
 		return f.index
 	}
 	return index
+}
+
+func (f *fakeConsul) isDenied(key string) bool {
+	for _, prefix := range f.denied {
+		if strings.HasPrefix(key, prefix) {
+			return true
+		}
+	}
+	return false
 }
