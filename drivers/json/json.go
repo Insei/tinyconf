@@ -43,31 +43,13 @@ func decode(data []byte) (map[string]any, error) {
 // GenDoc generates JSON document with all registered config fields and their current values.
 // Values of the fields with hidden:"true" tag are replaced with empty strings.
 func (d *jsonDriver) GenDoc(registers ...*tinyconf.Registered) string {
-	doc := make(map[string]any)
-	for _, register := range registers {
-		for _, path := range register.Storage.GetAllPaths() {
-			fld := register.Storage.MustFind(path)
-			tagPath := fld.GetTagPath(d.name, false)
-			if tagPath == "" || !convert.IsValueField(register.Storage, fld) {
-				continue
-			}
-			var value any = ""
-			if fld.GetTag().Get("hidden") != "true" {
-				value = convert.GetFieldValue(fld, register.Config)
-			}
-			keys := strings.Split(tagPath, ".")
-			node := doc
-			for _, key := range keys[:len(keys)-1] {
-				nested, ok := node[key].(map[string]any)
-				if !ok {
-					nested = make(map[string]any)
-					node[key] = nested
-				}
-				node = nested
-			}
-			node[keys[len(keys)-1]] = convert.ToTree(value, d.name)
+	doc := tree.Doc(registers, d.name, func(v any) any {
+		if v = convert.ToTree(v, d.name); v == nil {
+			// null is a value in JSON
+			return json.RawMessage("null")
 		}
-	}
+		return v
+	})
 	if len(doc) == 0 {
 		return ""
 	}
