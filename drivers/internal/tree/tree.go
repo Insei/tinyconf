@@ -343,3 +343,39 @@ func ExpandEnv(s string) string {
 		return groups[3]
 	})
 }
+
+// Doc returns the document with the current values of the fields of the registered configs:
+// nested maps by the paths of the tags, fields under the parents without the tag are skipped.
+// Values of the fields with hidden:"true" tag are empty strings.
+// Value converts the value of the field to the value of the document, nil value skips the field.
+func Doc(registers []*tinyconf.Registered, tag string, value func(v any) any) map[string]any {
+	doc := make(map[string]any)
+	for _, register := range registers {
+		for _, path := range register.Storage.GetAllPaths() {
+			fld := register.Storage.MustFind(path)
+			tagPath := fld.GetTagPath(tag, false)
+			if tagPath == "" || !convert.IsValueField(register.Storage, fld) {
+				continue
+			}
+			var val any = ""
+			if fld.GetTag().Get("hidden") != "true" {
+				val = value(convert.GetFieldValue(fld, register.Config))
+			}
+			if val == nil {
+				continue
+			}
+			keys := strings.Split(tagPath, ".")
+			node := doc
+			for _, key := range keys[:len(keys)-1] {
+				nested, ok := node[key].(map[string]any)
+				if !ok {
+					nested = make(map[string]any)
+					node[key] = nested
+				}
+				node = nested
+			}
+			node[keys[len(keys)-1]] = val
+		}
+	}
+	return doc
+}

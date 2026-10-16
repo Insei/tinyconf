@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -61,36 +60,10 @@ func normalize(v any) any {
 // GenDoc generates TOML document with all registered config fields and their current values.
 // Values of the fields with hidden:"true" tag are replaced with empty strings, fields without values are skipped.
 func (d *tomlDriver) GenDoc(registers ...*tinyconf.Registered) string {
-	doc := make(map[string]any)
-	for _, register := range registers {
-		for _, path := range register.Storage.GetAllPaths() {
-			fld := register.Storage.MustFind(path)
-			tagPath := fld.GetTagPath(d.name, false)
-			if tagPath == "" || !convert.IsValueField(register.Storage, fld) {
-				continue
-			}
-			var value any = ""
-			if fld.GetTag().Get("hidden") != "true" {
-				value = withoutNil(convert.ToTree(convert.GetFieldValue(fld, register.Config), d.name))
-			}
-			if value == nil {
-				// TOML has no null
-				continue
-			}
-			keys := strings.Split(tagPath, ".")
-			node := doc
-			for _, key := range keys[:len(keys)-1] {
-				nested, ok := node[key].(map[string]any)
-				if !ok {
-					nested = make(map[string]any)
-					node[key] = nested
-				}
-				node = nested
-			}
-			node[keys[len(keys)-1]] = value
-		}
-	}
-	return encodeDoc(doc)
+	// TOML has no null, nil values are skipped
+	return encodeDoc(tree.Doc(registers, d.name, func(v any) any {
+		return withoutNil(convert.ToTree(v, d.name))
+	}))
 }
 
 // encodeDoc encodes the document to TOML, empty string is returned if the document is empty or can not be encoded.
