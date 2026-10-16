@@ -1,6 +1,6 @@
 # End-to-end tests
 
-Tests of the drivers with the real external systems: Consul and Vault, other config storages later.
+Tests of the drivers with the real external systems: Consul, Vault and etcd.
 The systems are started in Docker by [testcontainers](https://golang.testcontainers.org/), so only Docker is needed:
 
 ```sh
