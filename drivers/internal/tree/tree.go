@@ -415,7 +415,7 @@ func ExpandEnv(s string) string {
 // nested maps by the paths of the tags, fields under the parents without the tag are skipped.
 // Values of the fields with hidden:"true" tag are empty strings.
 // Value converts the value of the field to the value of the document, nil value skips the field.
-func Doc(registers []*tinyconf.Registered, tag string, value func(v any) any) map[string]any {
+func Doc(registers []*tinyconf.Registered, tag string, value func(v any, field fmap.Field) any) map[string]any {
 	doc := make(map[string]any)
 	for _, register := range registers {
 		for _, path := range register.Storage.GetAllPaths() {
@@ -426,7 +426,7 @@ func Doc(registers []*tinyconf.Registered, tag string, value func(v any) any) ma
 			}
 			var val any = ""
 			if fld.GetTag().Get("hidden") != "true" {
-				val = value(convert.GetFieldValue(fld, register.Config))
+				val = value(convert.GetFieldValue(fld, register.Config), fld)
 			}
 			if val == nil {
 				continue
@@ -445,4 +445,31 @@ func Doc(registers []*tinyconf.Registered, tag string, value func(v any) any) ma
 		}
 	}
 	return doc
+}
+
+// SetPath sets the value in the document by the path of the keys, nested maps are created on the way.
+// Nil value creates the nested map only. A key can not be a value and an object at the same time,
+// the formats with flat keys, like INI and properties, are checked by it.
+func SetPath(doc map[string]any, keys []string, value any) error {
+	node := doc
+	for i, key := range keys {
+		if i == len(keys)-1 && value != nil {
+			if _, isObject := node[key].(map[string]any); isObject {
+				return fmt.Errorf("%s is an object, it can not have a value", strings.Join(keys, "."))
+			}
+			node[key] = value
+			return nil
+		}
+		next, exists := node[key]
+		nested, isObject := next.(map[string]any)
+		if exists && !isObject {
+			return fmt.Errorf("%s has a value, it can not be an object", strings.Join(keys[:i+1], "."))
+		}
+		if !isObject {
+			nested = make(map[string]any)
+			node[key] = nested
+		}
+		node = nested
+	}
+	return nil
 }

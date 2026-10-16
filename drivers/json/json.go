@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insei/fmap/v3"
+
 	"github.com/insei/tinyconf"
 	"github.com/insei/tinyconf/convert"
 	"github.com/insei/tinyconf/drivers/internal/tree"
@@ -43,7 +45,7 @@ func decode(data []byte) (map[string]any, error) {
 // GenDoc generates JSON document with all registered config fields and their current values.
 // Values of the fields with hidden:"true" tag are replaced with empty strings.
 func (d *jsonDriver) GenDoc(registers ...*tinyconf.Registered) string {
-	doc := tree.Doc(registers, d.name, func(v any) any {
+	doc := tree.Doc(registers, d.name, func(v any, _ fmap.Field) any {
 		if v = convert.ToTree(v, d.name); v == nil {
 			// null is a value in JSON
 			return json.RawMessage("null")

@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/insei/fmap/v3"
+
 	"github.com/insei/tinyconf"
 	"github.com/insei/tinyconf/convert"
 	"github.com/insei/tinyconf/drivers/internal/tree"
@@ -94,7 +96,7 @@ func shellQuote(arg string) string {
 // GenDoc generates the command of the Vault CLI that puts the current values of the fields to the first secret.
 // Values of the fields with hidden:"true" tag are empty strings.
 func (d *vaultDriver) GenDoc(registers ...*tinyconf.Registered) string {
-	doc := tree.Doc(registers, name, func(v any) any {
+	doc := tree.Doc(registers, name, func(v any, _ fmap.Field) any {
 		return convert.ToTree(v, name)
 	})
 	if len(doc) == 0 || len(d.paths) == 0 {

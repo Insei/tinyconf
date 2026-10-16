@@ -155,6 +155,12 @@ func FieldToString(v any, field fmap.Field) string {
 	return ToString(v, fieldOptions(field, ""))
 }
 
+// FieldToTagString formats the value of the field to the string that can be parsed back by TreeToField with the tag:
+// keys of the structs nested into slices and maps are taken from the tag, for the formats with string values like INI.
+func FieldToTagString(v any, field fmap.Field, tag string) string {
+	return ToString(v, fieldOptions(field, tag))
+}
+
 func isTreeScalar(v any) bool {
 	switch v.(type) {
 	case nil, []any, map[string]any:
