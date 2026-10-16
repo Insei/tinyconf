@@ -58,7 +58,12 @@ func (d *consulDriver) key(tagPath string) string {
 
 // Load reads all keys with the prefix by one request.
 func (d *consulDriver) Load() error {
-	pairs, index, err := d.client.load(d.listPrefix(), true)
+	return d.LoadContext(context.Background())
+}
+
+// LoadContext is Load with the context of the request, Manager calls it with the context of ParseContext.
+func (d *consulDriver) LoadContext(ctx context.Context) error {
+	pairs, index, err := d.client.load(ctx, d.listPrefix(), true)
 	if err != nil {
 		// the values from Consul are not in the config, Watch reports the change as soon as Consul is available
 		d.mu.Lock()
@@ -178,8 +183,8 @@ func Document(key string, opts ...Option) tree.Source {
 	var index atomic.Uint64
 	return tree.Source{
 		Name: "consul key " + key,
-		Open: func() (io.ReadCloser, error) {
-			pairs, newIndex, err := c.load(key, false)
+		Open: func(ctx context.Context) (io.ReadCloser, error) {
+			pairs, newIndex, err := c.load(ctx, key, false)
 			if err != nil {
 				index.Store(0)
 				return nil, err

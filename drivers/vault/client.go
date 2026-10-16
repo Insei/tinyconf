@@ -171,12 +171,12 @@ func (c *client) secretURL(path string) string {
 // read returns the data of the secret and its version: the number of the version for KV version 2,
 // the hash of the data for KV version 1. Absent secret is fs.ErrNotExist,
 // the token without the permission to read the secret is tinyconf.ErrAccessDenied.
-func (c *client) read(path string) (map[string]any, string, error) {
+func (c *client) read(ctx context.Context, path string) (map[string]any, string, error) {
 	token, err := c.getToken()
 	if err != nil {
 		return nil, "", err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.secretURL(path), nil)
 	if err != nil {

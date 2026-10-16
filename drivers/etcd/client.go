@@ -277,8 +277,8 @@ func rangeOf(key string, prefix bool) ([]byte, []byte) {
 
 // get returns the values by the key, or by the prefix if prefix is true, and the revision of the cluster.
 // Absent key is not an error, nil values are returned.
-func (c *client) get(key string, prefix bool) ([]keyValue, int64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+func (c *client) get(ctx context.Context, key string, prefix bool) ([]keyValue, int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
 	start, end := rangeOf(key, prefix)
 	var resp struct {
@@ -309,7 +309,7 @@ func (c *client) watch(ctx context.Context, key string, prefix bool, revision in
 		var err error
 		if failed {
 			// the current state is taken, it is a change
-			if _, revision, err = c.get(key, prefix); err == nil {
+			if _, revision, err = c.get(ctx, key, prefix); err == nil {
 				failed = false
 				onChange()
 			}

@@ -3,6 +3,7 @@ package vault
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,8 +39,8 @@ func decode(data []byte) (map[string]any, error) {
 func (c *client) source(path string) tree.Source {
 	return tree.Source{
 		Name: "vault secret " + c.mount + "/" + path,
-		Open: func() (io.ReadCloser, error) {
-			secret, _, err := c.read(path)
+		Open: func(ctx context.Context) (io.ReadCloser, error) {
+			secret, _, err := c.read(ctx, path)
 			if err != nil {
 				return nil, err
 			}
@@ -47,8 +48,8 @@ func (c *client) source(path string) tree.Source {
 			data, _ := json.Marshal(secret)
 			return io.NopCloser(bytes.NewReader(data)), nil
 		},
-		Stat: func() string {
-			_, version, err := c.read(path)
+		Stat: func(ctx context.Context) string {
+			_, version, err := c.read(ctx, path)
 			switch {
 			case errors.Is(err, fs.ErrNotExist):
 				return "absent"

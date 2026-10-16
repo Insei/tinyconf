@@ -213,13 +213,20 @@ func (c *Manager) findSubConfig(confTypeOf reflect.Type) (*Registered, reflect.T
 // Fields with required:"true" tag should have a value from any driver or non-zero value in the config,
 // otherwise ErrRequired is returned.
 func (c *Manager) Parse(conf any) error {
-	_, err := c.parse(conf, false)
+	return c.ParseContext(context.Background(), conf)
+}
+
+// ParseContext is Parse with the context for the drivers that read their sources by the network:
+// the requests to the remote storages are stopped when ctx is done, the drivers implement ContextLoader.
+// Other drivers do not use the context.
+func (c *Manager) ParseContext(ctx context.Context, conf any) error {
+	_, err := c.parse(ctx, conf, false)
 	return err
 }
 
 // parse parses the config and returns sources of the values.
 // Debug messages about every field are logged only if reload is false, reloads log only changed fields.
-func (c *Manager) parse(conf any, reload bool) ([]FieldSource, error) {
+func (c *Manager) parse(ctx context.Context, conf any, reload bool) ([]FieldSource, error) {
 	if err := checkConfig(conf); err != nil {
 		return nil, fmt.Errorf("config can't be parsed: %w", err)
 	}
@@ -271,12 +278,17 @@ func (c *Manager) parse(conf any, reload bool) ([]FieldSource, error) {
 	var errs parseErrors
 	drivers := make([]Driver, 0, len(c.drivers))
 	for _, d := range c.drivers {
-		if loader, ok := d.(Loader); ok {
-			if err := loader.Load(); err != nil {
-				c.log.Error(errorMessage(err, "failed to load"), LogField("driver", d.GetName()), LogField("details", err.Error()))
-				errs = append(errs, fmt.Errorf("%s driver: %w", d.GetName(), err))
-				continue
-			}
+		var err error
+		switch loader := d.(type) {
+		case ContextLoader:
+			err = loader.LoadContext(ctx)
+		case Loader:
+			err = loader.Load()
+		}
+		if err != nil {
+			c.log.Error(errorMessage(err, "failed to load"), LogField("driver", d.GetName()), LogField("details", err.Error()))
+			errs = append(errs, fmt.Errorf("%s driver: %w", d.GetName(), err))
+			continue
 		}
 		drivers = append(drivers, d)
 	}
