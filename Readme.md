@@ -303,4 +303,4 @@ If the driver implements the optional `tinyconf.Loader` or `tinyconf.ContextLoad
 so the driver can read its source once and not for every field.
 If the driver implements the optional `tinyconf.Watcher` interface, it can report changes of its source for reloading.
 
-More examples in `parser_test.go` and others test files.
+More examples: the service in the [`example`](example) directory, runnable examples on [pkg.go.dev](https://pkg.go.dev/github.com/insei/tinyconf#pkg-examples), recipes in the [documentation](https://insei.github.io/tinyconf/use-cases/).
