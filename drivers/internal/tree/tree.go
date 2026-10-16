@@ -28,8 +28,12 @@ type Source struct {
 	Name string
 	Open func() (io.ReadCloser, error)
 	// Stat returns the state of the source, the source is changed if the state is changed.
-	// Sources without Stat are never changed.
+	// Sources without Stat and Watch are never changed.
 	Stat func() string
+	// Watch blocks until ctx is done and calls onChange after every change of the source,
+	// for sources that are notified about changes, a remote storage for example.
+	// It can be called from several goroutines.
+	Watch func(ctx context.Context, onChange func()) error
 	// Optional source can be absent.
 	Optional bool
 }
@@ -92,6 +96,11 @@ func (o *Options) AddFS(fsys fs.FS, files ...string) {
 // AddData adds in-memory content.
 func (o *Options) AddData(name string, data []byte) {
 	o.Sources = append(o.Sources, DataSource(name, data))
+}
+
+// AddSource adds the source, a remote storage for example.
+func (o *Options) AddSource(source Source) {
+	o.Sources = append(o.Sources, source)
 }
 
 // NewDriver creates new tree driver from the options.
@@ -186,8 +195,26 @@ func (d *Driver) stat() string {
 }
 
 // Watch checks the sources for changes with the watch interval and calls onChange if any source is changed.
-// It blocks until ctx is done. Only files from the OS file system are checked.
+// Sources with Watch report their changes by themselves. It blocks until ctx is done.
 func (d *Driver) Watch(ctx context.Context, onChange func()) error {
+	// watchers of the sources are stopped and finished before return
+	var wg sync.WaitGroup
+	defer wg.Wait()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	errs := make(chan error, len(d.sources))
+	for _, source := range d.sources {
+		if source.Watch == nil {
+			continue
+		}
+		wg.Add(1)
+		go func(source Source) {
+			defer wg.Done()
+			if err := source.Watch(ctx, onChange); err != nil && ctx.Err() == nil {
+				errs <- fmt.Errorf("failed to watch %s: %w", source.Name, err)
+			}
+		}(source)
+	}
 	ticker := time.NewTicker(d.watchInterval)
 	defer ticker.Stop()
 	// changes made after the last Load should be detected too
@@ -201,6 +228,8 @@ func (d *Driver) Watch(ctx context.Context, onChange func()) error {
 		select {
 		case <-ctx.Done():
 			return nil
+		case err := <-errs:
+			return err
 		case <-ticker.C:
 			if newState := d.stat(); newState != state {
 				state = newState
@@ -240,13 +269,14 @@ func (d *Driver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 		return nil, fmt.Errorf("failed to convert %s value to field type value: %w", d.name, err)
 	}
 	// source is the key of the value in the tree, the path by the tags
-	return &tinyconf.Value{Source: field.GetTagPath(d.name, true), Value: val, Warning: parentTagWarning(field, d.name)}, nil
+	key := field.GetTagPath(d.name, true)
+	return &tinyconf.Value{Source: key, Value: val, Warning: ParentTagWarning(field, d.name, key)}, nil
 }
 
-// parentTagWarning returns the warning if some parents of the field have no tag:
+// ParentTagWarning returns the warning if some parents of the field have no tag:
 // the path is built without such parents and all parents above them,
-// so the value is read from the unexpected place of the config.
-func parentTagWarning(field fmap.Field, tag string) string {
+// so the value is read from the unexpected place of the config, key is the place of the value in the source.
+func ParentTagWarning(field fmap.Field, tag, key string) string {
 	var parents []string
 	for parent := field.GetParent(); parent != nil; parent = parent.GetParent() {
 		if name := strings.Split(parent.GetTag().Get(tag), ",")[0]; name == "" {
@@ -257,7 +287,7 @@ func parentTagWarning(field fmap.Field, tag string) string {
 		return ""
 	}
 	return fmt.Sprintf("parent fields %s have no '%s' tag, the value is read from the '%s' key",
-		strings.Join(parents, ", "), tag, field.GetTagPath(tag, true))
+		strings.Join(parents, ", "), tag, key)
 }
 
 // Lookup returns raw value for the field from the tree, path to the value is built from the tags of the field and its parents.

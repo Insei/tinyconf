@@ -103,6 +103,14 @@ func WithData(name string, data []byte) Option {
 	}
 }
 
+// WithSource adds the config content from another source, from a remote storage for example:
+// consul.Document reads the content from Consul KV. Sources are merged with the files in the order of addition.
+func WithSource(source tree.Source) Option {
+	return func(o *tree.Options) {
+		o.AddSource(source)
+	}
+}
+
 // WithOptional allows config files to be absent, by default absent file is an error.
 func WithOptional() Option {
 	return func(o *tree.Options) {
