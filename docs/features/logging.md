@@ -36,6 +36,7 @@ On the debug level the log has the whole history of every field: grep the log by
 | env | name of the variable, with the prefix; `HOSTS_*` for the value from [indexed keys](../drivers/env.md#indexed-keys) |
 | flag | name of the flag, `-http-port` |
 | consul | the key, `app/http/port` |
+| vault | path by the tags, `database.password` |
 
 If a field has lost its value in all drivers after a reload, it gets its initial value, and it is logged without `driver` and `key`.
 

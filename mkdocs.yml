@@ -90,4 +90,5 @@ nav:
       - env: drivers/env.md
       - flag: drivers/flag.md
       - consul: drivers/consul.md
+      - vault: drivers/vault.md
       - Custom drivers: drivers/custom.md

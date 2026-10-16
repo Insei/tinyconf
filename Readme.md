@@ -43,6 +43,7 @@ with `errors.Is` and `errors.As`.
 | env | `drivers/env` | `env` | environment variables and `.env` files |
 | flag | `drivers/flag` | `flag` | command line flags |
 | consul | `drivers/consul` | `consul` | Consul KV: a key per field, or a document for yaml, json and toml |
+| vault | `drivers/vault` | `vault` | secrets from the KV secrets engine of HashiCorp Vault |
 
 Common struct tags:
 
@@ -111,6 +112,16 @@ yamlDriver, err := yaml.New("config.yaml",
 ```
 The address and the token are taken from `CONSUL_HTTP_ADDR` and `CONSUL_HTTP_TOKEN` or set by options.
 Changes in Consul are reported for reloading right after they happen, by blocking queries.
+
+## vault
+```go
+vaultDriver, err := vault.New("app/config", // vault:"password" inside vault:"database" is read from database.password
+	vault.WithPaths("app/database"),          // secrets are merged in the order of the paths
+	vault.WithTokenFile("/vault/secrets/token"), // the token renewed by Vault Agent
+)
+```
+The address and the token are taken from `VAULT_ADDR` and `VAULT_TOKEN` or set by options, KV version 2 at `secret/` by default.
+The secrets are checked for changes every 30 seconds while there are subscriptions.
 
 # Supported types
 All drivers support the same set of types, it is checked by the conformance tests in `drivers/conformance_test.go`.
@@ -238,7 +249,7 @@ err := tinyconf.Subscribe(ctx, config, func(prev, next *HTTP) {
 timeout := tinyconf.Current[HTTP](config).Timeout // the current version, it must not be changed
 ```
 Watching starts with the first subscription and stops when the contexts of all subscriptions are done.
-Changes are reported by yaml, json and toml drivers for files from the OS file system, and by the consul driver and Consul documents.
+Changes are reported by yaml, json and toml drivers for files from the OS file system, by the consul driver and Consul documents, and by the vault driver.
 
 # Custom drivers
 The driver should implement the `tinyconf.Driver` interface:

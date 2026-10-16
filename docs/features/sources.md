@@ -34,6 +34,7 @@ Password is set by env driver from PASSWORD
 | env | name of the variable, with the prefix; `HOSTS_*` for the value from [indexed keys](../drivers/env.md#indexed-keys) |
 | flag | name of the flag, `-http-port` |
 | consul | the key, `app/http/port` |
+| vault | path by the tags, `database.password` |
 
 ## Rules
 
