@@ -58,7 +58,12 @@ func (d *etcdDriver) key(tagPath string) string {
 
 // Load reads all keys with the prefix by one request.
 func (d *etcdDriver) Load() error {
-	kvs, revision, err := d.client.get(d.listPrefix(), true)
+	return d.LoadContext(context.Background())
+}
+
+// LoadContext is Load with the context of the request, Manager calls it with the context of ParseContext.
+func (d *etcdDriver) LoadContext(ctx context.Context) error {
+	kvs, revision, err := d.client.get(ctx, d.listPrefix(), true)
 	if err != nil {
 		// the values from etcd are not in the config, Watch reports the change as soon as etcd is available
 		d.mu.Lock()
@@ -175,8 +180,8 @@ func Document(key string, opts ...Option) tree.Source {
 	var revision atomic.Int64
 	return tree.Source{
 		Name: "etcd key " + key,
-		Open: func() (io.ReadCloser, error) {
-			kvs, newRevision, err := c.get(key, false)
+		Open: func(ctx context.Context) (io.ReadCloser, error) {
+			kvs, newRevision, err := c.get(ctx, key, false)
 			if err != nil {
 				revision.Store(0)
 				return nil, err

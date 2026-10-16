@@ -171,10 +171,10 @@ func (c *client) get(ctx context.Context, key string, recurse bool, index uint64
 	}
 }
 
-// load returns the pairs by the key or by the prefix without waiting for changes.
+// load returns the pairs by the key or by the prefix without waiting for changes, the request is limited by requestTimeout and ctx.
 // Keys hidden by ACL are an error: Consul answers as if they are absent, so the config would be silently incomplete.
-func (c *client) load(key string, recurse bool) ([]pair, uint64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+func (c *client) load(ctx context.Context, key string, recurse bool) ([]pair, uint64, error) {
+	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
 	result, err := c.get(ctx, key, recurse, 0)
 	if err != nil {

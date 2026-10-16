@@ -80,6 +80,13 @@ type Loader interface {
 	Load() error
 }
 
+// ContextLoader is an optional interface of the driver that reads its source by the network, a remote storage for example.
+// Manager calls LoadContext instead of Load with the context of ParseContext, or with the context of watching for reloads,
+// the driver should stop the requests when the context is done.
+type ContextLoader interface {
+	LoadContext(ctx context.Context) error
+}
+
 // Watcher is an optional interface of the driver that can notify about changes of its source.
 // Watch should block until ctx is done and call onChange after every change of the source.
 // Manager calls it while there are subscriptions, see Subscribe; an error is logged and stops watching of the driver.

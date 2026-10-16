@@ -208,12 +208,12 @@ func (c *Manager) reload(ctx context.Context) {
 			continue
 		}
 		reloaded[sub.root] = true
-		c.reloadConfig(sub.root, subscribers)
+		c.reloadConfig(ctx, sub.root, subscribers)
 	}
 }
 
 // reloadConfig parses again the registered config and notifies its subscribers about the changes.
-func (c *Manager) reloadConfig(typeOf reflect.Type, subscribers []*subscriber) {
+func (c *Manager) reloadConfig(ctx context.Context, typeOf reflect.Type, subscribers []*subscriber) {
 	c.mu.RLock()
 	register := c.registered[typeOf]
 	c.mu.RUnlock()
@@ -226,7 +226,8 @@ func (c *Manager) reloadConfig(typeOf reflect.Type, subscribers []*subscriber) {
 		initial = copyConf(register.Config)
 	}
 	fresh := copyConf(initial)
-	sources, err := c.parse(fresh, true)
+	// the requests of the reload are stopped when watching is stopped
+	sources, err := c.parse(ctx, fresh, true)
 	if err != nil {
 		c.log.Error(errorMessage(err, "failed to reload"), LogField("config", typeOf.String()), LogField("details", err.Error()))
 		return

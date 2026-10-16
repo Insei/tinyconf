@@ -28,10 +28,11 @@ type Decoder func(data []byte) (map[string]any, error)
 // Source is a source of the config content: file, embedded file, bytes.
 type Source struct {
 	Name string
-	Open func() (io.ReadCloser, error)
+	// Open opens the content of the source, ctx is the context of Parse, remote sources should use it for the requests.
+	Open func(ctx context.Context) (io.ReadCloser, error)
 	// Stat returns the state of the source, the source is changed if the state is changed.
 	// Sources without Stat and Watch are never changed.
-	Stat func() string
+	Stat func(ctx context.Context) string
 	// Watch blocks until ctx is done and calls onChange after every change of the source,
 	// for sources that are notified about changes, a remote storage for example.
 	// It can be called from several goroutines.
@@ -47,10 +48,10 @@ func FileSource(filePath string) Source {
 	return Source{
 		Name: filePath,
 		File: filePath,
-		Open: func() (io.ReadCloser, error) {
+		Open: func(context.Context) (io.ReadCloser, error) {
 			return os.Open(filePath)
 		},
-		Stat: func() string {
+		Stat: func(context.Context) string {
 			info, err := os.Stat(filePath)
 			if err != nil {
 				return "absent"
@@ -62,14 +63,14 @@ func FileSource(filePath string) Source {
 
 // FSSource returns source that reads the file from the fsys.
 func FSSource(fsys fs.FS, filePath string) Source {
-	return Source{Name: filePath, Open: func() (io.ReadCloser, error) {
+	return Source{Name: filePath, Open: func(context.Context) (io.ReadCloser, error) {
 		return fsys.Open(filePath)
 	}}
 }
 
 // DataSource returns source with in-memory content.
 func DataSource(name string, data []byte) Source {
-	return Source{Name: name, Open: func() (io.ReadCloser, error) {
+	return Source{Name: name, Open: func(context.Context) (io.ReadCloser, error) {
 		return io.NopCloser(strings.NewReader(string(data))), nil
 	}}
 }
@@ -151,11 +152,16 @@ func (d *Driver) GetName() string {
 
 // Load reads and merges all sources, values from the next sources overrides values from the previous.
 func (d *Driver) Load() error {
+	return d.LoadContext(context.Background())
+}
+
+// LoadContext is Load with the context for the remote sources, Manager calls it with the context of ParseContext.
+func (d *Driver) LoadContext(ctx context.Context) error {
 	// state is taken before reading, so the changes made during the reading will be detected by Watch
-	state := d.stat()
+	state := d.stat(ctx)
 	tree := make(map[string]any)
 	for _, source := range d.sources {
-		sourceTree, err := d.loadSource(source)
+		sourceTree, err := d.loadSource(ctx, source)
 		if err != nil {
 			return fmt.Errorf("failed to load %s: %w", source.Name, err)
 		}
@@ -169,8 +175,8 @@ func (d *Driver) Load() error {
 	return nil
 }
 
-func (d *Driver) loadSource(source Source) (map[string]any, error) {
-	rc, err := source.Open()
+func (d *Driver) loadSource(ctx context.Context, source Source) (map[string]any, error) {
+	rc, err := source.Open(ctx)
 	if err != nil {
 		if source.Optional && errors.Is(err, fs.ErrNotExist) {
 			return nil, nil
@@ -188,11 +194,11 @@ func (d *Driver) loadSource(source Source) (map[string]any, error) {
 	return d.decode(data)
 }
 
-func (d *Driver) stat() string {
+func (d *Driver) stat(ctx context.Context) string {
 	var state strings.Builder
 	for _, source := range d.sources {
 		if source.Stat != nil {
-			state.WriteString(source.Stat())
+			state.WriteString(source.Stat(ctx))
 		}
 		state.WriteByte(';')
 	}
@@ -275,10 +281,10 @@ func (d *Driver) Watch(ctx context.Context, onChange func()) error {
 	state, loaded := d.state, d.loaded
 	d.mu.RUnlock()
 	if !loaded {
-		state = d.stat()
+		state = d.stat(ctx)
 	}
 	check := func() {
-		if newState := d.stat(); newState != state {
+		if newState := d.stat(ctx); newState != state {
 			state = newState
 			onChange()
 		}
