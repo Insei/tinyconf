@@ -355,18 +355,38 @@ func TestConsul_RestartWhileWatching(t *testing.T) {
 	timeout := 10 * time.Second
 	require.NoError(t, srv.container.Stop(ctx, &timeout))
 	require.NoError(t, srv.container.Start(ctx))
-	require.Eventually(t, func() bool {
-		resp, err := http.Get("http://" + srv.address + "/v1/status/leader")
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		return resp.StatusCode == http.StatusOK
-	}, 30*time.Second, 200*time.Millisecond)
+	waitLeader := func() {
+		require.Eventually(t, func() bool {
+			resp, err := http.Get("http://" + srv.address + "/v1/status/leader")
+			if err != nil {
+				return false
+			}
+			defer resp.Body.Close()
+			body, _ := io.ReadAll(resp.Body)
+			return resp.StatusCode == http.StatusOK && string(body) != `""`
+		}, 30*time.Second, 200*time.Millisecond)
+	}
+	waitLeader()
 
 	srv.put(t, "restart/name", "after")
 	for {
 		if c := next(t, changes); c.Name == "after" {
+			break
+		}
+	}
+
+	// Consul is not available at the start of the application, the config is loaded when it is available
+	require.NoError(t, srv.container.Stop(ctx, &timeout))
+	manager = newManager(t, driver)
+	conf = &config{}
+	require.NoError(t, manager.Register(conf))
+	require.Error(t, manager.Parse(conf))
+	changes = watch(t, manager, conf)
+	require.NoError(t, srv.container.Start(ctx))
+	waitLeader()
+	srv.put(t, "restart/name", "started")
+	for {
+		if c := next(t, changes); c.Name == "started" {
 			break
 		}
 	}
