@@ -18,6 +18,9 @@ tinyconf fills config structs with values from drivers. When initializing `tinyc
 as well as drivers. Drivers are applied in the order of addition, the next driver overrides values of the previous one,
 so the last driver has the highest priority. You can also add your own driver.
 
+Loggers: `logger.NewFmtLogger`, `logger.NewSlogLogger` (Go 1.21+), and the adapter of zap in the separate module
+`github.com/insei/tinyconf/logger/zaplogger`, so zap is not a dependency of the core.
+
 `tinyconf.Manager` has methods:
 
 | Method | Description |

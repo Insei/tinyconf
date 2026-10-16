@@ -69,9 +69,25 @@ import "github.com/insei/tinyconf/logger"
 // prints to stdout, levels: FATAL, ERROR, WARN, INFO, DEBUG, TRACE
 tinyconf.WithLogger(logger.NewFmtLogger(logger.INFO))
 
-// wraps *zap.Logger
-tinyconf.WithLogger(logger.NewZapLogger(zapLogger))
+// wraps *slog.Logger, Go 1.21 or newer
+tinyconf.WithLogger(logger.NewSlogLogger(slog.Default()))
 ```
+
+The adapter of [zap](https://github.com/uber-go/zap) is a separate module, so zap is not a dependency of tinyconf for the applications with other loggers:
+
+```bash
+go get github.com/insei/tinyconf/logger/zaplogger
+```
+
+```go
+import "github.com/insei/tinyconf/logger/zaplogger"
+
+// wraps *zap.Logger
+tinyconf.WithLogger(zaplogger.New(zapLogger))
+```
+
+!!! note "Migration"
+    `logger.NewZapLogger(l)` of the previous versions is `zaplogger.New(l)` from the `github.com/insei/tinyconf/logger/zaplogger` module.
 
 ## Custom logger
 
