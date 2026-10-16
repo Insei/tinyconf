@@ -252,7 +252,7 @@ func TestDriver(t *testing.T) {
 
 		val, err := driver.GetValue(name)
 		assert.NoError(t, err)
-		assert.Equal(t, &tinyconf.Value{Source: "test", Value: "second"}, val)
+		assert.Equal(t, &tinyconf.Value{Source: "name", Value: "second"}, val)
 
 		val, err = driver.GetValue(port)
 		assert.NoError(t, err)

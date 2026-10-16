@@ -239,7 +239,8 @@ func (d *Driver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert %s value to field type value: %w", d.name, err)
 	}
-	return &tinyconf.Value{Source: d.name, Value: val, Warning: parentTagWarning(field, d.name)}, nil
+	// source is the key of the value in the tree, the path by the tags
+	return &tinyconf.Value{Source: field.GetTagPath(d.name, true), Value: val, Warning: parentTagWarning(field, d.name)}, nil
 }
 
 // parentTagWarning returns the warning if some parents of the field have no tag:
