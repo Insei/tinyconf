@@ -400,3 +400,48 @@ func TestDriver_Watch(t *testing.T) {
 	assert.NoError(t, <-done)
 	assert.Equal(t, DefaultWatchInterval, New("test", testDecode, nil, false).watchInterval)
 }
+
+func TestDriver_WatchSources(t *testing.T) {
+	notify, fail := make(chan struct{}), make(chan struct{})
+	options := &Options{WatchInterval: time.Hour}
+	options.AddSource(Source{
+		Name: "notified",
+		Open: func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader("name=value")), nil },
+		Watch: func(ctx context.Context, onChange func()) error {
+			for {
+				select {
+				case <-ctx.Done():
+					return nil
+				case <-notify:
+					onChange()
+				}
+			}
+		},
+	})
+	options.AddSource(Source{
+		Name: "failed",
+		Open: func() (io.ReadCloser, error) { return io.NopCloser(strings.NewReader("")), nil },
+		Watch: func(ctx context.Context, onChange func()) error {
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-fail:
+				return errors.New("connection lost")
+			}
+		},
+	})
+	driver := options.NewDriver("test", testDecode)
+	assert.NoError(t, driver.Load())
+
+	changes, done := make(chan struct{}, 10), make(chan error, 1)
+	go func() {
+		done <- driver.Watch(context.Background(), func() { changes <- struct{}{} })
+	}()
+	// the source reports the change by itself
+	notify <- struct{}{}
+	<-changes
+	// the error of the source stops watching
+	fail <- struct{}{}
+	err := <-done
+	assert.EqualError(t, err, "failed to watch failed: connection lost")
+}
