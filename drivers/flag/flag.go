@@ -62,10 +62,7 @@ func (d flagDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 	if flagName == "" || flagName == "-" {
 		return nil, fmt.Errorf("%w: %s tag is not set for %s config field", tinyconf.ErrIncorrectTagSettings, d.name, field.GetStructPath())
 	}
-	typeOf := field.GetType()
-	for typeOf.Kind() == reflect.Ptr {
-		typeOf = typeOf.Elem()
-	}
+	typeOf := field.GetDereferencedType()
 	values, err := d.find(flagName, typeOf.Kind() == reflect.Bool)
 	if err != nil {
 		return nil, err
