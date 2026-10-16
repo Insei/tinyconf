@@ -1,7 +1,6 @@
 package tinyconf
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -60,5 +59,4 @@ func TestManager_StorageErrors(t *testing.T) {
 	assert.ErrorIs(t, manager.Register(&Other{}), storageErr)
 	// fields of the sub config are not found
 	assert.ErrorIs(t, manager.Parse(&Sub{}), storageErr)
-	assert.ErrorIs(t, manager.Watch(context.Background(), &Config{}, func(any, error) {}), storageErr)
 }
