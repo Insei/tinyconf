@@ -208,6 +208,41 @@ func TestManager_Watch_Log(t *testing.T) {
 	}, log.take())
 }
 
+func TestManager_Watch_LogIgnoresChangesOfApplication(t *testing.T) {
+	type Config struct {
+		Host string
+		Port int
+	}
+	log := newDebugLogger()
+	file := newMapMockDriver("file", map[string]any{"Host": "a", "Port": 80})
+	c, err := New(WithLogger(log), WithDriver(file))
+	assert.NoError(t, err)
+	conf := &Config{}
+	assert.NoError(t, c.Register(conf))
+	assert.NoError(t, c.Parse(conf))
+	log.take()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	changed := make(chan error)
+	go func() {
+		_ = c.Watch(ctx, conf, func(fresh any, err error) {
+			// the application changes the config it has received
+			fresh.(*Config).Host = "changed by the application"
+			changed <- err
+		})
+	}()
+	file.set(map[string]any{"Host": "a", "Port": 81})
+	assert.NoError(t, <-changed)
+	file.set(map[string]any{"Host": "a", "Port": 82})
+	assert.NoError(t, <-changed)
+	// only the changes of the sources are logged
+	assert.Equal(t, []string{
+		"override: config=*tinyconf.Config driver=file field=Port key=port value=81",
+		"override: config=*tinyconf.Config driver=file field=Port key=port value=82",
+	}, log.take())
+}
+
 func TestManager_Watch_SubConfigLog(t *testing.T) {
 	type HTTP struct {
 		Port int
