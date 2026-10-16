@@ -507,6 +507,10 @@ func TestDriver_WatchFileEvents(t *testing.T) {
 		assert.NoError(t, os.WriteFile(filePath, []byte("name=first"), 0o600))
 		options := &Options{WatchInterval: time.Hour}
 		options.AddFiles(filePath)
+		// the delay is long for the slow machines of CI, it is restored after watching is stopped
+		original := eventsDelay
+		eventsDelay = time.Second
+		t.Cleanup(func() { eventsDelay = original })
 		changes := watch(t, options.NewDriver("test", testDecode))
 
 		// several writes of the editor are one change
