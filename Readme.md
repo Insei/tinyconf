@@ -24,6 +24,7 @@ so the last driver has the highest priority. You can also add your own driver.
 |---|---|
 | `Register(conf any) error` | registers the config, `conf` should be a pointer to struct |
 | `Parse(conf any) error` | fills the registered config, or its field with struct type (sub config), with values from drivers |
+| `ParseContext(ctx, conf any) error` | `Parse` with the context for the requests of the drivers to the remote storages |
 | `GenDoc(driverName string) string` | generates documentation of all registered configs in the driver format |
 | `Sources(conf any) []FieldSource` | returns which driver has set the value of every field in the last `Parse` call |
 | `tinyconf.Subscribe(ctx, m, onChange) error` | calls `onChange(prev, next *T)` after the changes of the config or the sub config `T` |
@@ -295,7 +296,7 @@ and `tinyconf.ErrIncorrectTagSettings` if the field has no settings for the driv
 To support the same types as the built-in drivers, use the `convert` package: `convert.StringToField` for string values
 and `convert.TreeToField` for values decoded from formats like yaml or json.
 
-If the driver implements the optional `tinyconf.Loader` interface, `Load` is called once at the start of every `Parse` call,
+If the driver implements the optional `tinyconf.Loader` or `tinyconf.ContextLoader` interface, `Load` (or `LoadContext` with the context of `ParseContext`) is called once at the start of every `Parse` call,
 so the driver can read its source once and not for every field.
 If the driver implements the optional `tinyconf.Watcher` interface, it can report changes of its source for reloading.
 
