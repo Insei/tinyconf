@@ -67,7 +67,7 @@ func (d *kvDriver) Load() error {
 
 ## Watcher
 
-A driver can report changes of its source for [`Manager.Watch`](../features/reloading.md) by implementing the optional `tinyconf.Watcher` interface:
+A driver can report changes of its source for [reloading](../features/reloading.md) by implementing the optional `tinyconf.Watcher` interface:
 
 ```go
 type Watcher interface {
@@ -91,7 +91,7 @@ func (d *kvDriver) Watch(ctx context.Context, onChange func()) error {
 }
 ```
 
-An error returned before the context is done stops `Manager.Watch`, it returns this error.
+An error returned before the context is done is logged by the manager, and the driver does not take part in reloading anymore; other drivers continue watching.
 
 ## Example
 

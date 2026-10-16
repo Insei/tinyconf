@@ -49,7 +49,8 @@ err := config.Parse(c)
 |---|---|
 | `GenDoc(driverName)` | generates a template of all registered configs, see [Documentation generation](gendoc.md) |
 | `Sources(conf)` | returns which driver has set the value of every field, see [Value sources](sources.md) |
-| `Watch(ctx, conf, onChange)` | parses the config to the new copy after every change of the sources, see [Reloading](reloading.md) |
+| `tinyconf.Subscribe(ctx, m, onChange)` | calls `onChange` after the changes of the config or the sub config, see [Reloading](reloading.md) |
+| `tinyconf.Current[T](m)` | returns the current version of the config or the sub config, see [Reloading](reloading.md) |
 
 ## Errors
 

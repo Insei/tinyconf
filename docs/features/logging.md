@@ -37,7 +37,7 @@ On the debug level the log has the whole history of every field: grep the log by
 | flag | name of the flag, `-http-port` |
 | consul | the key, `app/http/port` |
 
-If a field has lost its value in all drivers after a reload, it gets the value from the config passed to `Watch`, and it is logged without `driver` and `key`.
+If a field has lost its value in all drivers after a reload, it gets its initial value, and it is logged without `driver` and `key`.
 
 ## Warnings of drivers
 

@@ -26,7 +26,8 @@ so the last driver has the highest priority. You can also add your own driver.
 | `Parse(conf any) error` | fills the registered config, or its field with struct type (sub config), with values from drivers |
 | `GenDoc(driverName string) string` | generates documentation of all registered configs in the driver format |
 | `Sources(conf any) []FieldSource` | returns which driver has set the value of every field in the last `Parse` call |
-| `Watch(ctx, conf, onChange) error` | watches for changes of the config sources and parses the config to the new copy after every change |
+| `tinyconf.Subscribe(ctx, m, onChange) error` | calls `onChange(prev, next *T)` after the changes of the config or the sub config `T` |
+| `tinyconf.Current[T](m) *T` | returns the current version of the config or the sub config `T` |
 
 `Parse` parses all fields even if some of them have errors, all errors are returned as one error that can be checked
 with `errors.Is` and `errors.As`.
@@ -109,7 +110,7 @@ yamlDriver, err := yaml.New("config.yaml",
 )
 ```
 The address and the token are taken from `CONSUL_HTTP_ADDR` and `CONSUL_HTTP_TOKEN` or set by options.
-Changes in Consul are reported to `Manager.Watch` right after they happen, by blocking queries.
+Changes in Consul are reported for reloading right after they happen, by blocking queries.
 
 # Supported types
 All drivers support the same set of types, it is checked by the conformance tests in `drivers/conformance_test.go`.
@@ -227,25 +228,16 @@ func main() {
 ```
 
 # Reloading
-`Manager.Watch` blocks until the context is done. After every change of the config sources it parses the config
-to the new copy and passes it to the callback, the original config is never changed, so it can be read concurrently.
+After every change of the config sources the manager parses the configs with subscribers again.
+A package subscribes to its own part of the config and is called only when this part is changed:
 ```go
-var current atomic.Pointer[Config]
-current.Store(c)
+err := tinyconf.Subscribe(ctx, config, func(prev, next *HTTP) {
+	server.SetTimeout(next.Timeout)
+})
 
-go func() {
-	err := config.Watch(ctx, c, func(conf any, err error) {
-		if err != nil {
-			log.Println("config is not reloaded:", err)
-			return
-		}
-		current.Store(conf.(*Config))
-	})
-	if err != nil {
-		log.Println("config watching is stopped:", err)
-	}
-}()
+timeout := tinyconf.Current[HTTP](config).Timeout // the current version, it must not be changed
 ```
+Watching starts with the first subscription and stops when the contexts of all subscriptions are done.
 Changes are reported by yaml, json and toml drivers for files from the OS file system, and by the consul driver and Consul documents.
 
 # Custom drivers
@@ -264,6 +256,6 @@ and `convert.TreeToField` for values decoded from formats like yaml or json.
 
 If the driver implements the optional `tinyconf.Loader` interface, `Load` is called once at the start of every `Parse` call,
 so the driver can read its source once and not for every field.
-If the driver implements the optional `tinyconf.Watcher` interface, it can report changes of its source for `Manager.Watch`.
+If the driver implements the optional `tinyconf.Watcher` interface, it can report changes of its source for reloading.
 
 More examples in `parser_test.go` and others test files.

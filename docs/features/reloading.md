@@ -1,25 +1,8 @@
 # Reloading
 
-`Watch` keeps the config up to date: after every change of the config sources it parses the config again and passes the result to the callback.
+The manager keeps configs up to date: after every change of the config sources it parses the configs again. The application gets the current version with `Current` and subscribes to the changes with `Subscribe`.
 
 ```go
-err := config.Watch(ctx, c, func(conf any, err error) {
-    // conf is a new *Config
-})
-```
-
-## How it works
-
-* `Watch` blocks until the context is done, run it in a goroutine.
-* After every change it parses the config to a **new copy** and calls `onChange` with the pointer to this copy and the error of parsing.
-* The config passed to `Watch` is **never changed**. Its values at the moment of the call are used as defaults for every copy, so the result is the same as `Parse` would give at the start.
-* All drivers are applied to every copy, not only the changed one: the usual [priority of drivers](manager.md#priority-of-drivers) is kept.
-
-Because the old config is never modified, it can be read from any goroutine without locks. The new config is published by replacing the pointer:
-
-```go
-var current atomic.Pointer[Config]
-
 c := &Config{}
 if err := config.Register(c); err != nil {
     panic(err)
@@ -27,28 +10,49 @@ if err := config.Register(c); err != nil {
 if err := config.Parse(c); err != nil {
     panic(err)
 }
-current.Store(c)
 
-go func() {
-    err := config.Watch(ctx, c, func(conf any, err error) {
-        if err != nil {
-            // keep the previous config
-            log.Println("config is not reloaded:", err)
-            return
-        }
-        current.Store(conf.(*Config))
-    })
-    if err != nil {
-        log.Println("config watching is stopped:", err)
+// a package subscribes to its part of the config
+err := tinyconf.Subscribe(ctx, config, func(prev, next *HTTP) {
+    if prev.Timeout != next.Timeout {
+        server.SetTimeout(next.Timeout)
     }
-}()
+})
 
 // anywhere in the application
-port := current.Load().HTTP.Port
+level := tinyconf.Current[Logging](config).Level
 ```
 
-!!! warning "Check the error"
-    The copy is passed to `onChange` even if parsing has failed, with the fields that were parsed. A file saved in the middle of editing is a typical reason of the error, so do not apply the config with the error.
+## Subscribe
+
+```go
+func Subscribe[T any](ctx context.Context, m *Manager, onChange func(prev, next *T)) error
+```
+
+* `T` is a registered config or a [sub config](structs.md#sub-configs): the type of a field of the registered config. A package subscribes to its own part and knows nothing about the whole config.
+* `Subscribe` does not block, the subscription is active until `ctx` is done.
+* `onChange` is called only if some fields of `T` are changed, with the previous and the new versions. A change of another part of the config does not call it.
+* The configs with errors are not applied: the errors are [logged](logging.md), the subscribers are not called and keep the last good version.
+
+## Current
+
+```go
+func Current[T any](m *Manager) *T
+```
+
+`Current` returns the current version of the config or the sub config: after the last `Parse` of the registered config or the last reload. It is `nil` before the first `Parse`, and for a sub config stored by pointer that is not created.
+
+!!! warning "Do not change the versions"
+    The versions from `Current` and `onChange` are shared by all readers, so they are read without locks. Never change them: copy the value if it should be changed.
+
+## How it works
+
+* Watching starts with the first subscription and stops after the context of the last one is done. One watching serves all subscribers: every driver watches its sources once for the whole application.
+* After every change the registered configs with subscribers are parsed again, **from their values before drivers at the first `Parse`**, so the result is the same as `Parse` would give at the start. A value removed from the file gets its default back.
+* All drivers are applied, not only the changed one: the usual [priority of drivers](manager.md#priority-of-drivers) is kept.
+* The new version replaces the current one atomically, and the subscribers of the changed parts are called.
+* The config passed to `Register` and `Parse` is never changed in the background, the application can read it as before.
+* `Parse` called by the application updates the current version too, but does not call the subscribers: the application knows what it does.
+* [`GenDoc`](gendoc.md) shows the values of the current versions.
 
 ## What is watched
 
@@ -73,17 +77,15 @@ Polling works with everything that replaces the file: editors, `kubectl` updates
 
 | Case | Result |
 |---|---|
-| the config is not registered | `Watch` returns `tinyconf.ErrNotRegisteredConfig` |
-| no driver can watch for changes | `Watch` returns `tinyconf.ErrNoWatchers` |
-| the new config is parsed with errors | `onChange` is called with the error, `Watch` continues |
-| a driver can not watch anymore, access is denied for example | the error is logged, `Watch` returns it |
-| the context is done | `Watch` returns `nil` |
+| the config is not registered | `Subscribe` returns `tinyconf.ErrNotRegisteredConfig`, `Current` returns `nil` |
+| no driver can watch for changes | `Subscribe` returns `tinyconf.ErrNoWatchers` |
+| the new config is parsed with errors | the error is logged as `failed to reload`, the current version is kept |
+| a driver can not watch anymore, access is denied for example | the error is logged, other drivers continue watching |
+| the handler panics | the panic is logged as `subscriber panicked`, other subscribers are called |
 
 ## Details
 
-* `onChange` is called from one goroutine, the next call starts after the previous one returns.
-* Several changes that happen while the config is being parsed are merged into one reload.
-* A [sub config](structs.md#sub-configs) can be watched the same way as the whole config.
-* On the debug level only the fields with a new value are [logged](logging.md#history-of-a-field) after a reload, with the driver that has set the value. Nothing is logged if the new config has errors, changes are logged relative to the last config without errors.
-* [Structs stored by pointer](structs.md#structs-stored-by-pointer) are copied for every new config too, the structs of the original config are not changed.
-* What can be applied on the fly is up to the application: a log level can be changed at any time, a listening port requires restart of the server. Compare the old and the new config in `onChange` and act on the fields that matter.
+* Handlers are called one by one in the order of subscription, from one goroutine. The next reload starts after all handlers return, so a slow handler delays the next reload.
+* Several changes that happen while the configs are being parsed are merged into one reload.
+* On the debug level only the fields with a new value are [logged](logging.md#history-of-a-field) after a reload, with the driver that has set the value.
+* What can be applied on the fly is up to the application: a log level can be changed at any time, a listening port requires restart of the server. Compare `prev` and `next` and act on the fields that matter.
