@@ -132,7 +132,10 @@ func ToString(v any, opts Options) string {
 			if !isTreeScalar(item) {
 				return toJSON(tree)
 			}
-			items[i] = quote(fmt.Sprint(item), opts.Separator)
+			var ok bool
+			if items[i], ok = quote(fmt.Sprint(item), opts.Separator); !ok {
+				return toJSON(tree)
+			}
 		}
 		return strings.Join(items, opts.Separator)
 	case map[string]any:
@@ -141,7 +144,12 @@ func ToString(v any, opts Options) string {
 			if !isTreeScalar(item) || reflect.ValueOf(v).Kind() == reflect.Struct {
 				return toJSON(tree)
 			}
-			items = append(items, quote(key, opts.Separator, opts.KeyValueSeparator)+opts.KeyValueSeparator+quote(fmt.Sprint(item), opts.Separator))
+			quotedKey, keyOK := quote(key, opts.Separator, opts.KeyValueSeparator)
+			quotedItem, itemOK := quote(fmt.Sprint(item), opts.Separator, opts.KeyValueSeparator)
+			if !keyOK || !itemOK {
+				return toJSON(tree)
+			}
+			items = append(items, quotedKey+opts.KeyValueSeparator+quotedItem)
 		}
 		sort.Strings(items)
 		return strings.Join(items, opts.Separator)
@@ -178,16 +186,22 @@ func toJSON(tree any) string {
 }
 
 // quote adds quotes to the item if it can not be parsed back without them.
-func quote(item string, separators ...string) string {
-	need := item != strings.TrimSpace(item) || strings.HasPrefix(item, `"`) || strings.HasPrefix(item, "'")
+// False is returned if the item can not be quoted: it has both quotes, there are no escapes inside of the quotes.
+func quote(item string, separators ...string) (string, bool) {
+	// the value that starts with [ or { is parsed as JSON, so such items are quoted too;
+	// the empty item is quoted, an empty string is an empty list
+	need := item == "" || item != strings.TrimSpace(item) || strings.HasPrefix(item, `"`) || strings.HasPrefix(item, "'") ||
+		strings.HasPrefix(item, "[") || strings.HasPrefix(item, "{")
 	for _, sep := range separators {
 		need = need || strings.Contains(item, sep)
 	}
-	if !need {
-		return item
+	switch {
+	case !need:
+		return item, true
+	case strings.Contains(item, `"`) && strings.Contains(item, "'"):
+		return "", false
+	case strings.Contains(item, `"`):
+		return "'" + item + "'", true
 	}
-	if strings.Contains(item, `"`) {
-		return "'" + item + "'"
-	}
-	return `"` + item + `"`
+	return `"` + item + `"`, true
 }
