@@ -364,8 +364,9 @@ func (c *Manager) Watch(ctx context.Context, conf any, onChange func(conf any, e
 		return dst
 	}
 	base := copyConf(reflect.ValueOf(conf))
-	// the last config passed to onChange without errors, changes are logged relative to it
-	prev := conf
+	// copy of the last config passed to onChange without errors, changes are logged relative to it;
+	// configs passed to the application are not read, the application can change them
+	prev := base.Interface()
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -401,7 +402,7 @@ func (c *Manager) Watch(ctx context.Context, conf any, onChange func(conf any, e
 			sources, err := c.parse(fresh, true)
 			if err == nil {
 				c.logChanges(storage, prev, fresh, prefix, sources)
-				prev = fresh
+				prev = copyConf(reflect.ValueOf(fresh)).Interface()
 			}
 			onChange(fresh, err)
 		}
