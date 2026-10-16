@@ -206,6 +206,19 @@ Where the value comes from:
       password: ${DB_PASSWORD}
     ```
 
+=== "Vault"
+
+    ```go
+    // add after the file driver: the secret overrides the file
+    vault.New("app/database", vault.WithTokenFile("/vault/secrets/token"))
+    ```
+
+    ```go
+    Password string `yaml:"password" vault:"password" hidden:"true" required:"true"`
+    ```
+
+    The token is renewed by Vault Agent, see [vault](drivers/vault.md#authentication).
+
 ## Containers
 
 A typical Kubernetes deployment: the config file is mounted from a ConfigMap, secrets are mounted as files, a few values are overridden by variables of the pod.

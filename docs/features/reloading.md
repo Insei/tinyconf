@@ -56,12 +56,13 @@ func Current[T any](m *Manager) *T
 
 ## What is watched
 
-Changes are reported by drivers. The bundled [yaml](../drivers/yaml.md), [json](../drivers/json.md) and [toml](../drivers/toml.md) drivers watch their files from the OS file system: the main file and the files from `WithFiles`. The [consul](../drivers/consul.md) driver and Consul documents are notified by Consul right after the change.
+Changes are reported by drivers. The bundled [yaml](../drivers/yaml.md), [json](../drivers/json.md) and [toml](../drivers/toml.md) drivers watch their files from the OS file system: the main file and the files from `WithFiles`. The [consul](../drivers/consul.md) driver and Consul documents are notified by Consul right after the change. The [vault](../drivers/vault.md) driver checks the versions of the secrets.
 
 | Source | Watched |
 |---|---|
 | files from `New` and `WithFiles` | yes, polling |
 | Consul keys and documents | yes, notified by Consul |
+| Vault secrets | yes, polling, every 30 seconds by default |
 | files from `WithFS`, data from `WithData` | no |
 | environment variables, flags, tags | no |
 

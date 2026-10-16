@@ -50,7 +50,7 @@ http:
   write_timeout: 10s
 ```
 
-* The yaml, json, toml and consul drivers read `Read` from `http.read_timeout`, the embedded struct adds no level. `yaml:",inline"` works the same way.
+* The yaml, json, toml, consul and vault drivers read `Read` from `http.read_timeout`, the embedded struct adds no level. `yaml:",inline"` works the same way.
 * With the name in the tag, ``Timeouts `yaml:"timeouts"` ``, the embedded struct is a usual nested struct: `http.timeouts.read_timeout`.
 * An embedded struct without the tag is expected, the manager does not [warn](logging.md#warnings-of-drivers) about it.
 * [Auto keys](../drivers/env.md#auto-keys) and [indexed keys](../drivers/env.md#indexed-keys) of the env driver skip the name of the embedded struct too: `HTTP.Timeouts.Read` is `HTTP_READ` with auto keys, and `SERVERS_0_READ` for the struct in the slice.
