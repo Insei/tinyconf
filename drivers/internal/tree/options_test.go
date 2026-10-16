@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -42,7 +43,7 @@ func TestOptions(t *testing.T) {
 
 func TestDriver_ReadError(t *testing.T) {
 	readErr := errors.New("read error")
-	driver := New("test", testDecode, []Source{{Name: "broken", Open: func() (io.ReadCloser, error) {
+	driver := New("test", testDecode, []Source{{Name: "broken", Open: func(context.Context) (io.ReadCloser, error) {
 		return io.NopCloser(iotest.ErrReader(readErr)), nil
 	}}}, false)
 	assert.ErrorIs(t, driver.Load(), readErr)

@@ -331,7 +331,7 @@ func TestClient_Watch(t *testing.T) {
 	c := newClient([]Option{WithAddress(consul.URL), WithWaitTime(10 * time.Millisecond)})
 
 	t.Run("loaded index", func(t *testing.T) {
-		_, index, err := c.load("key", false)
+		_, index, err := c.load(context.Background(), "key", false)
 		assert.NoError(t, err)
 		ctx, cancel := context.WithCancel(context.Background())
 		changes := make(chan struct{}, 10)
@@ -359,7 +359,7 @@ func TestClient_Watch(t *testing.T) {
 		consul := newFakeConsul(map[string]string{"key": "value"})
 		defer consul.Close()
 		c := newClient([]Option{WithAddress(consul.URL), WithWaitTime(10 * time.Millisecond)})
-		_, index, err := c.load("key", false)
+		_, index, err := c.load(context.Background(), "key", false)
 		assert.NoError(t, err)
 		consul.setFails(2)
 		ctx, cancel := context.WithCancel(context.Background())
@@ -497,4 +497,31 @@ func TestDocument_Absent(t *testing.T) {
 	err = manager.Parse(conf)
 	assert.ErrorContains(t, err, "500 Internal Server Error")
 	assert.False(t, errors.Is(err, fs.ErrNotExist))
+}
+
+func TestDriver_ParseContext(t *testing.T) {
+	consul := newFakeConsul(map[string]string{"app/name": "app", "app/config": "name: document\n"})
+	defer consul.Close()
+	type config struct {
+		Name     string `consul:"name"`
+		Document string `yaml:"name"`
+	}
+	consulDriver, err := New("app", WithAddress(consul.URL))
+	assert.NoError(t, err)
+	yamlDriver, err := yaml.New("", yaml.WithSource(Document("app/config", WithAddress(consul.URL))))
+	assert.NoError(t, err)
+	manager, err := tinyconf.New(tinyconf.WithDriver(consulDriver), tinyconf.WithDriver(yamlDriver))
+	assert.NoError(t, err)
+	conf := &config{}
+	assert.NoError(t, manager.Register(conf))
+	assert.NoError(t, manager.ParseContext(context.Background(), conf))
+	assert.Equal(t, config{Name: "app", Document: "document"}, *conf)
+
+	// the requests are stopped by the context of ParseContext
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err = manager.ParseContext(ctx, &config{})
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.ErrorContains(t, err, "consul driver")
+	assert.ErrorContains(t, err, "yaml driver")
 }
