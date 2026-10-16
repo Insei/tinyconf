@@ -91,6 +91,14 @@ func getLoggerValue(field fmap.Field, val any) string {
 	return valueLog
 }
 
+// errorMessage returns the log message for the error of the driver.
+func errorMessage(err error, message string) string {
+	if errors.Is(err, ErrAccessDenied) {
+		return "access denied"
+	}
+	return message
+}
+
 // copySubConfig copies values of the fields by paths between the config and its sub config.
 // The sub config has the same type as the field of the config with the prefix, so all fields are found.
 func copySubConfig(confFields fmap.Storage, conf any, subFields fmap.Storage, subConf any, prefix string, paths []string, toSub bool) {
@@ -211,7 +219,7 @@ func (c *Manager) parse(conf any, reload bool) ([]FieldSource, error) {
 	for _, d := range c.drivers {
 		if loader, ok := d.(Loader); ok {
 			if err := loader.Load(); err != nil {
-				c.log.Error("failed to load", LogField("driver", d.GetName()), LogField("details", err.Error()))
+				c.log.Error(errorMessage(err, "failed to load"), LogField("driver", d.GetName()), LogField("details", err.Error()))
 				errs = append(errs, fmt.Errorf("%s driver: %w", d.GetName(), err))
 				continue
 			}
@@ -234,7 +242,7 @@ func (c *Manager) parse(conf any, reload bool) ([]FieldSource, error) {
 					log.Debug("skip", LogField("details", err.Error()))
 				}
 			case err != nil:
-				log.Error("failed", LogField("details", err.Error()))
+				log.Error(errorMessage(err, "failed"), LogField("details", err.Error()))
 				errs = append(errs, fmt.Errorf("%s driver: field %s: %w", d.GetName(), path, err))
 			default:
 				if driverValue.Warning != "" {
@@ -385,6 +393,7 @@ func (c *Manager) Watch(ctx context.Context, conf any, onChange func(conf any, e
 		go func(d Driver) {
 			defer wg.Done()
 			if err := d.(Watcher).Watch(ctx, notify); err != nil && ctx.Err() == nil {
+				c.log.Error(errorMessage(err, "failed to watch"), LogField("driver", d.GetName()), LogField("details", err.Error()))
 				errs <- fmt.Errorf("%s driver: %w", d.GetName(), err)
 			}
 		}(d)
