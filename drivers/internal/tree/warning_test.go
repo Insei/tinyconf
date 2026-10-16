@@ -11,13 +11,18 @@ func TestDriver_ParentTagWarning(t *testing.T) {
 	type nested struct {
 		Name string `test:"name"`
 	}
+	type embedded struct {
+		Level string `test:"level"`
+	}
 	type config struct {
 		Name   string `test:"name"`
 		Tagged struct {
+			embedded
 			Name  string `test:"name"`
 			Inner nested
 		} `test:"tagged,omitempty"`
 		NoTag struct {
+			embedded
 			Name  string `test:"name"`
 			Inner nested
 		}
@@ -28,7 +33,8 @@ func TestDriver_ParentTagWarning(t *testing.T) {
 	driver := New("test", func([]byte) (map[string]any, error) {
 		return map[string]any{
 			"name":   "root",
-			"tagged": map[string]any{"name": "tagged"},
+			"level":  "root",
+			"tagged": map[string]any{"name": "tagged", "level": "tagged"},
 		}, nil
 	}, []Source{DataSource("data", nil)}, false)
 
@@ -38,6 +44,12 @@ func TestDriver_ParentTagWarning(t *testing.T) {
 	}{
 		"Name":        {value: "root"},
 		"Tagged.Name": {value: "tagged"},
+		// fields of the embedded structs are on the level of the embedding struct, it is expected
+		"Tagged.embedded.Level": {value: "tagged"},
+		"NoTag.embedded.Level": {
+			value:   "root",
+			warning: "parent fields NoTag have no 'test' tag, the value is read from the 'level' key",
+		},
 		"Tagged.Inner.Name": {
 			// the path is built only from the tags below the parent without the tag
 			value:   "root",

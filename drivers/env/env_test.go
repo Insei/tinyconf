@@ -692,3 +692,40 @@ func TestEnvDriver_IndexedKeys(t *testing.T) {
 		}
 	})
 }
+
+func TestEnvDriver_IndexedKeysEmbedded(t *testing.T) {
+	type base struct {
+		Host string
+		Tags []string
+	}
+	type server struct {
+		base
+		Name string
+	}
+	type config struct {
+		Servers []server `env:"EMB_SERVERS"`
+	}
+	parse := func(t *testing.T, vars map[string]string) (config, error) {
+		for key, val := range vars {
+			t.Setenv(key, val)
+		}
+		driver, err := New(WithFiles(), WithIndexedKeys())
+		assert.NoError(t, err)
+		manager, err := tinyconf.New(tinyconf.WithDriver(driver))
+		assert.NoError(t, err)
+		conf := &config{}
+		assert.NoError(t, manager.Register(conf))
+		err = manager.Parse(conf)
+		return *conf, err
+	}
+
+	t.Run("fields on the level of the embedding struct", func(t *testing.T) {
+		conf, err := parse(t, map[string]string{"EMB_SERVERS_0_HOST": "a", "EMB_SERVERS_0_TAGS_0": "x", "EMB_SERVERS_1_NAME": "b"})
+		assert.NoError(t, err)
+		assert.Equal(t, []server{{base: base{Host: "a", Tags: []string{"x"}}}, {Name: "b"}}, conf.Servers)
+	})
+	t.Run("error in the embedded struct", func(t *testing.T) {
+		_, err := parse(t, map[string]string{"EMB_SERVERS_0_TAGS_1": "x"})
+		assert.ErrorContains(t, err, "index 0 is not defined")
+	})
+}
