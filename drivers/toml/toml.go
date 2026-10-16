@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/insei/fmap/v3"
 
 	"github.com/insei/tinyconf"
 	"github.com/insei/tinyconf/convert"
@@ -61,7 +62,7 @@ func normalize(v any) any {
 // Values of the fields with hidden:"true" tag are replaced with empty strings, fields without values are skipped.
 func (d *tomlDriver) GenDoc(registers ...*tinyconf.Registered) string {
 	// TOML has no null, nil values are skipped
-	return encodeDoc(tree.Doc(registers, d.name, func(v any) any {
+	return encodeDoc(tree.Doc(registers, d.name, func(v any, _ fmap.Field) any {
 		return withoutNil(convert.ToTree(v, d.name))
 	}))
 }

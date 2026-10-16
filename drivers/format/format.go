@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"time"
 
+	"github.com/insei/fmap/v3"
+
 	"github.com/insei/tinyconf"
 	"github.com/insei/tinyconf/convert"
 	"github.com/insei/tinyconf/drivers/internal/tree"
@@ -124,7 +126,7 @@ func (d *formatDriver) GenDoc(registers ...*tinyconf.Registered) string {
 	if d.encode == nil {
 		return ""
 	}
-	doc := tree.Doc(registers, d.name, func(v any) any {
+	doc := tree.Doc(registers, d.name, func(v any, _ fmap.Field) any {
 		return convert.ToTree(v, d.name)
 	})
 	if len(doc) == 0 {
