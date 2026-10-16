@@ -43,6 +43,18 @@ err := config.Parse(c)
 
 `Parse` fills the registered config with values from drivers. The config can be a registered one or a field of the registered config with struct type, see [sub configs](structs.md#sub-configs). `tinyconf.ErrNotRegisteredConfig` is returned for all other configs.
 
+`ParseContext` is `Parse` with the context for the drivers that read their sources by the network — [consul](../drivers/consul.md), [vault](../drivers/vault.md), [etcd](../drivers/etcd.md) and the remote documents: their requests are stopped when the context is done. A start of the application in Kubernetes is a typical case:
+
+```go
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
+if err := config.ParseContext(ctx, c); err != nil {
+    log.Fatal(err) // errors.Is(err, context.DeadlineExceeded) if the storage is not available in time
+}
+```
+
+Every request of the drivers is limited to 30 seconds anyway. The reloads use the context of watching, so the requests are stopped when the last subscription is canceled.
+
 ## Other methods
 
 | Method | Description |
