@@ -30,6 +30,8 @@ type Manager struct {
 	sources map[reflect.Type][]FieldSource
 	// states of the registered configs: initial values and current versions
 	states map[reflect.Type]*configState
+	// subConfigs caches the registered configs of the sub config types, it is cleared by Register
+	subConfigs map[reflect.Type]subConfigType
 
 	// subscribers to the changes of the configs, watching is running while there are subscribers
 	subMu        sync.Mutex
@@ -80,6 +82,8 @@ func (c *Manager) Register(conf any) error {
 		c.states = make(map[reflect.Type]*configState)
 	}
 	c.states[typeOf] = &configState{}
+	// the new config can have the sub config types
+	c.subConfigs = nil
 	return nil
 }
 
@@ -154,11 +158,38 @@ func (c *Manager) getRegisters() []*Registered {
 func (c *Manager) findRegister(confTypeOf reflect.Type) (register *Registered, registerTypeOf reflect.Type, subPath string) {
 	c.mu.RLock()
 	register, ok := c.registered[confTypeOf]
+	sub, cached := c.subConfigs[confTypeOf]
 	c.mu.RUnlock()
 	if ok {
 		return register, confTypeOf, ""
 	}
-	for _, registered := range c.getRegisters() {
+	if cached {
+		return sub.register, sub.registerTypeOf, sub.path
+	}
+	// the fields of the registered configs are walked once for the type, Current is called on the hot path;
+	// the lock is held, so Register can not clear the cache before the result is stored
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	sub.register, sub.registerTypeOf, sub.path = c.findSubConfig(confTypeOf)
+	if c.subConfigs == nil {
+		c.subConfigs = make(map[reflect.Type]subConfigType)
+	}
+	c.subConfigs[confTypeOf] = sub
+	return sub.register, sub.registerTypeOf, sub.path
+}
+
+// subConfigType is the registered config with the field of the sub config type.
+type subConfigType struct {
+	register       *Registered
+	registerTypeOf reflect.Type
+	path           string
+}
+
+// findSubConfig returns the registered config with the field of the sub config type and the path of the field,
+// the registered configs are checked in the registration order. The lock of the manager should be held.
+func (c *Manager) findSubConfig(confTypeOf reflect.Type) (*Registered, reflect.Type, string) {
+	for _, typeOf := range c.order {
+		registered := c.registered[typeOf]
 		for _, path := range registered.Storage.GetAllPaths() {
 			field := registered.Storage.MustFind(path)
 			// fields of the values parsed as a whole are not parsed by drivers, so they can not be a sub config
