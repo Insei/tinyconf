@@ -82,6 +82,10 @@ func decode(data []byte) (map[string]any, error) {
 		if err != nil {
 			return nil, fmt.Errorf("line %d: %w", n+1, err)
 		}
+		// the key of the value is written at the start of the line, where ; and # are comments and [ is a section
+		if last := keys[len(keys)-1]; strings.IndexByte(";#[", last[0]) >= 0 {
+			return nil, fmt.Errorf("line %d: key %q starts with %q", n+1, last, last[0])
+		}
 		value, err := parseValue(strings.TrimSpace(line[idx+1:]))
 		if err != nil {
 			return nil, fmt.Errorf("line %d: incorrect quoted value: %w", n+1, err)
