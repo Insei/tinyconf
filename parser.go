@@ -38,6 +38,9 @@ type Manager struct {
 	subscribers  []*subscriber
 	stopWatching context.CancelFunc
 	reloadMu     sync.Mutex
+
+	statusMu sync.Mutex
+	status   ReloadStatus
 }
 
 // getStorage returns fields of the config, it is a variable to check the storage errors in tests.
