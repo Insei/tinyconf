@@ -1589,6 +1589,10 @@
 <td><code>WithLogger(logger)</code></td>
 <td>sets the logger, see <a href="../logging/">Logging</a></td>
 </tr>
+<tr>
+<td><code>WithDeferredLogger()</code></td>
+<td>keeps the log records until the logger is set by <code>SetLogger</code>, see <a href="../logging/#logger-from-the-config">Logger from the config</a></td>
+</tr>
 </tbody>
 </table>
 <h2 id="priority-of-drivers">Priority of drivers<a class="headerlink" href="#priority-of-drivers" title="Permanent link">&para;</a></h2>
@@ -1644,6 +1648,10 @@
 <tr>
 <td><code>ReloadStatus()</code></td>
 <td>state of watching and reloading for the health checks, see <a href="../reloading/#health-checks">Health checks</a></td>
+</tr>
+<tr>
+<td><code>SetLogger(logger)</code></td>
+<td>replaces the logger, safe for concurrent use, see <a href="../logging/#logger-from-the-config">Logger from the config</a></td>
 </tr>
 </tbody>
 </table>
