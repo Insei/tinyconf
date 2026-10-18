@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"time"
@@ -59,9 +60,19 @@ func must[T any](value T, err error) T {
 	return value
 }
 
+// newLogger creates the logger of the application from its config.
+func newLogger(conf Logging) tinyconf.Logger {
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(conf.Level)); err != nil {
+		level = slog.LevelInfo
+	}
+	return logger.NewSlogLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})))
+}
+
 func main() {
 	config := must(tinyconf.New(
-		tinyconf.WithLogger(logger.NewFmtLogger(logger.ERROR)),
+		// the logger is configured by the config itself, the records of parsing are kept until SetLogger
+		tinyconf.WithDeferredLogger(),
 		// the next driver overrides the values of the previous one
 		tinyconf.WithDriver(must(tag.New("initial"))),
 		tinyconf.WithDriver(must(yaml.New("config.yaml", yaml.WithOptional()))),
@@ -78,6 +89,7 @@ func main() {
 	parseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	err := config.Parse(parseCtx, conf)
+	config.SetLogger(newLogger(conf.Logging))
 	if conf.Doc != "" {
 		fmt.Print(config.GenDoc(conf.Doc))
 		return
@@ -99,6 +111,7 @@ func main() {
 	}))
 	must(0, tinyconf.Subscribe(ctx, config, func(prev, next *Logging) {
 		fmt.Printf("log level is changed: %s -> %s\n", prev.Level, next.Level)
+		config.SetLogger(newLogger(*next))
 	}))
 	fmt.Println("change config.yaml to see the changes, stop by Ctrl+C")
 	<-ctx.Done()

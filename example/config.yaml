@@ -4,5 +4,6 @@ http:
 database:
   host: db.internal
 logging:
-  level: info
+  # the logger is created from this config, debug shows the history of every field
+  level: error
 hosts: [a.example.com]
