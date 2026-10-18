@@ -1,6 +1,7 @@
 package env
 
 import (
+	"context"
 	"os"
 	"path"
 	"testing"
@@ -422,7 +423,7 @@ func TestEnvDriver_Options(t *testing.T) {
 		t.Setenv("TINYCONF_OPT_HOSTS", "a,b")
 		manager := newManager(t, WithPrefix("TINYCONF_OPT_"))
 		conf := &config{}
-		assert.NoError(t, manager.Parse(conf))
+		assert.NoError(t, manager.Parse(context.Background(), conf))
 		assert.Equal(t, "localhost", conf.HTTP.Host)
 		assert.Equal(t, []string{"a", "b"}, conf.Hosts)
 		assert.Equal(t, 0, conf.HTTP.MaxConns)
@@ -438,7 +439,7 @@ func TestEnvDriver_Options(t *testing.T) {
 		t.Setenv("TINYCONF_OPT_HTTP_HOST", "localhost")
 		manager := newManager(t, WithPrefix("TINYCONF_OPT_"), WithAutoKeys())
 		conf := &config{}
-		assert.NoError(t, manager.Parse(conf))
+		assert.NoError(t, manager.Parse(context.Background(), conf))
 		assert.Equal(t, 10, conf.HTTP.MaxConns)
 		assert.Equal(t, "localhost", conf.HTTP.Host)
 		assert.Equal(t, "", conf.HTTP.Excluded)
@@ -453,7 +454,7 @@ func TestEnvDriver_Options(t *testing.T) {
 		t.Setenv("HTTP_MAX_CONNS", "10")
 		manager := newManager(t)
 		conf := &config{}
-		assert.NoError(t, manager.Parse(conf))
+		assert.NoError(t, manager.Parse(context.Background(), conf))
 		assert.Equal(t, 0, conf.HTTP.MaxConns)
 	})
 
@@ -463,23 +464,23 @@ func TestEnvDriver_Options(t *testing.T) {
 		t.Setenv("TOKEN_FILE", secretPath)
 
 		conf := &config{}
-		assert.NoError(t, newManager(t).Parse(conf))
+		assert.NoError(t, newManager(t).Parse(context.Background(), conf))
 		assert.Equal(t, "", conf.Token)
 
 		manager := newManager(t, WithSecretFiles())
-		assert.NoError(t, manager.Parse(conf))
+		assert.NoError(t, manager.Parse(context.Background(), conf))
 		assert.Equal(t, "from file", conf.Token)
 
 		// variable has priority over file
 		t.Setenv("TOKEN", "from env")
-		assert.NoError(t, manager.Parse(conf))
+		assert.NoError(t, manager.Parse(context.Background(), conf))
 		assert.Equal(t, "from env", conf.Token)
 	})
 
 	t.Run("absent secret file", func(t *testing.T) {
 		t.Setenv("TOKEN_FILE", path.Join(t.TempDir(), "absent"))
 		conf := &config{}
-		assert.Error(t, newManager(t, WithSecretFiles()).Parse(conf))
+		assert.Error(t, newManager(t, WithSecretFiles()).Parse(context.Background(), conf))
 	})
 }
 
@@ -512,7 +513,7 @@ func TestEnvDriver_Files(t *testing.T) {
 		assert.NoError(t, err)
 		conf := &config{}
 		assert.NoError(t, manager.Register(conf))
-		assert.NoError(t, manager.Parse(conf))
+		assert.NoError(t, manager.Parse(context.Background(), conf))
 		return *conf
 	}
 
@@ -602,7 +603,7 @@ func TestEnvDriver_IndexedKeys(t *testing.T) {
 		assert.NoError(t, err)
 		conf := &config{}
 		assert.NoError(t, manager.Register(conf))
-		err = manager.Parse(conf)
+		err = manager.Parse(context.Background(), conf)
 		return *conf, err
 	}
 	vars := map[string]string{
@@ -715,7 +716,7 @@ func TestEnvDriver_IndexedKeysEmbedded(t *testing.T) {
 		assert.NoError(t, err)
 		conf := &config{}
 		assert.NoError(t, manager.Register(conf))
-		err = manager.Parse(conf)
+		err = manager.Parse(context.Background(), conf)
 		return *conf, err
 	}
 

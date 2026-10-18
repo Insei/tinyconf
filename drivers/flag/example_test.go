@@ -1,6 +1,7 @@
 package flag_test
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/insei/tinyconf"
@@ -26,7 +27,7 @@ func ExampleNew() {
 	if err = config.Register(conf); err != nil {
 		panic(err)
 	}
-	if err = config.Parse(conf); err != nil {
+	if err = config.Parse(context.Background(), conf); err != nil {
 		panic(err)
 	}
 	fmt.Printf("%+v\n", *conf)

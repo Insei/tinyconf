@@ -108,7 +108,7 @@ func TestVault(t *testing.T) {
 		manager := newManager(t, driver)
 		conf := &vaultConfig{}
 		require.NoError(t, manager.Register(conf))
-		return conf, manager, manager.Parse(conf)
+		return conf, manager, manager.Parse(context.Background(), conf)
 	}
 
 	t.Run("secrets merged in the order of the paths", func(t *testing.T) {

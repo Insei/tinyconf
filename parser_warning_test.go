@@ -1,6 +1,7 @@
 package tinyconf
 
 import (
+	"context"
 	"testing"
 
 	"github.com/insei/fmap/v3"
@@ -48,7 +49,7 @@ func TestManager_Parse_ValueWarning(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &Config{}
 	assert.NoError(t, c.Register(conf))
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 
 	// the value is set, the warning of the driver is logged
 	assert.Equal(t, Config{Usual: "value", Suspicious: "value"}, *conf)

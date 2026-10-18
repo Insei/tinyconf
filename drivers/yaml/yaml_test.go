@@ -348,7 +348,7 @@ func TestYamlDriver_Sources(t *testing.T) {
 			conf, want := &config{}, &config{}
 			tt.want(want)
 			assert.NoError(t, manager.Register(conf))
-			err = manager.Parse(conf)
+			err = manager.Parse(context.Background(), conf)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -371,12 +371,12 @@ func TestYamlDriver_Reload(t *testing.T) {
 
 	conf := &config{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	assert.Equal(t, "first", conf.Name)
 
 	// file is read again on every Parse
 	assert.NoError(t, os.WriteFile(filePath, []byte("name: second\n"), 0o600))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	assert.Equal(t, "second", conf.Name)
 }
 
@@ -435,7 +435,7 @@ func TestYamlDriver_GenDoc_Types(t *testing.T) {
 			Any     any            `yaml:"any"`
 		}{}
 		assert.NoError(t, manager.Register(parsed))
-		assert.NoError(t, manager.Parse(parsed))
+		assert.NoError(t, manager.Parse(context.Background(), parsed))
 		assert.Equal(t, conf, parsed)
 	})
 }
@@ -453,7 +453,7 @@ func TestYamlDriver_Watch(t *testing.T) {
 
 	conf := &config{Default: "default"}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

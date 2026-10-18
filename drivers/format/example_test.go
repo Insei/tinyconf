@@ -1,6 +1,7 @@
 package format_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -41,7 +42,7 @@ func ExampleNew() {
 	if err = config.Register(conf); err != nil {
 		panic(err)
 	}
-	if err = config.Parse(conf); err != nil {
+	if err = config.Parse(context.Background(), conf); err != nil {
 		panic(err)
 	}
 	fmt.Println(conf.HTTP.Port)

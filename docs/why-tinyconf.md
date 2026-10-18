@@ -73,7 +73,7 @@ Checked against the current documentation of the libraries on 2026-10-16.
 | viper `SetDefault("http.port", 8080)` | `initial:"8080"` with the [tag driver](drivers/tag.md) |
 | viper `AutomaticEnv()` | [`env.WithAutoKeys()`](drivers/env.md#auto-keys) |
 | viper `WatchConfig()` + `OnConfigChange` | [`tinyconf.Subscribe`](features/reloading.md) per package |
-| viper `Sub("http")` | `config.Parse(&HTTP{})` or `tinyconf.Current[HTTP](config)` |
+| viper `Sub("http")` | `config.Parse(context.Background(), &HTTP{})` or `tinyconf.Current[HTTP](config)` |
 | cleanenv `env-default`, `env-required` | `initial:"..."` and `required:"true"` |
 | cleanenv `env-description` + `Usage` | `doc:"..."` + [`GenDoc("env")`](features/gendoc.md) |
 | caarlos0/env `envDefault`, `required` | `initial:"..."` and `required:"true"` |

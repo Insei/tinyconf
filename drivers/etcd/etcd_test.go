@@ -53,7 +53,7 @@ func parse(t *testing.T, driver tinyconf.Driver) (*testConfig, *tinyconf.Manager
 	manager := newManager(t, driver)
 	conf := &testConfig{}
 	assert.NoError(t, manager.Register(conf))
-	return conf, manager, manager.Parse(conf)
+	return conf, manager, manager.Parse(context.Background(), conf)
 }
 
 func TestDriver_Parse(t *testing.T) {
@@ -191,13 +191,13 @@ func TestDriver_Auth(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "app", conf.Name)
 	// the token is used for the next requests
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	assert.Equal(t, []string{"/v3/auth/authenticate", "/v3/kv/range", "/v3/kv/range"}, requests())
 
 	// the expired token is taken again once
 	requests = since()
 	etcd.set(func(f *fakeEtcd) { f.tokens = map[string]bool{} })
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	assert.Equal(t, []string{"/v3/kv/range", "/v3/auth/authenticate", "/v3/kv/range"}, requests())
 
 	// the token is expired and the password is changed
@@ -205,7 +205,7 @@ func TestDriver_Auth(t *testing.T) {
 		f.tokens = map[string]bool{}
 		f.users["user"] = "changed"
 	})
-	err = manager.Parse(conf)
+	err = manager.Parse(context.Background(), conf)
 	assert.ErrorIs(t, err, tinyconf.ErrAccessDenied)
 	assert.ErrorContains(t, err, "failed to authenticate user user")
 
@@ -232,7 +232,7 @@ func TestDriver_Endpoints(t *testing.T) {
 	assert.Equal(t, "app", conf.Name)
 	// the endpoint that has answered is used first
 	etcd.Close()
-	assert.Error(t, manager.Parse(conf))
+	assert.Error(t, manager.Parse(context.Background(), conf))
 }
 
 func TestNewClient(t *testing.T) {
@@ -373,7 +373,7 @@ func TestDriver_WatchAfterFailedLoad(t *testing.T) {
 	assert.NoError(t, manager.Register(conf))
 	// etcd denies the access at the start
 	etcd.set(func(f *fakeEtcd) { f.denied = []string{"app/"} })
-	assert.Error(t, manager.Parse(conf))
+	assert.Error(t, manager.Parse(context.Background(), conf))
 	etcd.set(func(f *fakeEtcd) { f.denied = nil })
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -538,7 +538,7 @@ func TestDocument(t *testing.T) {
 	manager := newManager(t, driver)
 	conf := &config{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	// the document is merged with the data by the yaml tags
 	assert.Equal(t, config{Name: "etcd", Server: yamlServer{Host: "localhost", Port: 9090}}, *conf)
 
@@ -557,20 +557,20 @@ func TestDocument(t *testing.T) {
 	}
 	manager = newManager(t, must(yaml.New("", yaml.WithSource(Document("app/absent", WithEndpoints(etcd.URL))))))
 	assert.NoError(t, manager.Register(&nameConfig{}))
-	err := manager.Parse(&nameConfig{})
+	err := manager.Parse(context.Background(), &nameConfig{})
 	assert.ErrorIs(t, err, fs.ErrNotExist)
 	assert.ErrorContains(t, err, "failed to load etcd key app/absent")
 
 	manager = newManager(t, must(yaml.New("", yaml.WithOptional(), yaml.WithSource(Document("app/absent", WithEndpoints(etcd.URL))))))
 	assert.NoError(t, manager.Register(&nameConfig{}))
-	assert.NoError(t, manager.Parse(&nameConfig{}))
+	assert.NoError(t, manager.Parse(context.Background(), &nameConfig{}))
 
 	etcd.set(func(f *fakeEtcd) { f.denied = []string{"app/absent"} })
-	err = manager.Parse(&nameConfig{})
+	err = manager.Parse(context.Background(), &nameConfig{})
 	assert.ErrorIs(t, err, tinyconf.ErrAccessDenied)
 }
 
-func TestDriver_ParseContext(t *testing.T) {
+func TestDriver_ParseCancel(t *testing.T) {
 	etcd := newFakeEtcd(map[string]string{"app/name": "app", "app/config": "name: document\n"})
 	t.Cleanup(etcd.Close)
 	type config struct {
@@ -584,13 +584,13 @@ func TestDriver_ParseContext(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &config{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.ParseContext(context.Background(), conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	assert.Equal(t, config{Name: "app", Document: "document"}, *conf)
 
-	// the requests are stopped by the context of ParseContext
+	// the requests are stopped by the context of Parse
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	err = manager.ParseContext(ctx, &config{})
+	err = manager.Parse(ctx, &config{})
 	assert.ErrorIs(t, err, context.Canceled)
 	assert.ErrorContains(t, err, "etcd driver")
 	assert.ErrorContains(t, err, "yaml driver")

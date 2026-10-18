@@ -120,7 +120,7 @@ func TestManager_Parse_Log(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &Config{Host: "initial"}
 	assert.NoError(t, c.Register(conf))
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 
 	// initial values of all fields, then every override by every driver
 	assert.Equal(t, []string{
@@ -135,7 +135,7 @@ func TestManager_Parse_Log(t *testing.T) {
 	}, log.take())
 
 	// the same values are not overridden
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	assert.Equal(t, []string{
 		"initial: config=*tinyconf.Config field=Host value=localhost",
 		"initial: config=*tinyconf.Config field=Port value=9000",
@@ -161,7 +161,7 @@ func TestManager_Parse_SubConfigLog(t *testing.T) {
 
 	// values of the sub config are initial values
 	http := &HTTP{Host: "localhost", Port: 9000}
-	assert.NoError(t, c.Parse(http))
+	assert.NoError(t, c.Parse(context.Background(), http))
 	assert.Equal(t, HTTP{Host: "localhost", Port: 9000}, *http)
 	assert.Equal(t, []string{
 		"initial: config=*tinyconf.HTTP field=HTTP.Host value=localhost",
@@ -183,7 +183,7 @@ func TestSubscribe_Log(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &Config{}
 	assert.NoError(t, c.Register(conf))
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	log.take()
 	configs, _ := subscribe[Config](t, c)
 

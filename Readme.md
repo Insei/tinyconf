@@ -26,8 +26,7 @@ Loggers: `logger.NewFmtLogger`, `logger.NewSlogLogger` (Go 1.21+), and the adapt
 | Method | Description |
 |---|---|
 | `Register(conf any) error` | registers the config, `conf` should be a pointer to struct |
-| `Parse(conf any) error` | fills the registered config, or its field with struct type (sub config), with values from drivers |
-| `ParseContext(ctx, conf any) error` | `Parse` with the context for the requests of the drivers to the remote storages |
+| `Parse(ctx context.Context, conf any) error` | fills the registered config, or its field with struct type (sub config), with values from drivers; the context stops the requests of the drivers to the remote storages |
 | `GenDoc(driverName string) string` | generates documentation of all registered configs in the driver format |
 | `Sources(conf any) []FieldSource` | returns which driver has set the value of every field in the last `Parse` call |
 | `tinyconf.Subscribe(ctx, m, onChange) error` | calls `onChange(prev, next *T)` after the changes of the config or the sub config `T` |
@@ -245,7 +244,7 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(config.GenDoc("yaml"))
-	if err = config.Parse(c); err != nil {
+	if err = config.Parse(context.Background(), c); err != nil {
 		panic(err)
 	}
 	for _, source := range config.Sources(c) {
@@ -254,7 +253,7 @@ func main() {
 
 	// configs can be parsed partially, by the fields of the registered configs
 	http := &HTTP{}
-	if err = config.Parse(http); err != nil {
+	if err = config.Parse(context.Background(), http); err != nil {
 		panic(err)
 	}
 	fmt.Println(*http)
@@ -302,7 +301,7 @@ and `tinyconf.ErrIncorrectTagSettings` if the field has no settings for the driv
 To support the same types as the built-in drivers, use the `convert` package: `convert.StringToField` for string values
 and `convert.TreeToField` for values decoded from formats like yaml or json.
 
-If the driver implements the optional `tinyconf.Loader` or `tinyconf.ContextLoader` interface, `Load` (or `LoadContext` with the context of `ParseContext`) is called once at the start of every `Parse` call,
+If the driver implements the optional `tinyconf.Loader` or `tinyconf.ContextLoader` interface, `Load` (or `LoadContext` with the context of `Parse`) is called once at the start of every `Parse` call,
 so the driver can read its source once and not for every field.
 If the driver implements the optional `tinyconf.Watcher` interface, it can report changes of its source for reloading.
 

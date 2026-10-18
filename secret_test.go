@@ -1,6 +1,7 @@
 package tinyconf
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -58,7 +59,7 @@ func TestSecret_Parse(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &secretConfig{}
 	assert.NoError(t, c.Register(conf))
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	assert.Equal(t, Secret("password value"), conf.Password)
 	assert.Equal(t, []Secret{"first", "second"}, conf.Keys)
 }

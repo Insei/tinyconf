@@ -29,7 +29,7 @@ func (md *contextLoaderMockDriver) LoadContext(ctx context.Context) error {
 
 type contextKey struct{}
 
-func TestManager_ParseContext(t *testing.T) {
+func TestManager_ParseCancel(t *testing.T) {
 	type Config struct {
 		Name string
 	}
@@ -39,18 +39,18 @@ func TestManager_ParseContext(t *testing.T) {
 	conf := &Config{}
 	assert.NoError(t, c.Register(conf))
 
-	// LoadContext is called instead of Load with the context of ParseContext
+	// LoadContext is called instead of Load with the context of Parse
 	ctx := context.WithValue(context.Background(), contextKey{}, "value")
-	assert.NoError(t, c.ParseContext(ctx, conf))
+	assert.NoError(t, c.Parse(ctx, conf))
 	assert.False(t, driver.loaded)
 	assert.Equal(t, "value", driver.context.Value(contextKey{}))
 
 	// Parse uses the background context
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	assert.Nil(t, driver.context.Value(contextKey{}))
 
 	// the canceled context is the error of the driver
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	assert.ErrorIs(t, c.ParseContext(ctx, conf), context.Canceled)
+	assert.ErrorIs(t, c.Parse(ctx, conf), context.Canceled)
 }

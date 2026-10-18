@@ -47,7 +47,7 @@ func Example() {
 	if err := config.Register(conf); err != nil {
 		panic(err)
 	}
-	if err := config.Parse(conf); err != nil {
+	if err := config.Parse(context.Background(), conf); err != nil {
 		panic(err)
 	}
 	fmt.Printf("%+v\n", *conf)
@@ -64,7 +64,7 @@ func ExampleManager_Sources() {
 	if err := config.Register(conf); err != nil {
 		panic(err)
 	}
-	if err := config.Parse(conf); err != nil {
+	if err := config.Parse(context.Background(), conf); err != nil {
 		panic(err)
 	}
 	for _, source := range config.Sources(conf) {
@@ -86,7 +86,7 @@ func ExampleManager_GenDoc() {
 	if err := config.Register(conf); err != nil {
 		panic(err)
 	}
-	if err := config.Parse(conf); err != nil {
+	if err := config.Parse(context.Background(), conf); err != nil {
 		panic(err)
 	}
 	fmt.Print(config.GenDoc("env"))
@@ -107,7 +107,7 @@ func ExampleManager_Parse_subConfig() {
 	}
 
 	http := &HTTP{}
-	if err := config.Parse(http); err != nil {
+	if err := config.Parse(context.Background(), http); err != nil {
 		panic(err)
 	}
 	fmt.Printf("%+v\n", *http)
@@ -135,7 +135,7 @@ func ExampleSubscribe() {
 	if err = config.Register(conf); err != nil {
 		panic(err)
 	}
-	if err = config.Parse(conf); err != nil {
+	if err = config.Parse(context.Background(), conf); err != nil {
 		panic(err)
 	}
 

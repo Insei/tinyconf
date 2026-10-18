@@ -1,6 +1,7 @@
 package drivers_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,7 +29,7 @@ func TestMergeTag(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &config{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	// the values of all drivers in the order of the drivers
 	assert.Equal(t, []string{"default", "from-file", "from-env"}, conf.Hosts)
 	assert.Equal(t, map[string]string{"env": "prod", "team": "core", "region": "eu"}, conf.Labels)

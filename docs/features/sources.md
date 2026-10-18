@@ -3,7 +3,7 @@
 With several drivers it is not always obvious where the final value came from. `Sources` returns which driver has set every field in the last `Parse` call.
 
 ```go
-if err := config.Parse(c); err != nil {
+if err := config.Parse(context.Background(), c); err != nil {
     panic(err)
 }
 for _, source := range config.Sources(c) {

@@ -48,7 +48,7 @@ func TestStructPointers_NoValues(t *testing.T) {
 
 	conf := &pointersConfig{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	// structs are not created without values
 	assert.Nil(t, conf.Server)
 }
@@ -69,7 +69,7 @@ func TestStructPointers_Parse(t *testing.T) {
 
 	conf := &pointersConfig{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	assert.Equal(t, pointersConfig{
 		Name: "app",
 		Server: &pointersServer{
@@ -96,14 +96,14 @@ func TestStructPointers_Parse(t *testing.T) {
 	server, tls := existing.Server, existing.Server.TLS
 	another := newPointersManager(t, tagDriver, yamlDriver, envDriver)
 	assert.NoError(t, another.Register(existing))
-	assert.NoError(t, another.Parse(existing))
+	assert.NoError(t, another.Parse(context.Background(), existing))
 	assert.Same(t, server, existing.Server)
 	assert.Same(t, tls, existing.Server.TLS)
 	assert.Equal(t, *conf, *existing)
 
 	t.Run("sub config", func(t *testing.T) {
 		sub := &pointersTLS{}
-		assert.NoError(t, manager.Parse(sub))
+		assert.NoError(t, manager.Parse(context.Background(), sub))
 		assert.Equal(t, pointersTLS{Cert: "yaml.pem", Key: "env.key"}, *sub)
 	})
 }
@@ -122,13 +122,13 @@ func TestStructPointers_Required(t *testing.T) {
 
 	conf := &config{}
 	assert.NoError(t, manager.Register(conf))
-	err = manager.Parse(conf)
+	err = manager.Parse(context.Background(), conf)
 	assert.ErrorIs(t, err, tinyconf.ErrRequired)
 	assert.ErrorContains(t, err, "DB.DSN")
 	assert.Nil(t, conf.DB)
 
 	t.Setenv("POINTERS_REQUIRED_DSN", "dsn")
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	assert.Equal(t, &db{DSN: "dsn"}, conf.DB)
 }
 
@@ -164,7 +164,7 @@ func TestStructPointers_Watch(t *testing.T) {
 
 	conf := &pointersConfig{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	server, tls := conf.Server, conf.Server.TLS
 
 	ctx, cancel := context.WithCancel(context.Background())

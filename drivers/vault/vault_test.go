@@ -112,7 +112,7 @@ func parse(t *testing.T, driver tinyconf.Driver) (*testConfig, *tinyconf.Manager
 	assert.NoError(t, err)
 	conf := &testConfig{}
 	assert.NoError(t, manager.Register(conf))
-	return conf, manager, manager.Parse(conf)
+	return conf, manager, manager.Parse(context.Background(), conf)
 }
 
 func TestDriver_Parse(t *testing.T) {
@@ -260,10 +260,10 @@ func TestDriver_TokenFile(t *testing.T) {
 	// the renewed token is read from the file before every request
 	vault.token = "second"
 	assert.NoError(t, os.WriteFile(tokenFile, []byte("second"), 0o600))
-	assert.NoError(t, manager.Parse(&testConfig{}))
+	assert.NoError(t, manager.Parse(context.Background(), &testConfig{}))
 
 	assert.NoError(t, os.Remove(tokenFile))
-	assert.ErrorContains(t, manager.Parse(&testConfig{}), "failed to read the token")
+	assert.ErrorContains(t, manager.Parse(context.Background(), &testConfig{}), "failed to read the token")
 }
 
 func TestNewClient(t *testing.T) {
@@ -388,7 +388,7 @@ func TestDriver_Watch(t *testing.T) {
 	}
 }
 
-func TestDriver_ParseContext(t *testing.T) {
+func TestDriver_ParseCancel(t *testing.T) {
 	vault := newFakeVault(map[string]map[string]any{"app": {"name": "app"}})
 	defer vault.Close()
 	driver, err := New("app", WithAddress(vault.URL))
@@ -397,11 +397,11 @@ func TestDriver_ParseContext(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &testConfig{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.ParseContext(context.Background(), conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	assert.Equal(t, "app", conf.Name)
 
-	// the requests are stopped by the context of ParseContext
+	// the requests are stopped by the context of Parse
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	assert.ErrorIs(t, manager.ParseContext(ctx, &testConfig{}), context.Canceled)
+	assert.ErrorIs(t, manager.Parse(ctx, &testConfig{}), context.Canceled)
 }

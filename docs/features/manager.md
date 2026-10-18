@@ -38,20 +38,23 @@ err := config.Register(c)
 ## Parse
 
 ```go
-err := config.Parse(c)
+err := config.Parse(context.Background(), c)
 ```
 
 `Parse` fills the registered config with values from drivers. The config can be a registered one or a field of the registered config with struct type, see [sub configs](structs.md#sub-configs). `tinyconf.ErrNotRegisteredConfig` is returned for all other configs.
 
-`ParseContext` is `Parse` with the context for the drivers that read their sources by the network — [consul](../drivers/consul.md), [vault](../drivers/vault.md), [etcd](../drivers/etcd.md) and the remote documents: their requests are stopped when the context is done. A start of the application in Kubernetes is a typical case:
+The context is used by the drivers that read their sources by the network — [consul](../drivers/consul.md), [vault](../drivers/vault.md), [etcd](../drivers/etcd.md) and the remote documents: their requests are stopped when the context is done. A start of the application in Kubernetes is a typical case:
 
 ```go
 ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 defer cancel()
-if err := config.ParseContext(ctx, c); err != nil {
+if err := config.Parse(ctx, c); err != nil {
     log.Fatal(err) // errors.Is(err, context.DeadlineExceeded) if the storage is not available in time
 }
 ```
+
+!!! note "Migration"
+    `Parse(conf)` of the previous versions is `Parse(context.Background(), conf)`, and `ParseContext(ctx, conf)` is `Parse(ctx, conf)`.
 
 Every request of the drivers is limited to 30 seconds anyway. The reloads use the context of watching, so the requests are stopped when the last subscription is canceled.
 
@@ -70,7 +73,7 @@ Every request of the drivers is limited to 30 seconds anyway. The reloads use th
 `Parse` does not stop on the first error: all fields are parsed, and all errors are returned as one error. It can be checked with `errors.Is` and `errors.As`.
 
 ```go
-if err := config.Parse(c); err != nil {
+if err := config.Parse(context.Background(), c); err != nil {
     // env driver: field HTTP.Port: failed to parse env value from key HTTP_PORT ...
     log.Fatal(err)
 }

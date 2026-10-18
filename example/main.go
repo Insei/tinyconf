@@ -77,7 +77,7 @@ func main() {
 	defer stop()
 	parseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	err := config.ParseContext(parseCtx, conf)
+	err := config.Parse(parseCtx, conf)
 	if conf.Doc != "" {
 		fmt.Print(config.GenDoc(conf.Doc))
 		return

@@ -16,7 +16,7 @@ func TestManager_ReloadStatus(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &subConfig{}
 	assert.NoError(t, c.Register(conf))
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	assert.Equal(t, ReloadStatus{}, c.ReloadStatus())
 
 	ctx, cancel := context.WithCancel(context.Background())

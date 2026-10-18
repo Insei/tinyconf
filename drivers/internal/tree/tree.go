@@ -155,7 +155,7 @@ func (d *Driver) Load() error {
 	return d.LoadContext(context.Background())
 }
 
-// LoadContext is Load with the context for the remote sources, Manager calls it with the context of ParseContext.
+// LoadContext is Load with the context for the remote sources, Manager calls it with the context of Parse.
 func (d *Driver) LoadContext(ctx context.Context) error {
 	// state is taken before reading, so the changes made during the reading will be detected by Watch
 	state := d.stat(ctx)

@@ -71,7 +71,7 @@ func TestDriver_Parse(t *testing.T) {
 	manager := newManager(t, driver)
 	conf := &testConfig{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 
 	assert.Equal(t, "app", conf.Name)
 	assert.Equal(t, server{Host: "localhost", Port: 8080}, conf.Server)
@@ -268,7 +268,7 @@ func TestDriver_Watch(t *testing.T) {
 	manager := newManager(t, driver)
 	conf := &testConfig{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -312,7 +312,7 @@ func TestDriver_WatchAfterFailedLoad(t *testing.T) {
 	assert.NoError(t, manager.Register(conf))
 	// Consul is not available at the start
 	consul.setFails(2)
-	assert.Error(t, manager.Parse(conf))
+	assert.Error(t, manager.Parse(context.Background(), conf))
 	assert.Equal(t, config{}, *conf)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -457,7 +457,7 @@ func TestDocument(t *testing.T) {
 	manager := newManager(t, driver)
 	conf := &config{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	// the document is merged with the file by the yaml tags
 	assert.Equal(t, config{Name: "consul", Server: yamlServer{Host: "localhost", Port: 9090}}, *conf)
 
@@ -483,7 +483,7 @@ func TestDocument_Absent(t *testing.T) {
 	manager := newManager(t, driver)
 	conf := &config{}
 	assert.NoError(t, manager.Register(conf))
-	err = manager.Parse(conf)
+	err = manager.Parse(context.Background(), conf)
 	assert.ErrorIs(t, err, fs.ErrNotExist)
 	assert.ErrorContains(t, err, "failed to load consul key app/config")
 
@@ -491,15 +491,15 @@ func TestDocument_Absent(t *testing.T) {
 	assert.NoError(t, err)
 	manager = newManager(t, driver)
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 
 	consul.setFails(1)
-	err = manager.Parse(conf)
+	err = manager.Parse(context.Background(), conf)
 	assert.ErrorContains(t, err, "500 Internal Server Error")
 	assert.False(t, errors.Is(err, fs.ErrNotExist))
 }
 
-func TestDriver_ParseContext(t *testing.T) {
+func TestDriver_ParseCancel(t *testing.T) {
 	consul := newFakeConsul(map[string]string{"app/name": "app", "app/config": "name: document\n"})
 	defer consul.Close()
 	type config struct {
@@ -514,13 +514,13 @@ func TestDriver_ParseContext(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &config{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.ParseContext(context.Background(), conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	assert.Equal(t, config{Name: "app", Document: "document"}, *conf)
 
-	// the requests are stopped by the context of ParseContext
+	// the requests are stopped by the context of Parse
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	err = manager.ParseContext(ctx, &config{})
+	err = manager.Parse(ctx, &config{})
 	assert.ErrorIs(t, err, context.Canceled)
 	assert.ErrorContains(t, err, "consul driver")
 	assert.ErrorContains(t, err, "yaml driver")

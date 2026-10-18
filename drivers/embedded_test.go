@@ -1,6 +1,7 @@
 package drivers_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -62,7 +63,7 @@ func TestEmbeddedStructs(t *testing.T) {
 			assert.NoError(t, err)
 			conf := &embeddedConfig{}
 			assert.NoError(t, manager.Register(conf))
-			assert.NoError(t, manager.Parse(conf))
+			assert.NoError(t, manager.Parse(context.Background(), conf))
 
 			assert.Equal(t, 1, conf.Port)
 			assert.Equal(t, "app", conf.Name)
@@ -99,7 +100,7 @@ func TestEmbeddedStructs_Env(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &config{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 
 	// auto keys are built without the names of the embedded structs
 	assert.Equal(t, 1, conf.Port)

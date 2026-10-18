@@ -11,7 +11,7 @@ type Config struct {
 ```
 
 ```go
-err := config.Parse(c)
+err := config.Parse(context.Background(), c)
 if errors.Is(err, tinyconf.ErrRequired) {
     // field DSN: required value is not set; field Password: required value is not set
     log.Fatal(err)
@@ -29,7 +29,7 @@ So a required field without sources can still be filled in the code before `Pars
 
 ```go
 c := &Config{DSN: "postgres://localhost/dev"}
-err := config.Parse(c) // DSN is not required to be in the environment
+err := config.Parse(context.Background(), c) // DSN is not required to be in the environment
 ```
 
 ## All at once

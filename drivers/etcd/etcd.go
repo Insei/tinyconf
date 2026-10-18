@@ -61,7 +61,7 @@ func (d *etcdDriver) Load() error {
 	return d.LoadContext(context.Background())
 }
 
-// LoadContext is Load with the context of the request, Manager calls it with the context of ParseContext.
+// LoadContext is Load with the context of the request, Manager calls it with the context of Parse.
 func (d *etcdDriver) LoadContext(ctx context.Context) error {
 	kvs, revision, err := d.client.get(ctx, d.listPrefix(), true)
 	if err != nil {

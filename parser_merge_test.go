@@ -1,6 +1,7 @@
 package tinyconf
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,7 +27,7 @@ func TestManager_Parse_Merge(t *testing.T) {
 	// the value of the struct is replaced by the first driver, it is not merged
 	conf := &Config{Hosts: []string{"initial"}}
 	assert.NoError(t, c.Register(conf))
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	assert.Equal(t, []string{"a", "b"}, conf.Hosts)
 	assert.Equal(t, map[string]string{"env": "prod", "team": "core"}, conf.Labels)
 	assert.Equal(t, &[]int{80, 443}, conf.Ports)
@@ -36,6 +37,6 @@ func TestManager_Parse_Merge(t *testing.T) {
 	assert.Contains(t, log.take(), "override: config=*tinyconf.Config driver=file field=Hosts key=hosts value=[a b]")
 
 	// the next Parse does not duplicate the items
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	assert.Equal(t, []string{"a", "b"}, conf.Hosts)
 }

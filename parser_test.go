@@ -379,7 +379,7 @@ func TestManager_ParseSubConfig(t *testing.T) {
 			}
 			conf := &Config{Field: FieldConfig{}}
 			assert.NoError(t, c.Register(conf))
-			assert.NoError(t, c.Parse(testCase.config))
+			assert.NoError(t, c.Parse(context.Background(), testCase.config))
 			assert.Equal(t, testCase.expectedFieldValues, testCase.config.Test)
 			assert.Equal(t, testCase.expectedFieldValues, testCase.config.Test2)
 		})
@@ -465,7 +465,7 @@ func TestManager_Parse(t *testing.T) {
 
 			assert.NoError(t, c.Register(tc.Config))
 
-			_ = c.Parse(tc.Config)
+			_ = c.Parse(context.Background(), tc.Config)
 
 			logger := c.log.(*testLogger)
 
@@ -582,7 +582,7 @@ func TestManager_Parse_UncomparableValues(t *testing.T) {
 	conf := &Config{}
 	assert.NoError(t, c.Register(conf))
 	assert.NotPanics(t, func() {
-		assert.NoError(t, c.Parse(conf))
+		assert.NoError(t, c.Parse(context.Background(), conf))
 	})
 	assert.Equal(t, []any{"a", "b"}, conf.List)
 	assert.Equal(t, map[string]any{"a": 1}, conf.Map)
@@ -605,7 +605,7 @@ func TestManager_Parse_InvalidConfig(t *testing.T) {
 			c := newPathMockManager(&pathMockDriver{values: map[string]any{"Test": "test"}})
 			assert.NoError(t, c.Register(&Config{}))
 			assert.NotPanics(t, func() {
-				assert.Error(t, c.Parse(testCase.Config))
+				assert.Error(t, c.Parse(context.Background(), testCase.Config))
 			})
 		})
 	}
@@ -634,7 +634,7 @@ func TestManager_Parse_DriverErrors(t *testing.T) {
 			})
 			conf := &Config{}
 			assert.NoError(t, c.Register(conf))
-			err := c.Parse(conf)
+			err := c.Parse(context.Background(), conf)
 			if testCase.WantError {
 				assert.ErrorIs(t, err, driverErr)
 				assert.Contains(t, err.Error(), "Port")
@@ -682,7 +682,7 @@ func TestManager_ParseSubConfig_SiblingPrefix(t *testing.T) {
 			c := newPathMockManager(testCase.Driver)
 			assert.NoError(t, c.Register(&Config{}))
 			conf := &HTTP{}
-			assert.NoError(t, c.Parse(conf))
+			assert.NoError(t, c.Parse(context.Background(), conf))
 			assert.Equal(t, 1, conf.Port)
 		})
 	}
@@ -701,7 +701,7 @@ func TestManager_ParseSubConfig_RepeatedName(t *testing.T) {
 	c := newPathMockManager(&pathMockDriver{values: map[string]any{"Auth.Auth.Token": "token"}})
 	assert.NoError(t, c.Register(&Config{}))
 	conf := &Auth{}
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	assert.Equal(t, "token", conf.Auth.Token)
 }
 
@@ -716,7 +716,7 @@ func TestManager_ParseSubConfig_ZeroValue(t *testing.T) {
 	c := newPathMockManager(&pathMockDriver{values: map[string]any{"HTTP.Host": "", "HTTP.Port": 0}})
 	assert.NoError(t, c.Register(&Config{}))
 	conf := &HTTP{Host: "default", Port: 8080}
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	assert.Equal(t, "", conf.Host)
 	assert.Equal(t, 0, conf.Port)
 }
@@ -785,7 +785,7 @@ func TestManager_Parse_Types(t *testing.T) {
 	c := newPathMockManager(driver)
 	conf := &Config{}
 	assert.NoError(t, c.Register(conf))
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	assert.Equal(t, expected, *conf)
 	// fields of the types that are parsed from a single value are not requested from drivers
 	assert.NotContains(t, driver.requested, "At.wall")
@@ -795,7 +795,7 @@ func TestManager_Parse_Types(t *testing.T) {
 
 	t.Run("sub config", func(t *testing.T) {
 		sub := &Nested{}
-		assert.NoError(t, c.Parse(sub))
+		assert.NoError(t, c.Parse(context.Background(), sub))
 		assert.Equal(t, expected.Nested, *sub)
 	})
 }
@@ -833,14 +833,14 @@ func TestManager_Parse_Loader(t *testing.T) {
 	conf := &Config{}
 	assert.NoError(t, c.Register(conf))
 
-	err := c.Parse(conf)
+	err := c.Parse(context.Background(), conf)
 	assert.ErrorIs(t, err, loadErr)
 	assert.True(t, c.log.(*testLogger).ErrorLogged)
 	// values of the failed driver are not used
 	assert.Equal(t, Config{Host: "localhost", Port: 80}, *conf)
 	assert.Empty(t, failed.requested)
 
-	assert.Error(t, c.Parse(conf))
+	assert.Error(t, c.Parse(context.Background(), conf))
 	// Load is called once per Parse
 	assert.Equal(t, 2, loaded.loaded)
 	assert.Equal(t, 2, failed.loaded)
@@ -923,7 +923,7 @@ func TestManager_Parse_Required(t *testing.T) {
 			c := newPathMockManager(&pathMockDriver{values: testCase.Values})
 			conf := testCase.Config
 			assert.NoError(t, c.Register(&conf))
-			err := c.Parse(&conf)
+			err := c.Parse(context.Background(), &conf)
 			if len(testCase.Missing) == 0 {
 				assert.NoError(t, err)
 			} else {
@@ -936,7 +936,7 @@ func TestManager_Parse_Required(t *testing.T) {
 
 			t.Run("sub config", func(t *testing.T) {
 				sub := testCase.Config.HTTP
-				err := c.Parse(&sub)
+				err := c.Parse(context.Background(), &sub)
 				var missing []string
 				for _, path := range testCase.Missing {
 					if strings.HasPrefix(path, "HTTP.") {
@@ -983,7 +983,7 @@ func TestManager_Sources(t *testing.T) {
 	assert.NoError(t, c.Register(conf))
 	assert.Nil(t, c.Sources(conf))
 
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	expected := []FieldSource{
 		{Field: "Name", Driver: "first", Source: "first:Name"},
 		{Field: "HTTP.Host", Driver: "first", Source: "first:HTTP.Host"},
@@ -999,7 +999,7 @@ func TestManager_Sources(t *testing.T) {
 	t.Run("sub config", func(t *testing.T) {
 		sub := &HTTP{}
 		assert.Nil(t, c.Sources(sub))
-		assert.NoError(t, c.Parse(sub))
+		assert.NoError(t, c.Parse(context.Background(), sub))
 		assert.Equal(t, []FieldSource{
 			{Field: "Host", Driver: "first", Source: "first:HTTP.Host"},
 			{Field: "Port", Driver: "second", Source: "second:HTTP.Port"},
@@ -1010,7 +1010,7 @@ func TestManager_Sources(t *testing.T) {
 	t.Run("sources are updated by the next parse", func(t *testing.T) {
 		delete(second.values, "HTTP.Port")
 		first.errs["Name"] = errors.New("random error")
-		assert.Error(t, c.Parse(conf))
+		assert.Error(t, c.Parse(context.Background(), conf))
 		assert.Equal(t, []FieldSource{
 			{Field: "HTTP.Host", Driver: "first", Source: "first:HTTP.Host"},
 			{Field: "HTTP.Port", Driver: "first", Source: "first:HTTP.Port"},
@@ -1058,7 +1058,7 @@ func TestManager_RegistrationOrder(t *testing.T) {
 
 		// sub config is parsed from the first registered config with this type
 		sub := &Shared{}
-		assert.NoError(t, c.Parse(sub))
+		assert.NoError(t, c.Parse(context.Background(), sub))
 		assert.Equal(t, "nested", sub.Value)
 		assert.Equal(t, []string{"Nested.Shared.Value"}, driver.requested)
 
@@ -1087,8 +1087,8 @@ func TestManager_Concurrency(t *testing.T) {
 				conf, sub := &Config{}, &HTTP{}
 				assert.NoError(t, c.Register(&struct{ Other string }{}))
 				assert.NoError(t, c.Register(conf))
-				assert.NoError(t, c.Parse(conf))
-				assert.NoError(t, c.Parse(sub))
+				assert.NoError(t, c.Parse(context.Background(), conf))
+				assert.NoError(t, c.Parse(context.Background(), sub))
 				assert.Equal(t, "static", conf.HTTP.Host)
 				assert.Equal(t, "static", sub.Host)
 				assert.Len(t, c.Sources(conf), 1)
