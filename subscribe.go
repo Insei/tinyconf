@@ -182,7 +182,7 @@ func (c *Manager) watch(ctx context.Context) {
 			defer wg.Done()
 			// the driver can not watch anymore, other drivers continue
 			if err := watcher.Watch(ctx, notify); err != nil && ctx.Err() == nil {
-				c.log.Error(errorMessage(err, "failed to watch"), LogField("driver", d.GetName()), LogField("details", err.Error()))
+				c.logger().Error(errorMessage(err, "failed to watch"), LogField("driver", d.GetName()), LogField("details", err.Error()))
 				c.setStatus(func(s *ReloadStatus) {
 					if s.StoppedDrivers == nil {
 						s.StoppedDrivers = make(map[string]error)
@@ -252,7 +252,7 @@ func (c *Manager) reloadConfig(ctx context.Context, typeOf reflect.Type, subscri
 	// the requests of the reload are stopped when watching is stopped
 	sources, err := c.parse(ctx, fresh, true)
 	if err != nil {
-		c.log.Error(errorMessage(err, "failed to reload"), LogField("config", typeOf.String()), LogField("details", err.Error()))
+		c.logger().Error(errorMessage(err, "failed to reload"), LogField("config", typeOf.String()), LogField("details", err.Error()))
 		return fmt.Errorf("config %s: %w", typeOf, err)
 	}
 	prev := state.current.Load()
@@ -275,7 +275,7 @@ func (c *Manager) reloadConfig(ctx context.Context, typeOf reflect.Type, subscri
 func (c *Manager) callSubscriber(sub *subscriber, prev, next any) {
 	defer func() {
 		if r := recover(); r != nil {
-			c.log.Error("subscriber panicked", LogField("config", sub.root.String()), LogField("details", fmt.Sprint(r)))
+			c.logger().Error("subscriber panicked", LogField("config", sub.root.String()), LogField("details", fmt.Sprint(r)))
 		}
 	}()
 	sub.notify(prev, next)

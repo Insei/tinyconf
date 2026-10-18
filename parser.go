@@ -20,7 +20,7 @@ type Registered struct {
 
 type Manager struct {
 	drivers    []Driver
-	log        Logger
+	log        managerLogger
 	registered map[reflect.Type]*Registered
 
 	mu sync.RWMutex
@@ -266,7 +266,7 @@ func (c *Manager) parse(ctx context.Context, conf any, reload bool) ([]FieldSour
 	if !reload {
 		for _, path := range paths {
 			field := register.Storage.MustFind(path)
-			c.log.Debug("initial",
+			c.logger().Debug("initial",
 				LogField("config", confTypeOf.String()),
 				LogField("field", path),
 				LogField("value", getLoggerValue(field, convert.GetFieldValue(field, confParse))))
@@ -285,7 +285,7 @@ func (c *Manager) parse(ctx context.Context, conf any, reload bool) ([]FieldSour
 			err = loader.Load()
 		}
 		if err != nil {
-			c.log.Error(errorMessage(err, "failed to load"), LogField("driver", d.GetName()), LogField("details", err.Error()))
+			c.logger().Error(errorMessage(err, "failed to load"), LogField("driver", d.GetName()), LogField("details", err.Error()))
 			errs = append(errs, fmt.Errorf("%s driver: %w", d.GetName(), err))
 			continue
 		}
@@ -294,7 +294,7 @@ func (c *Manager) parse(ctx context.Context, conf any, reload bool) ([]FieldSour
 	for _, d := range drivers {
 		for _, path := range paths {
 			field := register.Storage.MustFind(path)
-			log := c.log.With(
+			log := c.logger().With(
 				LogField("config", confTypeOf.String()),
 				LogField("driver", d.GetName()),
 				LogField("field", path))
@@ -424,7 +424,7 @@ func (c *Manager) logChanges(storage fmap.Storage, prev, next any, prefix string
 			fields = append(fields, LogField("key", source.Source))
 		}
 		fields = append(fields, LogField("value", getLoggerValue(field, value)))
-		c.log.Debug("override", fields...)
+		c.logger().Debug("override", fields...)
 	}
 }
 
@@ -449,7 +449,7 @@ func (c *Manager) GenDoc(driverName string) string {
 }
 
 func New(opts ...Option) (*Manager, error) {
-	m := &Manager{log: &noopLogger{}, registered: map[reflect.Type]*Registered{}}
+	m := &Manager{registered: map[reflect.Type]*Registered{}}
 	count := countDrivers(opts...)
 	if count > 0 {
 		m.drivers = make([]Driver, 0, count)
@@ -460,6 +460,8 @@ func New(opts ...Option) (*Manager, error) {
 		case driverOption:
 			opt.apply(m)
 		case loggerOption:
+			opt.apply(m)
+		case deferredLoggerOption:
 			opt.apply(m)
 		}
 	}
