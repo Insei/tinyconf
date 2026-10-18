@@ -61,6 +61,39 @@ type Config struct {
 
 Add the tag to the parent, `yaml:"http"`, to read the value from `http.host`.
 
+## Logger from the config
+
+The level, the format or the output of the logger are often a part of the config, but the config is parsed by the manager that already needs the logger. `WithDeferredLogger` breaks this cycle: the manager keeps the log records in memory, and `SetLogger` writes them to the logger created from the parsed config.
+
+```go
+config, _ := tinyconf.New(
+    tinyconf.WithDriver(tagDriver),
+    tinyconf.WithDriver(yamlDriver),
+    tinyconf.WithDeferredLogger(), // the records are kept until SetLogger
+)
+conf := &Config{}
+_ = config.Register(conf)
+err := config.Parse(ctx, conf)
+
+log := newLogger(conf.Logging)                   // the logger of the application from its config
+config.SetLogger(logger.NewSlogLogger(log))      // the kept records are written to it
+if err != nil {
+    log.Error("config is not parsed", "error", err)
+    os.Exit(1)
+}
+
+// the logger follows the changes of the config without restart
+_ = tinyconf.Subscribe(ctx, config, func(_, next *Logging) {
+    config.SetLogger(logger.NewSlogLogger(newLogger(*next)))
+})
+```
+
+* The records of the first `Parse` get to the logger of the application in its format, its level filters them.
+* `SetLogger` is safe for concurrent use with `Parse`, reloads and other goroutines. The records written during `SetLogger` wait for the kept ones, so nothing is lost and the order is kept.
+* Up to 1000 records are kept, the oldest are dropped, and the logger gets a warning with the count of the dropped records.
+* `SetLogger(nil)` disables logging, the kept records are dropped.
+* `SetLogger` replaces the logger set by `WithLogger` too, without `WithDeferredLogger` nothing is kept.
+
 ## Bundled loggers
 
 ```go
