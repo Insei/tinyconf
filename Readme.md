@@ -33,6 +33,7 @@ Loggers: `logger.NewFmtLogger`, `logger.NewSlogLogger` (Go 1.21+), and the adapt
 | `tinyconf.Subscribe(ctx, m, onChange) error` | calls `onChange(prev, next *T)` after the changes of the config or the sub config `T` |
 | `tinyconf.Current[T](m) *T` | returns the current version of the config or the sub config `T` |
 | `ReloadStatus() ReloadStatus` | state of watching and reloading for the health checks: the last error, stopped drivers |
+| `SetLogger(l Logger)` | replaces the logger, safe for concurrent use; with `WithDeferredLogger()` the records of parsing before it are written to the new logger |
 
 `Parse` parses all fields even if some of them have errors, all errors are returned as one error that can be checked
 with `errors.Is` and `errors.As`.

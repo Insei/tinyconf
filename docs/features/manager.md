@@ -17,6 +17,7 @@ config, err := tinyconf.New(
 |---|---|
 | `WithDriver(driver)` | adds the driver, can be used many times |
 | `WithLogger(logger)` | sets the logger, see [Logging](logging.md) |
+| `WithDeferredLogger()` | keeps the log records until the logger is set by `SetLogger`, see [Logger from the config](logging.md#logger-from-the-config) |
 
 ## Priority of drivers
 
@@ -67,6 +68,7 @@ Every request of the drivers is limited to 30 seconds anyway. The reloads use th
 | `tinyconf.Subscribe(ctx, m, onChange)` | calls `onChange` after the changes of the config or the sub config, see [Reloading](reloading.md) |
 | `tinyconf.Current[T](m)` | returns the current version of the config or the sub config, see [Reloading](reloading.md) |
 | `ReloadStatus()` | state of watching and reloading for the health checks, see [Health checks](reloading.md#health-checks) |
+| `SetLogger(logger)` | replaces the logger, safe for concurrent use, see [Logger from the config](logging.md#logger-from-the-config) |
 
 ## Errors
 
