@@ -216,14 +216,15 @@ func TestNew(t *testing.T) {
 		name     string
 		opts     []Option
 		expected *Manager
+		logger   Logger
 	}{
 		{
 			name: "Empty Options",
 			opts: []Option{},
 			expected: &Manager{
-				log:        &noopLogger{},
 				registered: map[reflect.Type]*Registered{},
 			},
+			logger: noop,
 		},
 		{
 			name: "With Driver Option",
@@ -231,12 +232,12 @@ func TestNew(t *testing.T) {
 				WithDriver(&mockDriver{}),
 			},
 			expected: &Manager{
-				log:        &noopLogger{},
 				registered: map[reflect.Type]*Registered{},
 				drivers: []Driver{
 					&mockDriver{},
 				},
 			},
+			logger: noop,
 		},
 		{
 			name: "With Logger Option",
@@ -244,9 +245,9 @@ func TestNew(t *testing.T) {
 				WithLogger(&mockLogger{}),
 			},
 			expected: &Manager{
-				log:        &mockLogger{},
 				registered: map[reflect.Type]*Registered{},
 			},
+			logger: &mockLogger{},
 		},
 		{
 			name: "With Multiple Different Options",
@@ -255,12 +256,12 @@ func TestNew(t *testing.T) {
 				WithLogger(&mockLogger{}),
 			},
 			expected: &Manager{
-				log:        &mockLogger{},
 				registered: map[reflect.Type]*Registered{},
 				drivers: []Driver{
 					&mockDriver{},
 				},
 			},
+			logger: &mockLogger{},
 		},
 		{
 			name: "With Multiple Identical Options",
@@ -269,13 +270,13 @@ func TestNew(t *testing.T) {
 				WithDriver(&mockDriver{}),
 			},
 			expected: &Manager{
-				log:        &noopLogger{},
 				registered: map[reflect.Type]*Registered{},
 				drivers: []Driver{
 					&mockDriver{},
 					&mockDriver{},
 				},
 			},
+			logger: noop,
 		},
 	}
 
@@ -283,7 +284,9 @@ func TestNew(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			result, err := New(test.opts...)
 			assert.NoError(t, err)
-			assert.Equal(t, test.expected, result)
+			assert.Equal(t, test.expected.drivers, result.drivers)
+			assert.Equal(t, test.expected.registered, result.registered)
+			assert.Equal(t, test.logger, result.logger())
 		})
 	}
 }
@@ -372,11 +375,10 @@ func TestManager_ParseSubConfig(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.Name, func(t *testing.T) {
-			c := &Manager{
+			c := withLogger(&Manager{
 				drivers:    testCase.Drivers,
 				registered: make(map[reflect.Type]*Registered),
-				log:        &testLogger{},
-			}
+			}, &testLogger{})
 			conf := &Config{Field: FieldConfig{}}
 			assert.NoError(t, c.Register(conf))
 			assert.NoError(t, c.Parse(context.Background(), testCase.config))
@@ -457,17 +459,16 @@ func TestManager_Parse(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
-			c := &Manager{
+			c := withLogger(&Manager{
 				drivers:    tc.Drivers,
 				registered: make(map[reflect.Type]*Registered),
-				log:        &testLogger{},
-			}
+			}, &testLogger{})
 
 			assert.NoError(t, c.Register(tc.Config))
 
 			_ = c.Parse(context.Background(), tc.Config)
 
-			logger := c.log.(*testLogger)
+			logger := c.logger().(*testLogger)
 
 			assert.Equal(t, tc.ExpectWarnLogged, logger.WarnLogged)
 			assert.Equal(t, tc.ExpectErrorLogged, logger.ErrorLogged)
@@ -526,11 +527,10 @@ func TestManager_GenDoc(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Manager{
+			c := withLogger(&Manager{
 				drivers:    tt.fields.drivers,
-				log:        tt.fields.log,
 				registered: tt.fields.registered,
-			}
+			}, tt.fields.log)
 			assert.Equalf(t, tt.want, c.GenDoc(tt.args.driverName), "GenDoc(%v)", tt.args.driverName)
 		})
 	}
@@ -563,11 +563,10 @@ func (md *pathMockDriver) GetValue(field fmap.Field) (*Value, error) {
 }
 
 func newPathMockManager(driver *pathMockDriver) *Manager {
-	return &Manager{
+	return withLogger(&Manager{
 		drivers:    []Driver{driver},
 		registered: make(map[reflect.Type]*Registered),
-		log:        &testLogger{},
-	}
+	}, &testLogger{})
 }
 
 func TestManager_Parse_UncomparableValues(t *testing.T) {
@@ -638,7 +637,7 @@ func TestManager_Parse_DriverErrors(t *testing.T) {
 			if testCase.WantError {
 				assert.ErrorIs(t, err, driverErr)
 				assert.Contains(t, err.Error(), "Port")
-				assert.True(t, c.log.(*testLogger).ErrorLogged)
+				assert.True(t, c.logger().(*testLogger).ErrorLogged)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -825,17 +824,16 @@ func TestManager_Parse_Loader(t *testing.T) {
 		loadErr:        loadErr,
 	}
 	loaded := &loaderMockDriver{pathMockDriver: pathMockDriver{values: map[string]any{"Port": 80}}}
-	c := &Manager{
+	c := withLogger(&Manager{
 		drivers:    []Driver{&pathMockDriver{values: map[string]any{"Host": "localhost"}}, loaded, failed},
 		registered: make(map[reflect.Type]*Registered),
-		log:        &testLogger{},
-	}
+	}, &testLogger{})
 	conf := &Config{}
 	assert.NoError(t, c.Register(conf))
 
 	err := c.Parse(context.Background(), conf)
 	assert.ErrorIs(t, err, loadErr)
-	assert.True(t, c.log.(*testLogger).ErrorLogged)
+	assert.True(t, c.logger().(*testLogger).ErrorLogged)
 	// values of the failed driver are not used
 	assert.Equal(t, Config{Host: "localhost", Port: 80}, *conf)
 	assert.Empty(t, failed.requested)
@@ -974,11 +972,10 @@ func TestManager_Sources(t *testing.T) {
 	second := &namedPathMockDriver{name: "second", pathMockDriver: pathMockDriver{
 		values: map[string]any{"HTTP.Port": 8080},
 	}}
-	c := &Manager{
+	c := withLogger(&Manager{
 		drivers:    []Driver{first, second},
 		registered: make(map[reflect.Type]*Registered),
-		log:        &testLogger{},
-	}
+	}, &testLogger{})
 	conf := &Config{}
 	assert.NoError(t, c.Register(conf))
 	assert.Nil(t, c.Sources(conf))
@@ -1045,11 +1042,10 @@ func TestManager_RegistrationOrder(t *testing.T) {
 			"Shared.Value":        "shared",
 			"Nested.Shared.Value": "nested",
 		}}}
-		c := &Manager{
+		c := withLogger(&Manager{
 			drivers:    []Driver{driver},
 			registered: make(map[reflect.Type]*Registered),
-			log:        &testLogger{},
-		}
+		}, &testLogger{})
 		assert.NoError(t, c.Register(&Third{}))
 		assert.NoError(t, c.Register(&First{}))
 		assert.NoError(t, c.Register(&Second{}))
@@ -1157,4 +1153,12 @@ func (md *watchMockDriver) Watch(ctx context.Context, onChange func()) error {
 			onChange()
 		}
 	}
+}
+
+// withLogger sets the logger of the manager created by the literal in the tests.
+func withLogger(m *Manager, l Logger) *Manager {
+	if l != nil {
+		m.storeLogger(l)
+	}
+	return m
 }
