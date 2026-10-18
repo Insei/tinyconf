@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/env"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/env"
 )
 
 // With the prefix, auto keys and indexed keys the variables are found without the env tags of every field.

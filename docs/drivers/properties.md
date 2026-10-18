@@ -3,7 +3,7 @@
 The properties driver reads values from `.properties` files — the format of Java and Spring, `application.properties`.
 
 ```go
-import "github.com/insei/tinyconf/drivers/properties"
+import "github.com/insei/tinyconf/v2/drivers/properties"
 
 propertiesDriver, err := properties.New("application.properties")
 ```

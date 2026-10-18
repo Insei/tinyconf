@@ -2,7 +2,7 @@ module example
 
 go 1.21
 
-require github.com/insei/tinyconf v1.1.0
+require github.com/insei/tinyconf/v2 v2.0.0
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -13,4 +13,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/insei/tinyconf v1.1.0 => ../
+replace github.com/insei/tinyconf/v2 v2.0.0 => ../

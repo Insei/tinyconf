@@ -14,8 +14,8 @@ import (
 	"github.com/insei/fmap/v3"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/yaml"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/yaml"
 )
 
 func init() {

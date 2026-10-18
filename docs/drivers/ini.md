@@ -3,7 +3,7 @@
 The ini driver reads values from INI files.
 
 ```go
-import "github.com/insei/tinyconf/drivers/ini"
+import "github.com/insei/tinyconf/v2/drivers/ini"
 
 iniDriver, err := ini.New("config.ini")
 ```

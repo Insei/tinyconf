@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/flag"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/flag"
 )
 
 // Flags are read from the arguments, unknown flags are ignored, so the driver works next to any CLI framework.

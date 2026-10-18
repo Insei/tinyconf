@@ -11,7 +11,7 @@ import (
 	"github.com/insei/fmap/v3"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/v2"
 )
 
 type testConfig struct {

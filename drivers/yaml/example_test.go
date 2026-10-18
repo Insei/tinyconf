@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/yaml"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/yaml"
 )
 
 // Several sources are merged in the order of addition: the next source overrides the keys of the previous one.

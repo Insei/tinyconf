@@ -15,8 +15,8 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	tcvault "github.com/testcontainers/testcontainers-go/modules/vault"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/vault"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/vault"
 )
 
 const (

@@ -10,7 +10,7 @@ import (
 
 	"github.com/insei/fmap/v3"
 
-	"github.com/insei/tinyconf/convert"
+	"github.com/insei/tinyconf/v2/convert"
 )
 
 type Registered struct {

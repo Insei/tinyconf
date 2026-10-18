@@ -18,14 +18,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	yamlv3 "gopkg.in/yaml.v3"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/convert"
-	"github.com/insei/tinyconf/drivers/env"
-	"github.com/insei/tinyconf/drivers/flag"
-	jsondriver "github.com/insei/tinyconf/drivers/json"
-	"github.com/insei/tinyconf/drivers/tag"
-	tomldriver "github.com/insei/tinyconf/drivers/toml"
-	"github.com/insei/tinyconf/drivers/yaml"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/convert"
+	"github.com/insei/tinyconf/v2/drivers/env"
+	"github.com/insei/tinyconf/v2/drivers/flag"
+	jsondriver "github.com/insei/tinyconf/v2/drivers/json"
+	"github.com/insei/tinyconf/v2/drivers/tag"
+	tomldriver "github.com/insei/tinyconf/v2/drivers/toml"
+	"github.com/insei/tinyconf/v2/drivers/yaml"
 )
 
 type conformanceNamedString string

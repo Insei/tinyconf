@@ -3,7 +3,7 @@
 The json driver reads values from JSON files.
 
 ```go
-import "github.com/insei/tinyconf/drivers/json"
+import "github.com/insei/tinyconf/v2/drivers/json"
 
 jsonDriver, err := json.New("config.json")
 ```

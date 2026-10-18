@@ -7,7 +7,7 @@ package zaplogger
 import (
 	"go.uber.org/zap"
 
-	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/v2"
 )
 
 type zapLogger struct {

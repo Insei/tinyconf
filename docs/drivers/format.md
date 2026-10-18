@@ -3,7 +3,7 @@
 The format driver reads config files of any format with nested objects. The format is set by a function that decodes the content to a map, everything else is the same as in the [yaml](yaml.md), [json](json.md) and [toml](toml.md) drivers: several files, merging, embedded files, [remote documents](consul.md#document), environment variables in the content, [reloading](../features/reloading.md), [documentation](../features/gendoc.md).
 
 ```go
-import "github.com/insei/tinyconf/drivers/format"
+import "github.com/insei/tinyconf/v2/drivers/format"
 
 driver, err := format.New("hujson", decodeHuJSON, "config.hujson")
 ```

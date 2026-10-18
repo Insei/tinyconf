@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 
-	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/v2"
 )
 
 func TestLogger(t *testing.T) {

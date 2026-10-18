@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/format"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/format"
 )
 
 // A format is plugged by the decoder: here it is JSON without the lines with // comments.

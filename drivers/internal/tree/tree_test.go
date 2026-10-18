@@ -16,8 +16,8 @@ import (
 	"github.com/insei/fmap/v3"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/convert"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/convert"
 )
 
 func TestLookup(t *testing.T) {

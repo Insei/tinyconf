@@ -18,8 +18,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/insei/fmap/v3"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/convert"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/convert"
 )
 
 // Decoder decodes the config content to the map.

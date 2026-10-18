@@ -3,7 +3,7 @@
 The toml driver reads values from TOML files.
 
 ```go
-import "github.com/insei/tinyconf/drivers/toml"
+import "github.com/insei/tinyconf/v2/drivers/toml"
 
 tomlDriver, err := toml.New("config.toml")
 ```

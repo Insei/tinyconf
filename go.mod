@@ -1,4 +1,4 @@
-module github.com/insei/tinyconf
+module github.com/insei/tinyconf/v2
 
 go 1.19
 

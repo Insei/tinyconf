@@ -12,7 +12,7 @@ Both ways report changes for [reloading](../features/reloading.md) as soon as th
 ## Key per field
 
 ```go
-import "github.com/insei/tinyconf/drivers/consul"
+import "github.com/insei/tinyconf/v2/drivers/consul"
 
 consulDriver, err := consul.New("app")
 ```
