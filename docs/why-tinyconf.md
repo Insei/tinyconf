@@ -63,10 +63,12 @@ Checked against the current documentation of the libraries on 2026-10-16.
 - **No HCL out of the box.** The [format driver](drivers/format.md) accepts any decoder, but the conversion of HCL to a map is up to you.
 - **Own flag parser.** It ignores unknown flags, so it lives next to cobra or any CLI framework, but it is not a pflag integration.
 - **Subscriptions are package functions,** `tinyconf.Subscribe(ctx, config, ...)`, to keep Go 1.19 support; methods with type parameters need Go 1.27.
-- **zap is a dependency of the core** because of the bundled logger adapter, even if you use another logger.
 - **A younger and smaller project** than viper and koanf.
 
 ## Migrating
+
+From tinyconf v1: see [Upgrading to v2](upgrading.md).
+
 
 | From | To tinyconf |
 |---|---|
