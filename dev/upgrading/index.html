@@ -1376,6 +1376,9 @@
 <li>
 <p>Fields of an <a href="../features/structs/#embedded-structs">embedded struct</a> without the tag are on the level of the embedding struct, like in <code>encoding/json</code>. Check the keys of such fields in the files and the environment variables.</p>
 </li>
+<li>
+<p><code>Parse</code> returns the errors: a value that can't be converted to the type of the field, a file that can't be read, a field with <code>required:"true"</code> without a value. v1 only logged them and returned <code>nil</code>. All fields are parsed anyway, the errors are returned as one error, see <a href="../features/manager/#errors">Errors</a>.</p>
+</li>
 </ol>
 
 
