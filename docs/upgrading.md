@@ -13,3 +13,5 @@ v2 changes the module path and a few methods. The steps for the code of v1:
 3. The zap adapter is the separate module, zap is not a dependency of the core anymore: `logger.NewZapLogger(l)` is `zaplogger.New(l)` from `github.com/insei/tinyconf/logger/zaplogger`, see [Logging](features/logging.md).
 
 4. Fields of an [embedded struct](features/structs.md#embedded-structs) without the tag are on the level of the embedding struct, like in `encoding/json`. Check the keys of such fields in the files and the environment variables.
+
+5. `Parse` returns the errors: a value that can't be converted to the type of the field, a file that can't be read, a field with `required:"true"` without a value. v1 only logged them and returned `nil`. All fields are parsed anyway, the errors are returned as one error, see [Errors](features/manager.md#errors).
