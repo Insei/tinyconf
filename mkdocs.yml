@@ -67,12 +67,13 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/Insei/tinyconf
     - icon: simple/go
-      link: https://pkg.go.dev/github.com/insei/tinyconf
+      link: https://pkg.go.dev/github.com/insei/tinyconf/v2
 
 nav:
   - Get started: index.md
   - Why tinyconf?: why-tinyconf.md
   - Use cases: use-cases.md
+  - Upgrading to v2: upgrading.md
   - Features:
       - features/index.md
       - Manager: features/manager.md
