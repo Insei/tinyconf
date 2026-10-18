@@ -113,8 +113,11 @@ func TestLoggerOption_apply(t *testing.T) {
 
 			opt.apply(manager)
 
-			if manager.log != tt.expected {
-				t.Errorf("Expected: %v, but got: %v", tt.expected, manager.log)
+			if tt.expected == nil {
+				tt.expected = noop
+			}
+			if manager.logger() != tt.expected {
+				t.Errorf("Expected: %v, but got: %v", tt.expected, manager.logger())
 			}
 		})
 	}
