@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/v2"
 )
 
 func TestFmtLogger_Fields(t *testing.T) {

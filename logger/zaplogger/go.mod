@@ -2,10 +2,10 @@ module github.com/insei/tinyconf/logger/zaplogger
 
 go 1.19
 
-replace github.com/insei/tinyconf => ../../
+replace github.com/insei/tinyconf/v2 => ../../
 
 require (
-	github.com/insei/tinyconf v1.3.2
+	github.com/insei/tinyconf/v2 v2.0.0
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
 )

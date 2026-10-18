@@ -6,7 +6,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/v2"
 )
 
 type slogLogger struct {

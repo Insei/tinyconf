@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/v2"
 )
 
 // DefaultEndpoint is used if the endpoints are not set by the option and by the ETCDCTL_ENDPOINTS variable.

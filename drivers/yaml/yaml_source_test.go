@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/internal/tree"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/internal/tree"
 )
 
 func TestYamlDriver_WithSource(t *testing.T) {

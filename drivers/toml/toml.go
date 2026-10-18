@@ -10,9 +10,9 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/insei/fmap/v3"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/convert"
-	"github.com/insei/tinyconf/drivers/internal/tree"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/convert"
+	"github.com/insei/tinyconf/v2/drivers/internal/tree"
 )
 
 type tomlDriver struct {

@@ -13,8 +13,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/internal/tree"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/internal/tree"
 )
 
 // decodeLines decodes the format of the tests: key.path=value lines, the parts of the key are nested objects.

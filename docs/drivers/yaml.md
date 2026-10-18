@@ -3,7 +3,7 @@
 The yaml driver reads values from YAML files.
 
 ```go
-import "github.com/insei/tinyconf/drivers/yaml"
+import "github.com/insei/tinyconf/v2/drivers/yaml"
 
 yamlDriver, err := yaml.New("config.yaml")
 ```

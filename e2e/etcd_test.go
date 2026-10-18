@@ -18,9 +18,9 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	tcetcd "github.com/testcontainers/testcontainers-go/modules/etcd"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/etcd"
-	"github.com/insei/tinyconf/drivers/yaml"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/etcd"
+	"github.com/insei/tinyconf/v2/drivers/yaml"
 )
 
 const etcdImage = "quay.io/coreos/etcd:v3.5.17"

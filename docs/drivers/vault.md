@@ -3,7 +3,7 @@
 The vault driver reads values from the [KV secrets engine](https://developer.hashicorp.com/vault/docs/secrets/kv) of HashiCorp Vault.
 
 ```go
-import "github.com/insei/tinyconf/drivers/vault"
+import "github.com/insei/tinyconf/v2/drivers/vault"
 
 vaultDriver, err := vault.New("app/config")
 ```

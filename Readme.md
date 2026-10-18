@@ -1,7 +1,7 @@
 [![codecov](https://codecov.io/gh/Insei/tinyconf/graph/badge.svg?token=TSOJ1SWF9D)](https://codecov.io/gh/Insei/tinyconf)
 [![build](https://github.com/insei/tinyconf/actions/workflows/go.yml/badge.svg)](https://github.com/Insei/tinyconf/actions/workflows/go.yml)
 [![Goreport](https://goreportcard.com/badge/github.com/insei/tinyconf)](https://goreportcard.com/report/github.com/insei/tinyconf)
-[![GoDoc](https://godoc.org/github.com/insei/tinyconf?status.svg)](https://godoc.org/github.com/insei/tinyconf)
+[![GoDoc](https://godoc.org/github.com/insei/tinyconf/v2?status.svg)](https://godoc.org/github.com/insei/tinyconf/v2)
 # tinyconf
 tinyconf - a simple and universal library for parsing configs.
 
@@ -10,8 +10,9 @@ Documentation: [insei.github.io/tinyconf](https://insei.github.io/tinyconf/) —
 # Installation
 Install via go get. Note that Go 1.19 or newer is required.
 ```sh
-go get github.com/insei/tinyconf@latest
+go get github.com/insei/tinyconf/v2@latest
 ```
+Upgrading from v1: see [Upgrading to v2](https://insei.github.io/tinyconf/latest/upgrading/).
 
 # Description
 tinyconf fills config structs with values from drivers. When initializing `tinyconf.Manager`, you can add a logger to it,
@@ -190,12 +191,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/env"
-	"github.com/insei/tinyconf/drivers/flag"
-	"github.com/insei/tinyconf/drivers/tag"
-	"github.com/insei/tinyconf/drivers/yaml"
-	"github.com/insei/tinyconf/logger"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/env"
+	"github.com/insei/tinyconf/v2/drivers/flag"
+	"github.com/insei/tinyconf/v2/drivers/tag"
+	"github.com/insei/tinyconf/v2/drivers/yaml"
+	"github.com/insei/tinyconf/v2/logger"
 )
 
 type HTTP struct {
@@ -305,4 +306,4 @@ If the driver implements the optional `tinyconf.Loader` or `tinyconf.ContextLoad
 so the driver can read its source once and not for every field.
 If the driver implements the optional `tinyconf.Watcher` interface, it can report changes of its source for reloading.
 
-More examples: the service in the [`example`](example) directory, runnable examples on [pkg.go.dev](https://pkg.go.dev/github.com/insei/tinyconf#pkg-examples), recipes in the [documentation](https://insei.github.io/tinyconf/latest/use-cases/).
+More examples: the service in the [`example`](example) directory, runnable examples on [pkg.go.dev](https://pkg.go.dev/github.com/insei/tinyconf/v2#pkg-examples), recipes in the [documentation](https://insei.github.io/tinyconf/latest/use-cases/).

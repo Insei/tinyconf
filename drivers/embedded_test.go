@@ -7,11 +7,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/env"
-	"github.com/insei/tinyconf/drivers/json"
-	"github.com/insei/tinyconf/drivers/toml"
-	"github.com/insei/tinyconf/drivers/yaml"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/env"
+	"github.com/insei/tinyconf/v2/drivers/json"
+	"github.com/insei/tinyconf/v2/drivers/toml"
+	"github.com/insei/tinyconf/v2/drivers/yaml"
 )
 
 type embeddedCommon struct {

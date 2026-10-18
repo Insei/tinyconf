@@ -3,7 +3,7 @@
 The flag driver reads values from command line flags.
 
 ```go
-import "github.com/insei/tinyconf/drivers/flag"
+import "github.com/insei/tinyconf/v2/drivers/flag"
 
 flagDriver, err := flag.New()
 ```

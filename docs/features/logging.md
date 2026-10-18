@@ -64,7 +64,7 @@ Add the tag to the parent, `yaml:"http"`, to read the value from `http.host`.
 ## Bundled loggers
 
 ```go
-import "github.com/insei/tinyconf/logger"
+import "github.com/insei/tinyconf/v2/logger"
 
 // prints to stdout, levels: FATAL, ERROR, WARN, INFO, DEBUG, TRACE
 tinyconf.WithLogger(logger.NewFmtLogger(logger.INFO))

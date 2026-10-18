@@ -3,7 +3,7 @@
 The env driver reads values from environment variables and `.env` files.
 
 ```go
-import "github.com/insei/tinyconf/drivers/env"
+import "github.com/insei/tinyconf/v2/drivers/env"
 
 envDriver, err := env.New()
 ```

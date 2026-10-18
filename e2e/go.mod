@@ -2,10 +2,10 @@ module github.com/insei/tinyconf/e2e
 
 go 1.25.0
 
-replace github.com/insei/tinyconf => ../
+replace github.com/insei/tinyconf/v2 => ../
 
 require (
-	github.com/insei/tinyconf v1.3.2
+	github.com/insei/tinyconf/v2 v2.0.0
 	github.com/moby/moby/api v1.55.0
 	github.com/stretchr/testify v1.12.1
 	github.com/testcontainers/testcontainers-go v0.44.0

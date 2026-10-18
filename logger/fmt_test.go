@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/v2"
 )
 
 // define a utility to capture stdout

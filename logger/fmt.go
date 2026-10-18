@@ -3,7 +3,7 @@ package logger
 import (
 	"fmt"
 
-	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/v2"
 )
 
 type level uint8

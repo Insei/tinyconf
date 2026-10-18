@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/env"
-	"github.com/insei/tinyconf/drivers/tag"
-	"github.com/insei/tinyconf/drivers/yaml"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/env"
+	"github.com/insei/tinyconf/v2/drivers/tag"
+	"github.com/insei/tinyconf/v2/drivers/yaml"
 )
 
 type benchServer struct {

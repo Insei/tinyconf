@@ -10,11 +10,11 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/cmp118"
-	"github.com/insei/tinyconf/convert"
-	"github.com/insei/tinyconf/drivers/internal/tree"
-	"github.com/insei/tinyconf/slices118"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/cmp118"
+	"github.com/insei/tinyconf/v2/convert"
+	"github.com/insei/tinyconf/v2/drivers/internal/tree"
+	"github.com/insei/tinyconf/v2/slices118"
 )
 
 type yamlDriver struct {

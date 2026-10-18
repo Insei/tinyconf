@@ -21,9 +21,9 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	tcconsul "github.com/testcontainers/testcontainers-go/modules/consul"
 
-	"github.com/insei/tinyconf"
-	"github.com/insei/tinyconf/drivers/consul"
-	"github.com/insei/tinyconf/drivers/yaml"
+	"github.com/insei/tinyconf/v2"
+	"github.com/insei/tinyconf/v2/drivers/consul"
+	"github.com/insei/tinyconf/v2/drivers/yaml"
 )
 
 const consulImage = "hashicorp/consul:1.20"

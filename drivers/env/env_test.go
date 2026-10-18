@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/insei/fmap/v3"
-	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/v2"
 	"github.com/stretchr/testify/assert"
 )
 

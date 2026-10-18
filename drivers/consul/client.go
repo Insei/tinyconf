@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insei/tinyconf"
+	"github.com/insei/tinyconf/v2"
 )
 
 const (

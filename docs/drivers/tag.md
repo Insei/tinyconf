@@ -3,7 +3,7 @@
 The tag driver takes values right from the struct tags. It is used for default values.
 
 ```go
-import "github.com/insei/tinyconf/drivers/tag"
+import "github.com/insei/tinyconf/v2/drivers/tag"
 
 tagDriver, err := tag.New("initial")
 ```
