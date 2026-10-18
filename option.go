@@ -30,10 +30,26 @@ type loggerOption struct {
 
 func (o loggerOption) apply(config *Manager) {
 	if o.logger != nil {
-		config.log = o.logger
+		config.storeLogger(o.logger)
 	}
 }
 
+// WithLogger sets the logger of the Manager, the logger can be replaced later by Manager.SetLogger.
 func WithLogger(logger Logger) Option {
 	return loggerOption{logger: logger}
+}
+
+type deferredLoggerOption struct{}
+
+func (deferredLoggerOption) apply(config *Manager) {
+	config.storeLogger(&deferredLogger{buf: &deferredBuffer{}})
+}
+
+// WithDeferredLogger keeps the log records in memory until the logger is set by Manager.SetLogger,
+// then they are written to it. It solves the case of the logger configured by the config itself:
+// the config is parsed before the logger exists, and the logs of this parsing are not lost.
+// Up to 1000 records are kept, the oldest are dropped.
+// The last of WithLogger and WithDeferredLogger is used.
+func WithDeferredLogger() Option {
+	return deferredLoggerOption{}
 }
