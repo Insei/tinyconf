@@ -69,7 +69,7 @@ func TestManager_AccessDenied(t *testing.T) {
 	assert.NoError(t, c.Register(conf))
 
 	// access denied is logged by its own message and can be checked by errors.Is
-	err = c.Parse(conf)
+	err = c.Parse(context.Background(), conf)
 	assert.ErrorIs(t, err, ErrAccessDenied)
 	assert.Equal(t, []string{
 		"access denied: access denied: no permission to read denied",
@@ -78,9 +78,9 @@ func TestManager_AccessDenied(t *testing.T) {
 
 	logged = nil
 	driver.loadErr = fmt.Errorf("%w: no permission to read the source", ErrAccessDenied)
-	assert.ErrorIs(t, c.Parse(conf), ErrAccessDenied)
+	assert.ErrorIs(t, c.Parse(context.Background(), conf), ErrAccessDenied)
 	driver.loadErr = errors.New("source is not available")
-	assert.Error(t, c.Parse(conf))
+	assert.Error(t, c.Parse(context.Background(), conf))
 	assert.Equal(t, []string{
 		"access denied: access denied: no permission to read the source",
 		"failed to load: source is not available",

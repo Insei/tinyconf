@@ -1,6 +1,7 @@
 package flag
 
 import (
+	"context"
 	"errors"
 	"os"
 	"testing"
@@ -98,7 +99,7 @@ func TestFlagDriver_Parse(t *testing.T) {
 	conf := &testConfig{}
 	conf.HTTP.Port = 80
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 
 	want := &testConfig{Debug: true, Hosts: []string{"a", "b"}}
 	want.HTTP.Host, want.HTTP.Port = "localhost", 80

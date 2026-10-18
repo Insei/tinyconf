@@ -1,6 +1,7 @@
 package drivers_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -59,7 +60,7 @@ func BenchmarkParse_Drivers(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err = config.Parse(conf); err != nil {
+		if err = config.Parse(context.Background(), conf); err != nil {
 			b.Fatal(err)
 		}
 	}

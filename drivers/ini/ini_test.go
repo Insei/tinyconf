@@ -40,7 +40,7 @@ func parse(t *testing.T, driver tinyconf.Driver) (*testConfig, *tinyconf.Manager
 	assert.NoError(t, err)
 	conf := &testConfig{}
 	assert.NoError(t, manager.Register(conf))
-	return conf, manager, manager.Parse(conf)
+	return conf, manager, manager.Parse(context.Background(), conf)
 }
 
 func TestDecode(t *testing.T) {

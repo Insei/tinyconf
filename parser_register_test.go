@@ -1,6 +1,7 @@
 package tinyconf
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -18,11 +19,11 @@ func TestManager_Parse_NotRegistered(t *testing.T) {
 	assert.NoError(t, err)
 
 	// there are no registered configs
-	assert.ErrorIs(t, manager.Parse(&other{}), ErrNotRegisteredConfig)
+	assert.ErrorIs(t, manager.Parse(context.Background(), &other{}), ErrNotRegisteredConfig)
 
 	// config is not registered and it is not a field of the registered config
 	assert.NoError(t, manager.Register(&registered{}))
-	assert.ErrorIs(t, manager.Parse(&other{}), ErrNotRegisteredConfig)
+	assert.ErrorIs(t, manager.Parse(context.Background(), &other{}), ErrNotRegisteredConfig)
 	assert.Nil(t, manager.Sources(&other{}))
 }
 

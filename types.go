@@ -86,7 +86,7 @@ type Loader interface {
 }
 
 // ContextLoader is an optional interface of the driver that reads its source by the network, a remote storage for example.
-// Manager calls LoadContext instead of Load with the context of ParseContext, or with the context of watching for reloads,
+// Manager calls LoadContext instead of Load with the context of Parse, or with the context of watching for reloads,
 // the driver should stop the requests when the context is done.
 type ContextLoader interface {
 	LoadContext(ctx context.Context) error

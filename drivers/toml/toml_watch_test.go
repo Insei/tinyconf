@@ -24,7 +24,7 @@ func TestTOMLDriver_Watch(t *testing.T) {
 
 	conf := &config{Default: "default"}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

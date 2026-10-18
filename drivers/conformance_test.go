@@ -2,6 +2,7 @@ package drivers_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net"
 	"net/url"
@@ -350,7 +351,7 @@ func TestConformance(t *testing.T) {
 
 			conf := &conformanceConfig{}
 			assert.NoError(t, manager.Register(conf))
-			assert.NoError(t, manager.Parse(conf))
+			assert.NoError(t, manager.Parse(context.Background(), conf))
 
 			expectedOf, confOf := reflect.ValueOf(expected), reflect.ValueOf(*conf)
 			for i := 0; i < expectedOf.NumField(); i++ {
@@ -360,13 +361,13 @@ func TestConformance(t *testing.T) {
 
 			t.Run("sub config", func(t *testing.T) {
 				sub := &conformanceNested{}
-				assert.NoError(t, manager.Parse(sub))
+				assert.NoError(t, manager.Parse(context.Background(), sub))
 				assert.Equal(t, expected.Nested, *sub)
 			})
 
 			t.Run("sub config stored by pointer", func(t *testing.T) {
 				sub := &conformanceNestedPtr{}
-				assert.NoError(t, manager.Parse(sub))
+				assert.NoError(t, manager.Parse(context.Background(), sub))
 				assert.Equal(t, *expected.NestedPtr, *sub)
 			})
 		})
@@ -419,7 +420,7 @@ chan: 1
 
 			conf := &config{}
 			assert.NoError(t, manager.Register(conf))
-			err = manager.Parse(conf)
+			err = manager.Parse(context.Background(), conf)
 			assert.Error(t, err)
 			for i := 0; i < typeOf.NumField(); i++ {
 				assert.True(t, strings.Contains(err.Error(), "field "+typeOf.Field(i).Name+":"), typeOf.Field(i).Name)

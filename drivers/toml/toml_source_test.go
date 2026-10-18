@@ -1,6 +1,7 @@
 package toml
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,6 @@ func TestTomlDriver_WithSource(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &config{}
 	assert.NoError(t, manager.Register(conf))
-	assert.NoError(t, manager.Parse(conf))
+	assert.NoError(t, manager.Parse(context.Background(), conf))
 	assert.Equal(t, "source", conf.Name)
 }

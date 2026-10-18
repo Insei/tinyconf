@@ -56,7 +56,7 @@ type Loader interface {
 
 `Load` is called once at the start of every `Parse` call, before any `GetValue` call. If it returns an error, the driver is skipped in this `Parse` call and the error is returned from `Parse`.
 
-A driver that reads its source by the network should implement `tinyconf.ContextLoader` instead: `LoadContext` gets the context of [`ParseContext`](../features/manager.md#parse), or the context of watching for reloads, and the requests should stop when it is done.
+A driver that reads its source by the network should implement `tinyconf.ContextLoader` instead: `LoadContext` gets the context of [`Parse`](../features/manager.md#parse), or the context of watching for reloads, and the requests should stop when it is done.
 
 ```go
 type ContextLoader interface {

@@ -1,6 +1,7 @@
 package json
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -139,7 +140,7 @@ func TestJSONDriver(t *testing.T) {
 			conf, want := &testConfig{}, &testConfig{}
 			tt.want(want)
 			assert.NoError(t, manager.Register(conf))
-			err = manager.Parse(conf)
+			err = manager.Parse(context.Background(), conf)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -190,7 +191,7 @@ func TestJSONDriver_GenDoc(t *testing.T) {
 		assert.NoError(t, err)
 		parsed := &testConfig{}
 		assert.NoError(t, manager.Register(parsed))
-		assert.NoError(t, manager.Parse(parsed))
+		assert.NoError(t, manager.Parse(context.Background(), parsed))
 		conf.Password, conf.Skipped = "", ""
 		assert.Equal(t, conf, parsed)
 	})

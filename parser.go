@@ -211,18 +211,14 @@ func (c *Manager) findSubConfig(confTypeOf reflect.Type) (*Registered, reflect.T
 // Parse fills the config with values from the drivers, the next driver overrides values of the previous.
 // Config should be registered, or it should be a field of the registered config (sub config).
 //
+// The context is used by the drivers that read their sources by the network: the requests to the remote storages
+// are stopped when ctx is done, the drivers implement ContextLoader. Other drivers do not use the context.
+//
 // All fields are parsed even if some of them has errors, all errors are returned as one error,
 // it can be checked with errors.Is and errors.As.
 // Fields with required:"true" tag should have a value from any driver or non-zero value in the config,
 // otherwise ErrRequired is returned.
-func (c *Manager) Parse(conf any) error {
-	return c.ParseContext(context.Background(), conf)
-}
-
-// ParseContext is Parse with the context for the drivers that read their sources by the network:
-// the requests to the remote storages are stopped when ctx is done, the drivers implement ContextLoader.
-// Other drivers do not use the context.
-func (c *Manager) ParseContext(ctx context.Context, conf any) error {
+func (c *Manager) Parse(ctx context.Context, conf any) error {
 	_, err := c.parse(ctx, conf, false)
 	return err
 }

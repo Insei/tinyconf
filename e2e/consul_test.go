@@ -161,7 +161,7 @@ func TestConsul(t *testing.T) {
 		manager := newManager(t, driver)
 		conf := &keysConfig{}
 		require.NoError(t, manager.Register(conf))
-		require.NoError(t, manager.Parse(conf))
+		require.NoError(t, manager.Parse(context.Background(), conf))
 		assert.Equal(t, keysConfig{
 			Name:     "app",
 			Server:   server{Host: "example.com", Port: 9090, Timeout: 90 * time.Second},
@@ -194,7 +194,7 @@ func TestConsul(t *testing.T) {
 		parsed := &keysConfig{}
 		manager = newManager(t, driver)
 		require.NoError(t, manager.Register(parsed))
-		require.NoError(t, manager.Parse(parsed))
+		require.NoError(t, manager.Parse(context.Background(), parsed))
 		assert.Equal(t, *conf, *parsed)
 	})
 
@@ -212,7 +212,7 @@ func TestConsul(t *testing.T) {
 		manager := newManager(t, driver)
 		conf := &config{}
 		require.NoError(t, manager.Register(conf))
-		require.NoError(t, manager.Parse(conf))
+		require.NoError(t, manager.Parse(context.Background(), conf))
 		assert.Equal(t, config{Name: "consul", Server: server{Host: "localhost", Port: 9090}}, *conf)
 
 		// absent document is an error, unless the driver has the optional option
@@ -220,7 +220,7 @@ func TestConsul(t *testing.T) {
 		require.NoError(t, err)
 		manager = newManager(t, driver)
 		require.NoError(t, manager.Register(conf))
-		assert.ErrorContains(t, manager.Parse(conf), "failed to load consul key document/absent")
+		assert.ErrorContains(t, manager.Parse(context.Background(), conf), "failed to load consul key document/absent")
 	})
 
 	t.Run("watch", func(t *testing.T) {
@@ -238,7 +238,7 @@ func TestConsul(t *testing.T) {
 		manager := newManager(t, yamlDriver, consulDriver)
 		conf := &config{}
 		require.NoError(t, manager.Register(conf))
-		require.NoError(t, manager.Parse(conf))
+		require.NoError(t, manager.Parse(context.Background(), conf))
 		changes := subscribe[config](t, manager)
 
 		srv.put(t, "watch/keys/level", "debug")
@@ -281,7 +281,7 @@ func TestConsul_ACL(t *testing.T) {
 		manager := newManager(t, driver)
 		conf := &config{}
 		require.NoError(t, manager.Register(conf))
-		return conf, manager.Parse(conf)
+		return conf, manager.Parse(context.Background(), conf)
 	}
 
 	// Consul answers as if there are no keys, the driver checks the permission
@@ -304,7 +304,7 @@ func TestConsul_ACL(t *testing.T) {
 	require.NoError(t, err)
 	manager := newManager(t, driver)
 	require.NoError(t, manager.Register(conf))
-	err = manager.Parse(conf)
+	err = manager.Parse(context.Background(), conf)
 	assert.ErrorIs(t, err, tinyconf.ErrAccessDenied)
 	assert.ErrorContains(t, err, "403 Forbidden")
 }
@@ -336,7 +336,7 @@ func TestConsul_RestartWhileWatching(t *testing.T) {
 	manager := newManager(t, driver)
 	conf := &config{}
 	require.NoError(t, manager.Register(conf))
-	require.NoError(t, manager.Parse(conf))
+	require.NoError(t, manager.Parse(context.Background(), conf))
 	changes := subscribe[config](t, manager)
 
 	// the dev agent keeps the data in memory, after the restart the keys and the indexes start from scratch,
@@ -370,7 +370,7 @@ func TestConsul_RestartWhileWatching(t *testing.T) {
 	manager = newManager(t, driver)
 	conf = &config{}
 	require.NoError(t, manager.Register(conf))
-	require.Error(t, manager.Parse(conf))
+	require.Error(t, manager.Parse(context.Background(), conf))
 	changes = subscribe[config](t, manager)
 	require.NoError(t, srv.container.Start(ctx))
 	waitLeader()

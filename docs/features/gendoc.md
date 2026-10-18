@@ -7,7 +7,7 @@ c := &Config{}
 if err := config.Register(c); err != nil {
     panic(err)
 }
-if err := config.Parse(c); err != nil {
+if err := config.Parse(context.Background(), c); err != nil {
     panic(err)
 }
 fmt.Println(config.GenDoc("yaml"))

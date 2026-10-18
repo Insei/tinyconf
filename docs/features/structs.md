@@ -77,7 +77,7 @@ The pointer makes the section **optional**:
 * an existing struct is filled in place, it is not replaced with a new one.
 
 ```go
-if err := config.Parse(c); err != nil {
+if err := config.Parse(context.Background(), c); err != nil {
     panic(err)
 }
 if c.TLS != nil {
@@ -102,7 +102,7 @@ if err := config.Register(c); err != nil {
 
 // HTTP is a type of the field in the registered Config
 http := &HTTP{}
-if err := config.Parse(http); err != nil {
+if err := config.Parse(context.Background(), http); err != nil {
     panic(err)
 }
 ```

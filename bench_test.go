@@ -1,6 +1,7 @@
 package tinyconf
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -35,7 +36,7 @@ func newBenchManager(b *testing.B) *Manager {
 	if err = c.Register(conf); err != nil {
 		b.Fatal(err)
 	}
-	if err = c.Parse(conf); err != nil {
+	if err = c.Parse(context.Background(), conf); err != nil {
 		b.Fatal(err)
 	}
 	return c
@@ -47,7 +48,7 @@ func BenchmarkParse(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := c.Parse(conf); err != nil {
+		if err := c.Parse(context.Background(), conf); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -59,7 +60,7 @@ func BenchmarkParse_SubConfig(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := c.Parse(http); err != nil {
+		if err := c.Parse(context.Background(), http); err != nil {
 			b.Fatal(err)
 		}
 	}

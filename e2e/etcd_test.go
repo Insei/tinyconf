@@ -86,7 +86,7 @@ func parseEtcd(t *testing.T, driver tinyconf.Driver) (*etcdConfig, *tinyconf.Man
 	manager := newManager(t, driver)
 	conf := &etcdConfig{}
 	require.NoError(t, manager.Register(conf))
-	return conf, manager, manager.Parse(conf)
+	return conf, manager, manager.Parse(context.Background(), conf)
 }
 
 func TestEtcd(t *testing.T) {
@@ -153,7 +153,7 @@ func TestEtcd(t *testing.T) {
 		manager := newManager(t, driver)
 		conf := &config{}
 		require.NoError(t, manager.Register(conf))
-		require.NoError(t, manager.Parse(conf))
+		require.NoError(t, manager.Parse(context.Background(), conf))
 		assert.Equal(t, "etcd", conf.Name)
 		assert.Equal(t, "db", conf.Database.Host)
 		assert.Equal(t, 6432, conf.Database.Port)
@@ -248,7 +248,7 @@ func TestEtcd_Cluster(t *testing.T) {
 		}
 	}
 	// the driver reads from the next endpoint
-	require.NoError(t, manager.Parse(conf))
+	require.NoError(t, manager.Parse(context.Background(), conf))
 	assert.Equal(t, "second", conf.Name)
 }
 

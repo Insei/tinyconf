@@ -274,7 +274,7 @@ c := &Config{}
 if err := config.Register(c); err != nil {
     panic(err)
 }
-if err := config.Parse(c); err != nil {
+if err := config.Parse(context.Background(), c); err != nil {
     fmt.Fprintln(os.Stderr, err)
     os.Exit(2)
 }
@@ -384,7 +384,7 @@ type Config struct {
 
 func New(config *tinyconf.Manager) (*Storage, error) {
     c := &Config{}
-    if err := config.Parse(c); err != nil {
+    if err := config.Parse(context.Background(), c); err != nil {
         return nil, err
     }
     return connect(c)
@@ -412,7 +412,7 @@ The package gets a [sub config](features/structs.md#sub-configs): its own fields
 Check everything at start and report all problems in one message.
 
 ```go
-if err := config.Parse(c); err != nil {
+if err := config.Parse(context.Background(), c); err != nil {
     if errors.Is(err, tinyconf.ErrRequired) {
         fmt.Fprintln(os.Stderr, "some required settings are not set")
     }
@@ -436,7 +436,7 @@ c := &Config{}
 if err := config.Register(c); err != nil {
     panic(err)
 }
-if err := config.Parse(c); err != nil {
+if err := config.Parse(context.Background(), c); err != nil {
     panic(err)
 }
 
@@ -485,7 +485,7 @@ if err := config.Register(c); err != nil {
 if len(os.Args) > 1 && os.Args[1] == "-doc" {
     // fills the defaults and the values of this environment,
     // missing required values are not a problem for the template
-    _ = config.Parse(c)
+    _ = config.Parse(context.Background(), c)
     fmt.Println(config.GenDoc("yaml"))
     fmt.Println(config.GenDoc("env"))
     return
@@ -533,7 +533,7 @@ func newTestConfig(t *testing.T, yamlDoc string, args ...string) *Config {
     if err := config.Register(c); err != nil {
         t.Fatal(err)
     }
-    if err := config.Parse(c); err != nil {
+    if err := config.Parse(context.Background(), c); err != nil {
         t.Fatal(err)
     }
     return c

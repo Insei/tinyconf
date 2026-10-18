@@ -74,7 +74,7 @@ func TestSubscribe(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &subConfig{Default: "default"}
 	assert.NoError(t, c.Register(conf))
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 
 	configs, _ := subscribe[subConfig](t, c)
 	https, _ := subscribe[subHTTP](t, c)
@@ -147,7 +147,7 @@ func TestSubscribe_Parse(t *testing.T) {
 	configs, _ := subscribe[subConfig](t, c)
 
 	// Parse updates the current version without the handlers
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	nothing(t, configs)
 	current := Current[subConfig](c)
 	assert.Equal(t, "first", current.Name)
@@ -159,7 +159,7 @@ func TestSubscribe_Parse(t *testing.T) {
 	// Parse of the sub config does not change the current version
 	file.values = map[string]any{"HTTP.Host": "b"}
 	http := &subHTTP{}
-	assert.NoError(t, c.Parse(http))
+	assert.NoError(t, c.Parse(context.Background(), http))
 	assert.Equal(t, "b", http.Host)
 	assert.Equal(t, "a", Current[subHTTP](c).Host)
 }
@@ -270,7 +270,7 @@ func TestSubscribe_LoggedErrors(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &subConfig{}
 	assert.NoError(t, c.Register(conf))
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -301,7 +301,7 @@ func TestManager_reload(t *testing.T) {
 	assert.NoError(t, err)
 	conf := &subConfig{}
 	assert.NoError(t, c.Register(conf))
-	assert.NoError(t, c.Parse(conf))
+	assert.NoError(t, c.Parse(context.Background(), conf))
 	called := false
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

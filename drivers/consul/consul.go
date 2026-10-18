@@ -61,7 +61,7 @@ func (d *consulDriver) Load() error {
 	return d.LoadContext(context.Background())
 }
 
-// LoadContext is Load with the context of the request, Manager calls it with the context of ParseContext.
+// LoadContext is Load with the context of the request, Manager calls it with the context of Parse.
 func (d *consulDriver) LoadContext(ctx context.Context) error {
 	pairs, index, err := d.client.load(ctx, d.listPrefix(), true)
 	if err != nil {
