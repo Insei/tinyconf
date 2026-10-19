@@ -24,6 +24,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      artifact_id: ${{ steps.artifact.outputs.artifact_id }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,7 +64,8 @@ jobs:
           git worktree add pages origin/gh-pages
           # llms.txt of the latest version is also at the root of the site, where the agents look for it first
           cp -L pages/latest/llms.txt pages/latest/llms-full.txt pages/ 2>/dev/null || true
-      - uses: actions/upload-pages-artifact@v3
+      - id: artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: pages
 
@@ -73,9 +76,26 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # deploy-pages takes the commit as the version of the deployment and Pages skips the version that is already
+      # deployed: the release tag is on the same commit as the last deployment of main, so every run deploys its own version
       - id: deployment
-        uses: actions/deploy-pages@v4
         env:
-          # Pages skips the deployment of the commit that is already deployed, the tag of the release is on the
-          # same commit as the last deployment of main, so every run deploys its own version
-          GITHUB_SHA: ${{ github.sha }}-${{ github.run_id }}
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ needs.build.outputs.artifact_id }}
+          VERSION: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          oidc=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r .value)
+          deployment=$(gh api "repos/$GITHUB_REPOSITORY/pages/deployments" \
+            -F artifact_id="$ARTIFACT_ID" -f pages_build_version="$VERSION" -f oidc_token="$oidc")
+          echo "page_url=$(jq -r .page_url <<<"$deployment")" >> "$GITHUB_OUTPUT"
+          id=$(jq -r '.id // (.status_url | split("/") | last)' <<<"$deployment")
+          for _ in $(seq 120); do
+            status=$(gh api "repos/$GITHUB_REPOSITORY/pages/deployments/$id" --jq .status)
+            echo "$status"
+            case "$status" in
+              succeed) exit 0 ;;
+              deployment_failed|deployment_perms_error|deployment_content_failed|deployment_cancelled|deployment_lost) exit 1 ;;
+            esac
+            sleep 5
+          done
+          exit 1
