@@ -41,6 +41,10 @@ jobs:
         go vet ./...
         go build -o /dev/null ./...
 
+    - name: Build the programs of the skill for AI agents
+      if: matrix.go-version == 'stable'
+      run: scripts/check-skill.sh
+
     - name: Test zap logger module
       if: matrix.go-version == 'stable'
       working-directory: logger/zaplogger
