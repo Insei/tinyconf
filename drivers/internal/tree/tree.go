@@ -213,16 +213,14 @@ var (
 	eventsDelay = 100 * time.Millisecond
 )
 
-// fileEvents returns the channel of the events of the directories with the files of the sources and the function
-// that stops watching. Nil channel is returned if the directories can not be watched, the files are checked by polling then.
+// fileEvents returns the channel of the events of the directories with the files and the function that stops watching.
+// Nil channel is returned if the directories can not be watched, the files are checked by polling then.
 // Directories are watched instead of the files, so the replaced files and symlinks are watched too:
 // editors, atomic renames, updates of ConfigMap volumes in Kubernetes.
-func (d *Driver) fileEvents() (<-chan fsnotify.Event, func()) {
+func fileEvents(files []string) (<-chan fsnotify.Event, func()) {
 	dirs := make(map[string]bool)
-	for _, source := range d.sources {
-		if source.File != "" {
-			dirs[filepath.Dir(source.File)] = true
-		}
+	for _, file := range files {
+		dirs[filepath.Dir(file)] = true
 	}
 	if len(dirs) == 0 {
 		return nil, func() {}
@@ -250,41 +248,16 @@ func (d *Driver) fileEvents() (<-chan fsnotify.Event, func()) {
 	return watcher.Events, func() { _ = watcher.Close() }
 }
 
-// Watch checks the sources for changes and calls onChange if any source is changed.
-// Files are checked after the events of the file system and with the watch interval, if the events are lost.
-// Sources with Watch report their changes by themselves. It blocks until ctx is done.
-func (d *Driver) Watch(ctx context.Context, onChange func()) error {
-	// watchers of the sources are stopped and finished before return
-	var wg sync.WaitGroup
-	defer wg.Wait()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	errs := make(chan error, len(d.sources))
-	for _, source := range d.sources {
-		if source.Watch == nil {
-			continue
-		}
-		wg.Add(1)
-		go func(source Source) {
-			defer wg.Done()
-			if err := source.Watch(ctx, onChange); err != nil && ctx.Err() == nil {
-				errs <- fmt.Errorf("failed to watch %s: %w", source.Name, err)
-			}
-		}(source)
-	}
-	ticker := time.NewTicker(d.watchInterval)
+// WatchFiles calls onChange every time the state of the files returned by stat differs from the previous one,
+// starting from state. The state is checked after the events of the file system in the directories of the files
+// and with the interval, if the events are lost. It blocks until ctx is done.
+func WatchFiles(ctx context.Context, files []string, interval time.Duration, state string, stat func() string, onChange func()) {
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
-	events, stopEvents := d.fileEvents()
+	events, stopEvents := fileEvents(files)
 	defer stopEvents()
-	// changes made after the last Load should be detected too
-	d.mu.RLock()
-	state, loaded := d.state, d.loaded
-	d.mu.RUnlock()
-	if !loaded {
-		state = d.stat(ctx)
-	}
 	check := func() {
-		if newState := d.stat(ctx); newState != state {
+		if newState := stat(); newState != state {
 			state = newState
 			onChange()
 		}
@@ -293,9 +266,7 @@ func (d *Driver) Watch(ctx context.Context, onChange func()) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
-		case err := <-errs:
-			return err
+			return
 		case <-ticker.C:
 			check()
 		case _, ok := <-events:
@@ -310,6 +281,49 @@ func (d *Driver) Watch(ctx context.Context, onChange func()) error {
 			check()
 		}
 	}
+}
+
+// Watch checks the sources for changes and calls onChange if any source is changed.
+// Files are checked after the events of the file system and with the watch interval, if the events are lost.
+// Sources with Watch report their changes by themselves. It blocks until ctx is done.
+func (d *Driver) Watch(ctx context.Context, onChange func()) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	// the first error of the sources stops watching, it is returned after the watchers of the sources are finished
+	var (
+		wg       sync.WaitGroup
+		errOnce  sync.Once
+		watchErr error
+	)
+	for _, source := range d.sources {
+		if source.Watch == nil {
+			continue
+		}
+		wg.Add(1)
+		go func(source Source) {
+			defer wg.Done()
+			if err := source.Watch(ctx, onChange); err != nil && ctx.Err() == nil {
+				errOnce.Do(func() { watchErr = fmt.Errorf("failed to watch %s: %w", source.Name, err) })
+				cancel()
+			}
+		}(source)
+	}
+	var files []string
+	for _, source := range d.sources {
+		if source.File != "" {
+			files = append(files, source.File)
+		}
+	}
+	// changes made after the last Load should be detected too
+	d.mu.RLock()
+	state, loaded := d.state, d.loaded
+	d.mu.RUnlock()
+	if !loaded {
+		state = d.stat(ctx)
+	}
+	WatchFiles(ctx, files, d.watchInterval, state, func() string { return d.stat(ctx) }, onChange)
+	wg.Wait()
+	return watchErr
 }
 
 func (d *Driver) getTree() (map[string]any, error) {
