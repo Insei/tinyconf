@@ -1,25 +1,64 @@
 # Why tinyconf?
 
-Go has many config libraries: big key-value stores, struct-tag loaders, environment-only parsers. tinyconf occupies a specific niche: **one config struct, filled by a chain of drivers, that tells you where every value came from and lets every package subscribe to its own part**. This page lays out where it fits, what it gives up, and how it compares to the closest alternatives.
+**tinyconf is for Go services built from independent packages, whose config comes from several sources and changes without restart.** Every package declares its own config struct, gets its values and its updates, and knows nothing about the config of the whole application. Where a value came from is always known.
 
-## The 30-second pitch
+## Who it is for
 
-- **The config is your struct.** Every field says where its value lives: `initial:"8080" yaml:"port" env:"HTTP_PORT" flag:"http-port"`. No key-value store in between, no `Unmarshal` step.
-- **Drivers are a chain with priorities:** defaults from tags, files, remote stores, environment, flags — the next driver overrides the previous one, field by field.
-- **Every value has a history.** [`Sources`](https://insei.github.io/tinyconf/dev/features/sources/index.md) tells which driver and which key gave the final value; the debug [log](https://insei.github.io/tinyconf/dev/features/logging/#history-of-a-field) shows every override and every change after reloads. Secrets are masked everywhere.
-- **Packages own their parts.** A package parses or [subscribes](https://insei.github.io/tinyconf/dev/features/reloading/index.md) to its sub config by type — `tinyconf.Subscribe(ctx, config, func(prev, next *HTTP) {...})` — and is called only when its part changes.
-- **Documentation from the same structs:** a YAML template, a `.env` file, flags help, `consul kv put` / `vault kv put` / `etcdctl put` commands — in the format of every driver.
-- **Remote stores without heavy dependencies:** Consul, Vault and etcd talk to their HTTP APIs directly; changes in Consul and etcd arrive right away, files are watched by the events of the file system.
+- **Modular services.** An HTTP server, a database client, a queue consumer, a cache — each package has its own config struct and works with it alone. Adding a package does not touch a central config file of the code.
+- **Services that change config at runtime.** A ConfigMap in Kubernetes, keys in Consul or etcd, a rotated secret in Vault: the change reaches only the packages whose part has changed, without restart and without locks in the code that reads the config.
+- **Services with many sources.** Defaults, a file, the environment, flags and a remote store at the same time, with one explicit priority order — and an answer to "why is this value here?" when something goes wrong in production.
+- **Teams that do not want to maintain config templates by hand.** `.env` examples, YAML templates, flags help and the commands for Consul, Vault and etcd are generated from the same structs.
 
-## When to pick tinyconf
+## What you get
 
-- Your service has several sources of config — defaults, a file, the environment, flags, a remote store — and you want one explicit priority order.
-- You want to answer "why is this value here?" from the logs, without guessing.
-- Your packages are independent: each one knows its own config struct, not the whole config.
-- You want config changes applied without restart, with the old config never modified under your readers.
-- You want the template of the config generated, not maintained by hand.
+### Every package owns its part of the config
 
-## When **not** to pick tinyconf
+The application registers the whole config once. A package parses, reads and subscribes to its own struct type — no string keys, no `Unmarshal` of a subtree, no knowledge of where its part lives in the whole config.
+
+```go
+// in the http package
+tinyconf.Current[HTTP](config).Port // the current version: an atomic read, no allocations
+
+tinyconf.Subscribe(ctx, config, func(prev, next *HTTP) {
+    server.Restart(next) // called only when HTTP has changed
+})
+```
+
+Other libraries give one callback for any change of the whole config (viper), or a callback per provider (koanf), and leave it to you to find out what has changed and who should know. See [Sub configs](https://insei.github.io/tinyconf/dev/features/structs/#sub-configs) and [Reloading](https://insei.github.io/tinyconf/dev/features/reloading/index.md).
+
+### Reloads that are safe by design
+
+A reload builds a new version of the config from the defaults. The version that your code holds is never modified, so readers need no locks and never see a half-applied config. A broken file or an unavailable store keeps the last good config; subscribers are called only with a config without errors, and only for their changed part. `ReloadStatus()` reports the last error and the drivers that stopped watching, for health checks. Files are watched by the events of the file system, Consul and etcd notify about changes, Vault is polled.
+
+### One struct, one chain of drivers
+
+The config is your struct, every field says where its value lives:
+
+```go
+Port int `initial:"8080" yaml:"port" env:"HTTP_PORT" flag:"http-port" required:"true" doc:"port of the server"`
+```
+
+Drivers are applied in the order of addition, the next one overrides the previous one field by field. Eleven drivers out of the box — defaults from tags, YAML, JSON, TOML, INI, properties, environment, flags, Consul, Vault, etcd — and [any file format](https://insei.github.io/tinyconf/dev/drivers/format/index.md) by a decoder. `time.Duration`, `url.URL`, `TextUnmarshaler`, slices, maps, structs in lists and pointers behave the same in every driver: a conformance test checks it.
+
+### You always know where a value came from
+
+`Sources(conf)` returns the driver and the key of the final value of every field. The debug log shows the initial value of every field, every override and every change after reloads. Secrets are masked everywhere: `hidden:"true"` in the logs and templates, the `tinyconf.Secret` type also in `fmt`, JSON and the logs of the application. See [Value sources](https://insei.github.io/tinyconf/dev/features/sources/index.md) and [Logging](https://insei.github.io/tinyconf/dev/features/logging/index.md).
+
+### Templates of the config from the code
+
+`GenDoc` renders the registered configs with the current values and the `doc` descriptions in the format of every driver: a YAML or TOML file, a `.env` file, flags help, `consul kv put`, `vault kv put` and `etcdctl put` commands. See [Documentation generation](https://insei.github.io/tinyconf/dev/features/gendoc/index.md).
+
+### Light, fast and tested
+
+- No SDKs: Consul, Vault and etcd are used through their HTTP APIs, zap is a separate module. The core depends only on the YAML and TOML parsers, fsnotify and two small libraries of the author, fmap and cast.
+- `Current` takes tens of nanoseconds without allocations, `Parse` of a typical config takes microseconds, so the config can be read on every request.
+- 100% test coverage, race detector, fuzz tests of the parsers, end-to-end tests with real Consul, Vault and etcd, Go 1.19 and the latest Go in CI, a benchmark diff in every pull request.
+
+### Ready for AI agents
+
+The repository has a [skill for agents](https://insei.github.io/tinyconf/dev/ai-agents/index.md) whose programs are built in CI, and the documentation is published as `llms.txt` and `llms-full.txt` for every version, so an agent writes the code for the current API, not for the one it remembers.
+
+## When another library fits better
 
 - You only read environment variables into a struct — [caarlos0/env](https://github.com/caarlos0/env) or [sethvargo/go-envconfig](https://github.com/sethvargo/go-envconfig) have no dependencies at all.
 - You work with config as dynamic keys rather than a struct, or need many remote providers (S3, AWS Parameter Store and AppConfig, Azure Key Vault, NATS) out of the box — pick [koanf](https://github.com/knadh/koanf).
@@ -42,21 +81,12 @@ Checked against the current documentation of the libraries on 2026-10-16.
 | **Change subscriptions per part**  | ✓                                                                                                                    | ✗ (one global callback)                             | ✗ (one callback per provider)                        | ✗                                                      | ✗                                               | ✗                                            | ✗                                               |
 | **Old config untouched on reload** | ✓ (new version)                                                                                                      | ✗ (in place)                                        | ✓ (fresh instance by hand)                           | ✗ (in place)                                           | n/a                                             | n/a                                          | n/a                                             |
 | **Where the value came from**      | ✓ driver and key                                                                                                     | ✗                                                   | ✗                                                    | ✗                                                      | ✗                                               | ✗                                            | partial (default or not)                        |
-| **Masking secrets**                | ✓ logs and docs                                                                                                      | ✗                                                   | ✗                                                    | ✗                                                      | ✗                                               | ✗                                            | ✗                                               |
+| **Masking secrets**                | ✓ logs, docs, `Secret` type                                                                                          | ✗                                                   | ✗                                                    | ✗                                                      | ✗                                               | ✗                                            | ✗                                               |
 | **Generated docs**                 | every driver                                                                                                         | write config back                                   | write config back                                    | env usage                                              | flags usage                                     | flags usage                                  | external tool                                   |
 | **Sub configs**                    | by type                                                                                                              | by key                                              | by key                                               | by type                                                | by type                                         | by type                                      | by type                                         |
 | **Concurrent use**                 | ✓                                                                                                                    | ✗                                                   | ✗ during load                                        | n/a                                                    | n/a                                             | n/a                                          | n/a                                             |
 
-## Strengths
-
-- **Provenance is built in.** No other library from the table reports which source gave the final value of every field. With several drivers it is the difference between reading the logs and guessing. See [Value sources](https://insei.github.io/tinyconf/dev/features/sources/index.md) and [Logging](https://insei.github.io/tinyconf/dev/features/logging/index.md).
-- **Reloading that is safe to read.** A reload builds a new version from the defaults, the old one is never modified, so readers need no locks. Subscribers are called only for their part and only with a config without errors; a broken file keeps the last good config. See [Reloading](https://insei.github.io/tinyconf/dev/features/reloading/index.md).
-- **The same types in every driver.** `time.Duration`, `url.URL`, `TextUnmarshaler`, slices, maps, structs in lists and pointers behave the same in a file, an environment variable, a flag and a remote store — the conformance tests check it for the tag, yaml, json, toml, env and flag drivers, the other drivers share their conversion.
-- **Remote stores without the weight.** Consul, Vault and etcd drivers use their HTTP APIs: no SDKs, no gRPC. They handle the real-world cases — ACL that hides keys, expired tokens, compacted history, restarts of the store, failover between etcd endpoints — and are tested against real servers in Docker in CI.
-- **Errors you can act on.** `Parse` collects all errors of all fields at once; `ErrAccessDenied` separates permission problems from network ones; `required:"true"` fails fast at the start.
-- **100% test coverage**, race detector and the minimal supported Go version in CI.
-
-## Weaknesses
+## Known limitations
 
 - **Fewer remote stores than koanf.** Consul, Vault and etcd only; others need a [custom driver](https://insei.github.io/tinyconf/dev/drivers/custom/index.md).
 - **Vault: token authentication only.** Kubernetes, AppRole and cloud login are delegated to Vault Agent; changes are detected by polling, because Vault does not notify.

@@ -1,6 +1,6 @@
 # tinyconf
 
-> Simple and universal library for parsing configs in Go
+> Go config structs filled from a chain of drivers, every package owns its part of the config and gets its changes without restart
 
 tinyconf fills Go config structs from a chain of drivers by struct tags: defaults, YAML, JSON, TOML, INI, properties, environment variables, flags, Consul, Vault and etcd. The next driver overrides the previous one. Packages parse and subscribe to their own parts of the config, reloads create new versions of the config. The module path is github.com/insei/tinyconf/v2.
 
@@ -10,7 +10,7 @@ tinyconf fills Go config structs from a chain of drivers by struct tags: default
 - [Why tinyconf?](https://insei.github.io/tinyconf/dev/why-tinyconf/index.md): for whom and for what, comparison with viper, koanf, cleanenv
 - [Use cases](https://insei.github.io/tinyconf/dev/use-cases/index.md): recipes
 - [Upgrading to v2](https://insei.github.io/tinyconf/dev/upgrading/index.md): upgrading from v1
-- [For AI agents](https://insei.github.io/tinyconf/dev/ai-agents/index.md): the skill for AI agents and llms.txt
+- [For AI agents](https://insei.github.io/tinyconf/dev/ai-agents/index.md): the skill for AI agents
 
 ## Features
 

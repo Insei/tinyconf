@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Simple and universal library for parsing configs in Go">
+        <meta name="description" content="Go config structs filled from a chain of drivers, every package owns its part of the config and gets its changes without restart">
       
       
       
@@ -503,10 +503,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-30-second-pitch" class="md-nav__link">
+  <a href="#who-it-is-for" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The 30-second pitch
+        Who it is for
       
     </span>
   </a>
@@ -514,21 +514,104 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#when-to-pick-tinyconf" class="md-nav__link">
+  <a href="#what-you-get" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to pick tinyconf
+        What you get
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What you get">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#every-package-owns-its-part-of-the-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Every package owns its part of the config
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#when-not-to-pick-tinyconf" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#reloads-that-are-safe-by-design" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When not to pick tinyconf
+        Reloads that are safe by design
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#one-struct-one-chain-of-drivers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One struct, one chain of drivers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#you-always-know-where-a-value-came-from" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        You always know where a value came from
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#templates-of-the-config-from-the-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates of the config from the code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#light-fast-and-tested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Light, fast and tested
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ready-for-ai-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ready for AI agents
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-another-library-fits-better" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When another library fits better
       
     </span>
   </a>
@@ -547,21 +630,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#strengths" class="md-nav__link">
+  <a href="#known-limitations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Strengths
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#weaknesses" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Weaknesses
+        Known limitations
       
     </span>
   </a>
@@ -1503,10 +1575,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#the-30-second-pitch" class="md-nav__link">
+  <a href="#who-it-is-for" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The 30-second pitch
+        Who it is for
       
     </span>
   </a>
@@ -1514,21 +1586,104 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#when-to-pick-tinyconf" class="md-nav__link">
+  <a href="#what-you-get" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to pick tinyconf
+        What you get
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What you get">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#every-package-owns-its-part-of-the-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Every package owns its part of the config
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#when-not-to-pick-tinyconf" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#reloads-that-are-safe-by-design" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When not to pick tinyconf
+        Reloads that are safe by design
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#one-struct-one-chain-of-drivers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One struct, one chain of drivers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#you-always-know-where-a-value-came-from" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        You always know where a value came from
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#templates-of-the-config-from-the-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates of the config from the code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#light-fast-and-tested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Light, fast and tested
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ready-for-ai-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ready for AI agents
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-another-library-fits-better" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When another library fits better
       
     </span>
   </a>
@@ -1547,21 +1702,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#strengths" class="md-nav__link">
+  <a href="#known-limitations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Strengths
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#weaknesses" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Weaknesses
+        Known limitations
       
     </span>
   </a>
@@ -1605,25 +1749,45 @@
 
 
 <h1 id="why-tinyconf">Why tinyconf?<a class="headerlink" href="#why-tinyconf" title="Permanent link">&para;</a></h1>
-<p>Go has many config libraries: big key-value stores, struct-tag loaders, environment-only parsers. tinyconf occupies a specific niche: <strong>one config struct, filled by a chain of drivers, that tells you where every value came from and lets every package subscribe to its own part</strong>. This page lays out where it fits, what it gives up, and how it compares to the closest alternatives.</p>
-<h2 id="the-30-second-pitch">The 30-second pitch<a class="headerlink" href="#the-30-second-pitch" title="Permanent link">&para;</a></h2>
+<p><strong>tinyconf is for Go services built from independent packages, whose config comes from several sources and changes without restart.</strong> Every package declares its own config struct, gets its values and its updates, and knows nothing about the config of the whole application. Where a value came from is always known.</p>
+<h2 id="who-it-is-for">Who it is for<a class="headerlink" href="#who-it-is-for" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>The config is your struct.</strong> Every field says where its value lives: <code>initial:"8080" yaml:"port" env:"HTTP_PORT" flag:"http-port"</code>. No key-value store in between, no <code>Unmarshal</code> step.</li>
-<li><strong>Drivers are a chain with priorities:</strong> defaults from tags, files, remote stores, environment, flags — the next driver overrides the previous one, field by field.</li>
-<li><strong>Every value has a history.</strong> <a href="../features/sources/"><code>Sources</code></a> tells which driver and which key gave the final value; the debug <a href="../features/logging/#history-of-a-field">log</a> shows every override and every change after reloads. Secrets are masked everywhere.</li>
-<li><strong>Packages own their parts.</strong> A package parses or <a href="../features/reloading/">subscribes</a> to its sub config by type — <code>tinyconf.Subscribe(ctx, config, func(prev, next *HTTP) {...})</code> — and is called only when its part changes.</li>
-<li><strong>Documentation from the same structs:</strong> a YAML template, a <code>.env</code> file, flags help, <code>consul kv put</code> / <code>vault kv put</code> / <code>etcdctl put</code> commands — in the format of every driver.</li>
-<li><strong>Remote stores without heavy dependencies:</strong> Consul, Vault and etcd talk to their HTTP APIs directly; changes in Consul and etcd arrive right away, files are watched by the events of the file system.</li>
+<li><strong>Modular services.</strong> An HTTP server, a database client, a queue consumer, a cache — each package has its own config struct and works with it alone. Adding a package does not touch a central config file of the code.</li>
+<li><strong>Services that change config at runtime.</strong> A ConfigMap in Kubernetes, keys in Consul or etcd, a rotated secret in Vault: the change reaches only the packages whose part has changed, without restart and without locks in the code that reads the config.</li>
+<li><strong>Services with many sources.</strong> Defaults, a file, the environment, flags and a remote store at the same time, with one explicit priority order — and an answer to "why is this value here?" when something goes wrong in production.</li>
+<li><strong>Teams that do not want to maintain config templates by hand.</strong> <code>.env</code> examples, YAML templates, flags help and the commands for Consul, Vault and etcd are generated from the same structs.</li>
 </ul>
-<h2 id="when-to-pick-tinyconf">When to pick tinyconf<a class="headerlink" href="#when-to-pick-tinyconf" title="Permanent link">&para;</a></h2>
+<h2 id="what-you-get">What you get<a class="headerlink" href="#what-you-get" title="Permanent link">&para;</a></h2>
+<h3 id="every-package-owns-its-part-of-the-config">Every package owns its part of the config<a class="headerlink" href="#every-package-owns-its-part-of-the-config" title="Permanent link">&para;</a></h3>
+<p>The application registers the whole config once. A package parses, reads and subscribes to its own struct type — no string keys, no <code>Unmarshal</code> of a subtree, no knowledge of where its part lives in the whole config.</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// in the http package</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nx">tinyconf</span><span class="p">.</span><span class="nx">Current</span><span class="p">[</span><span class="nx">HTTP</span><span class="p">](</span><span class="nx">config</span><span class="p">).</span><span class="nx">Port</span><span class="w"> </span><span class="c1">// the current version: an atomic read, no allocations</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nx">tinyconf</span><span class="p">.</span><span class="nx">Subscribe</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">config</span><span class="p">,</span><span class="w"> </span><span class="kd">func</span><span class="p">(</span><span class="nx">prev</span><span class="p">,</span><span class="w"> </span><span class="nx">next</span><span class="w"> </span><span class="o">*</span><span class="nx">HTTP</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nx">server</span><span class="p">.</span><span class="nx">Restart</span><span class="p">(</span><span class="nx">next</span><span class="p">)</span><span class="w"> </span><span class="c1">// called only when HTTP has changed</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">})</span>
+</span></code></pre></div>
+<p>Other libraries give one callback for any change of the whole config (viper), or a callback per provider (koanf), and leave it to you to find out what has changed and who should know. See <a href="../features/structs/#sub-configs">Sub configs</a> and <a href="../features/reloading/">Reloading</a>.</p>
+<h3 id="reloads-that-are-safe-by-design">Reloads that are safe by design<a class="headerlink" href="#reloads-that-are-safe-by-design" title="Permanent link">&para;</a></h3>
+<p>A reload builds a new version of the config from the defaults. The version that your code holds is never modified, so readers need no locks and never see a half-applied config. A broken file or an unavailable store keeps the last good config; subscribers are called only with a config without errors, and only for their changed part. <code>ReloadStatus()</code> reports the last error and the drivers that stopped watching, for health checks. Files are watched by the events of the file system, Consul and etcd notify about changes, Vault is polled.</p>
+<h3 id="one-struct-one-chain-of-drivers">One struct, one chain of drivers<a class="headerlink" href="#one-struct-one-chain-of-drivers" title="Permanent link">&para;</a></h3>
+<p>The config is your struct, every field says where its value lives:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">Port</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="s">`initial:"8080" yaml:"port" env:"HTTP_PORT" flag:"http-port" required:"true" doc:"port of the server"`</span>
+</span></code></pre></div>
+<p>Drivers are applied in the order of addition, the next one overrides the previous one field by field. Eleven drivers out of the box — defaults from tags, YAML, JSON, TOML, INI, properties, environment, flags, Consul, Vault, etcd — and <a href="../drivers/format/">any file format</a> by a decoder. <code>time.Duration</code>, <code>url.URL</code>, <code>TextUnmarshaler</code>, slices, maps, structs in lists and pointers behave the same in every driver: a conformance test checks it.</p>
+<h3 id="you-always-know-where-a-value-came-from">You always know where a value came from<a class="headerlink" href="#you-always-know-where-a-value-came-from" title="Permanent link">&para;</a></h3>
+<p><code>Sources(conf)</code> returns the driver and the key of the final value of every field. The debug log shows the initial value of every field, every override and every change after reloads. Secrets are masked everywhere: <code>hidden:"true"</code> in the logs and templates, the <code>tinyconf.Secret</code> type also in <code>fmt</code>, JSON and the logs of the application. See <a href="../features/sources/">Value sources</a> and <a href="../features/logging/">Logging</a>.</p>
+<h3 id="templates-of-the-config-from-the-code">Templates of the config from the code<a class="headerlink" href="#templates-of-the-config-from-the-code" title="Permanent link">&para;</a></h3>
+<p><code>GenDoc</code> renders the registered configs with the current values and the <code>doc</code> descriptions in the format of every driver: a YAML or TOML file, a <code>.env</code> file, flags help, <code>consul kv put</code>, <code>vault kv put</code> and <code>etcdctl put</code> commands. See <a href="../features/gendoc/">Documentation generation</a>.</p>
+<h3 id="light-fast-and-tested">Light, fast and tested<a class="headerlink" href="#light-fast-and-tested" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Your service has several sources of config — defaults, a file, the environment, flags, a remote store — and you want one explicit priority order.</li>
-<li>You want to answer "why is this value here?" from the logs, without guessing.</li>
-<li>Your packages are independent: each one knows its own config struct, not the whole config.</li>
-<li>You want config changes applied without restart, with the old config never modified under your readers.</li>
-<li>You want the template of the config generated, not maintained by hand.</li>
+<li>No SDKs: Consul, Vault and etcd are used through their HTTP APIs, zap is a separate module. The core depends only on the YAML and TOML parsers, fsnotify and two small libraries of the author, fmap and cast.</li>
+<li><code>Current</code> takes tens of nanoseconds without allocations, <code>Parse</code> of a typical config takes microseconds, so the config can be read on every request.</li>
+<li>100% test coverage, race detector, fuzz tests of the parsers, end-to-end tests with real Consul, Vault and etcd, Go 1.19 and the latest Go in CI, a benchmark diff in every pull request.</li>
 </ul>
-<h2 id="when-not-to-pick-tinyconf">When <strong>not</strong> to pick tinyconf<a class="headerlink" href="#when-not-to-pick-tinyconf" title="Permanent link">&para;</a></h2>
+<h3 id="ready-for-ai-agents">Ready for AI agents<a class="headerlink" href="#ready-for-ai-agents" title="Permanent link">&para;</a></h3>
+<p>The repository has a <a href="../ai-agents/">skill for agents</a> whose programs are built in CI, and the documentation is published as <code>llms.txt</code> and <code>llms-full.txt</code> for every version, so an agent writes the code for the current API, not for the one it remembers.</p>
+<h2 id="when-another-library-fits-better">When another library fits better<a class="headerlink" href="#when-another-library-fits-better" title="Permanent link">&para;</a></h2>
 <ul>
 <li>You only read environment variables into a struct — <a href="https://github.com/caarlos0/env">caarlos0/env</a> or <a href="https://github.com/sethvargo/go-envconfig">sethvargo/go-envconfig</a> have no dependencies at all.</li>
 <li>You work with config as dynamic keys rather than a struct, or need many remote providers (S3, AWS Parameter Store and AppConfig, Azure Key Vault, NATS) out of the box — pick <a href="https://github.com/knadh/koanf">koanf</a>.</li>
@@ -1748,7 +1912,7 @@
 </tr>
 <tr>
 <td><strong>Masking secrets</strong></td>
-<td>✓ logs and docs</td>
+<td>✓ logs, docs, <code>Secret</code> type</td>
 <td>✗</td>
 <td>✗</td>
 <td>✗</td>
@@ -1788,16 +1952,7 @@
 </tr>
 </tbody>
 </table>
-<h2 id="strengths">Strengths<a class="headerlink" href="#strengths" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Provenance is built in.</strong> No other library from the table reports which source gave the final value of every field. With several drivers it is the difference between reading the logs and guessing. See <a href="../features/sources/">Value sources</a> and <a href="../features/logging/">Logging</a>.</li>
-<li><strong>Reloading that is safe to read.</strong> A reload builds a new version from the defaults, the old one is never modified, so readers need no locks. Subscribers are called only for their part and only with a config without errors; a broken file keeps the last good config. See <a href="../features/reloading/">Reloading</a>.</li>
-<li><strong>The same types in every driver.</strong> <code>time.Duration</code>, <code>url.URL</code>, <code>TextUnmarshaler</code>, slices, maps, structs in lists and pointers behave the same in a file, an environment variable, a flag and a remote store — the conformance tests check it for the tag, yaml, json, toml, env and flag drivers, the other drivers share their conversion.</li>
-<li><strong>Remote stores without the weight.</strong> Consul, Vault and etcd drivers use their HTTP APIs: no SDKs, no gRPC. They handle the real-world cases — ACL that hides keys, expired tokens, compacted history, restarts of the store, failover between etcd endpoints — and are tested against real servers in Docker in CI.</li>
-<li><strong>Errors you can act on.</strong> <code>Parse</code> collects all errors of all fields at once; <code>ErrAccessDenied</code> separates permission problems from network ones; <code>required:"true"</code> fails fast at the start.</li>
-<li><strong>100% test coverage</strong>, race detector and the minimal supported Go version in CI.</li>
-</ul>
-<h2 id="weaknesses">Weaknesses<a class="headerlink" href="#weaknesses" title="Permanent link">&para;</a></h2>
+<h2 id="known-limitations">Known limitations<a class="headerlink" href="#known-limitations" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Fewer remote stores than koanf.</strong> Consul, Vault and etcd only; others need a <a href="../drivers/custom/">custom driver</a>.</li>
 <li><strong>Vault: token authentication only.</strong> Kubernetes, AppRole and cloud login are delegated to Vault Agent; changes are detected by polling, because Vault does not notify.</li>
