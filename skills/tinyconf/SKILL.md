@@ -111,7 +111,7 @@ func main() {
 
 ## Packages own their parts: sub configs and reloading
 
-A package works with its own struct type, not with the whole config. `Parse(ctx, &HTTP{})` parses only this part of the registered config, `tinyconf.Current[HTTP](config)` returns its current version, `tinyconf.Subscribe` calls the handler only when this part changes. Reloading needs a driver that watches its source: files (by the events of the file system), Consul, Vault, etcd; otherwise `Subscribe` returns `tinyconf.ErrNoWatchers`.
+A package works with its own struct type, not with the whole config. `Parse(ctx, &HTTP{})` parses only this part of the registered config, `tinyconf.Current[HTTP](config)` returns its current version, `tinyconf.Subscribe` calls the handler only when this part changes. Reloading needs a driver that watches its source: files (by the events of the file system), `.env` files of the env driver, Consul, Vault, etcd; otherwise `Subscribe` returns `tinyconf.ErrNoWatchers`.
 
 ```go
 package main
@@ -243,7 +243,7 @@ func main() {
 |---|---|---|
 | defaults | `tag.New("initial")` | the first driver |
 | yaml, json, toml, ini, properties | `yaml.New("config.yaml", opts...)` | `WithFiles(...)` more files, `WithFS(fsys, ...)`, `WithData(name, []byte)`, `WithOptional()` absent files are skipped, `WithEnvExpansion()` `${VAR}` in the file, `WithWatchInterval(d)`; `yaml.New("", yaml.WithData(...))` without a file |
-| env | `env.New(opts...)` | `WithPrefix("APP_")`, `WithAutoKeys()` names from the field paths without tags (`HTTP.MaxConns` → `HTTP_MAX_CONNS`), `WithIndexedKeys()` `SERVERS_0_HOST`, `WithSecretFiles()` `DB_PASSWORD_FILE`, `WithFiles(".env.local")` custom .env files, `WithFiles()` no .env files |
+| env | `env.New(opts...)` | `WithPrefix("APP_")`, `WithAutoKeys()` names from the field paths without tags (`HTTP.MaxConns` → `HTTP_MAX_CONNS`), `WithIndexedKeys()` `SERVERS_0_HOST`, `WithSecretFiles()` `DB_PASSWORD_FILE`, `WithFiles(".env.local")` custom .env files, `WithFiles()` no .env files, `WithWatchInterval(d)` .env files are watched |
 | flag | `flag.New(opts...)` | `WithArgs(args)` instead of `os.Args[1:]`; slices by repeated or comma separated flags: `--host=a --host=b,c` |
 | Consul KV | `consul.New("app/config", opts...)` | key per field: `prefix/http/port`; `WithAddress`, `WithToken` (or `CONSUL_HTTP_ADDR`, `CONSUL_HTTP_TOKEN`), `WithDatacenter`; a whole document: `yaml.New("", yaml.WithSource(consul.Document("app/config")))` |
 | Vault KV | `vault.New("app", opts...)` | one secret with JSON keys; `WithAddress`, `WithToken`, `WithTokenFile` (or `VAULT_ADDR`, `VAULT_TOKEN`), `WithMount("secret")`, `WithKVv1()`, `WithPaths(...)`, `WithOptional()`; changes by polling |
@@ -257,5 +257,5 @@ func main() {
 - A missing tag on the parent struct for the file and remote drivers: `yaml:"port"` in a struct field without `yaml:"http"` is not read from `http.port`.
 - Expecting `env:"PORT"` to get a prefix from the parent struct: env and flag tags are full names (use `env.WithPrefix` or `env.WithAutoKeys` for generated names).
 - Modifying the struct returned by `Current`: it is shared by all readers.
-- `Subscribe` without a driver that watches (only tag, env and flag drivers): `ErrNoWatchers`.
+- `Subscribe` without a driver that watches (only tag and flag drivers): `ErrNoWatchers`. The env driver watches only its `.env` files, not the process environment.
 - Logging the config with a `string` password field: use `tinyconf.Secret` or at least `hidden:"true"` for the logs of tinyconf.

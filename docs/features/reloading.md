@@ -56,16 +56,17 @@ func Current[T any](m *Manager) *T
 
 ## What is watched
 
-Changes are reported by drivers. The bundled [yaml](../drivers/yaml.md), [json](../drivers/json.md), [toml](../drivers/toml.md), [ini](../drivers/ini.md) and [properties](../drivers/properties.md) drivers watch their files from the OS file system: the main file and the files from `WithFiles`. The [consul](../drivers/consul.md) driver and Consul documents are notified by Consul right after the change. The [vault](../drivers/vault.md) driver checks the versions of the secrets. The [etcd](../drivers/etcd.md) driver and etcd documents watch the stream of the events of etcd.
+Changes are reported by drivers. The bundled [yaml](../drivers/yaml.md), [json](../drivers/json.md), [toml](../drivers/toml.md), [ini](../drivers/ini.md) and [properties](../drivers/properties.md) drivers watch their files from the OS file system: the main file and the files from `WithFiles`. The [env](../drivers/env.md) driver watches its `.env` files. The [consul](../drivers/consul.md) driver and Consul documents are notified by Consul right after the change. The [vault](../drivers/vault.md) driver checks the versions of the secrets. The [etcd](../drivers/etcd.md) driver and etcd documents watch the stream of the events of etcd.
 
 | Source | Watched |
 |---|---|
 | files from `New` and `WithFiles` | yes, events of the file system and polling |
+| `.env` files of the env driver | yes, events of the file system and polling |
 | Consul keys and documents | yes, notified by Consul |
 | Vault secrets | yes, polling, every 30 seconds by default |
 | etcd keys and documents | yes, notified by etcd |
 | files from `WithFS`, data from `WithData` | no |
-| environment variables, flags, tags | no |
+| process environment, flags, tags | no |
 
 Files are watched by the events of the file system: inotify on Linux, kqueue on macOS and BSD, ReadDirectoryChangesW on Windows. The change is detected right after the file is written: the driver waits 100 milliseconds for the next events, so the several writes of an editor are one change.
 
