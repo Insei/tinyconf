@@ -1,5 +1,5 @@
 site_name: tinyconf
-site_description: Simple and universal library for parsing configs in Go
+site_description: Go config structs filled from a chain of drivers, every package owns its part of the config and gets its changes without restart
 site_url: https://insei.github.io/tinyconf/
 repo_url: https://github.com/Insei/tinyconf
 repo_name: Insei/tinyconf
@@ -120,7 +120,7 @@ plugins:
           - why-tinyconf.md: for whom and for what, comparison with viper, koanf, cleanenv
           - use-cases.md: recipes
           - upgrading.md: upgrading from v1
-          - ai-agents.md: the skill for AI agents and llms.txt
+          - ai-agents.md: the skill for AI agents
         Features:
           - features/*.md
         Drivers:
