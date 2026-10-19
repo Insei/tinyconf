@@ -134,6 +134,7 @@ vaultDriver, err := vault.New("app/config", // vault:"password" inside vault:"da
 )
 ```
 The address and the token are taken from `VAULT_ADDR` and `VAULT_TOKEN` or set by options, KV version 2 at `secret/` by default.
+The driver can log in itself: `vault.WithAppRole(roleID, secretID)` or `vault.WithKubernetes("app", "")` by the service account of the pod.
 The secrets are checked for changes every 30 seconds while there are subscriptions.
 
 ## etcd

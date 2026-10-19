@@ -89,7 +89,7 @@ Checked against the current documentation of the libraries on 2026-10-16.
 ## Known limitations
 
 - **Fewer remote stores than koanf.** Consul, Vault and etcd only; others need a [custom driver](drivers/custom.md).
-- **Vault: token authentication only.** Kubernetes, AppRole and cloud login are delegated to Vault Agent; changes are detected by polling, because Vault does not notify.
+- **Vault: AppRole, Kubernetes and token authentication.** Cloud IAM, LDAP and JWT login are delegated to Vault Agent; changes are detected by polling, because Vault does not notify.
 - **No HCL out of the box.** The [format driver](drivers/format.md) accepts any decoder, but the conversion of HCL to a map is up to you.
 - **Own flag parser.** It ignores unknown flags, so it lives next to cobra or any CLI framework, but it is not a pflag integration.
 - **Subscriptions are package functions,** `tinyconf.Subscribe(ctx, config, ...)`, to keep Go 1.19 support; methods with type parameters need Go 1.27.

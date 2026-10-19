@@ -211,14 +211,14 @@ Where the value comes from:
 
     ```go
     // add after the file driver: the secret overrides the file
-    vault.New("app/database", vault.WithTokenFile("/vault/secrets/token"))
+    vault.New("app/database", vault.WithKubernetes("app", ""))
     ```
 
     ```go
     Password string `yaml:"password" vault:"password" hidden:"true" required:"true"`
     ```
 
-    The token is renewed by Vault Agent, see [vault](drivers/vault.md#authentication).
+    The driver logs in by the service account of the pod, AppRole and the token of Vault Agent are supported too, see [vault](drivers/vault.md#authentication).
 
 ## Containers
 
