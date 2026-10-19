@@ -2,17 +2,21 @@ package env
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"path"
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 	"unicode"
 
 	"github.com/insei/tinyconf/v2"
 	"github.com/insei/tinyconf/v2/cmp118"
 	"github.com/insei/tinyconf/v2/convert"
+	"github.com/insei/tinyconf/v2/drivers/internal/tree"
 	"github.com/insei/tinyconf/v2/slices118"
 
 	"github.com/insei/fmap/v3"
@@ -21,18 +25,33 @@ import (
 // secretFileSuffix is a suffix of the env variable with path to the file with value.
 const secretFileSuffix = "_FILE"
 
+// envFile is the .env file of the driver, default files are optional.
+type envFile struct {
+	path     string
+	optional bool
+}
+
 type envDriver struct {
-	name        string
-	prefix      string
-	autoKeys    bool
-	secretFiles bool
-	indexedKeys bool
+	name          string
+	prefix        string
+	autoKeys      bool
+	secretFiles   bool
+	indexedKeys   bool
+	isolation     bool
+	files         []envFile
+	watchInterval time.Duration
+
+	mu sync.RWMutex
 	// values from .env files, that are not exported to the process environment
 	values map[string]string
+	// values from .env files, that are exported to the process environment by the driver
+	exported map[string]string
+	// state of the files at the moment of the last reading
+	state string
 }
 
 // getKey returns name of the env variable for the field without prefix.
-func (d envDriver) getKey(field fmap.Field) (string, bool) {
+func (d *envDriver) getKey(field fmap.Field) (string, bool) {
 	envKey, ok := field.GetTag().Lookup(d.name)
 	if ok && envKey != "" {
 		return envKey, envKey != "-"
@@ -76,15 +95,17 @@ func autoKey(structPath string) string {
 	return key.String()
 }
 
-func (d envDriver) lookup(envKey string) (string, bool) {
+func (d *envDriver) lookup(envKey string) (string, bool) {
 	if envVal, ok := os.LookupEnv(envKey); ok {
 		return envVal, true
 	}
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 	envVal, ok := d.values[envKey]
 	return envVal, ok
 }
 
-func (d envDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
+func (d *envDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 	envKey, ok := d.getKey(field)
 	if !ok {
 		return nil, fmt.Errorf("%w: env tag is not set for %s config field", tinyconf.ErrIncorrectTagSettings, field.GetStructPath())
@@ -125,16 +146,18 @@ func (d envDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 }
 
 // environ returns all env variables with the prefix, keys are the names of the variables without the prefix.
-func (d envDriver) environ(prefix string) map[string]string {
+func (d *envDriver) environ(prefix string) map[string]string {
 	vars := make(map[string]string)
 	add := func(envKey, envVal string) {
 		if strings.HasPrefix(envKey, prefix) && len(envKey) > len(prefix) {
 			vars[envKey[len(prefix):]] = envVal
 		}
 	}
+	d.mu.RLock()
 	for envKey, envVal := range d.values {
 		add(envKey, envVal)
 	}
+	d.mu.RUnlock()
 	// process environment has priority over .env files
 	for _, env := range os.Environ() {
 		if idx := strings.Index(env, "="); idx > 0 {
@@ -287,7 +310,7 @@ func hasLongerField(t reflect.Type, name, envKey string) bool {
 	return false
 }
 
-func (d envDriver) GetName() string {
+func (d *envDriver) GetName() string {
 	return d.name
 }
 
@@ -303,7 +326,7 @@ func (f field) genDoc() string {
 	return fmt.Sprintf("#%s\n#%s=%s\n", f.tag.Get("doc"), f.key, f.value)
 }
 
-func (d envDriver) getUniqueFields(registers []*tinyconf.Registered) []field {
+func (d *envDriver) getUniqueFields(registers []*tinyconf.Registered) []field {
 	var fields []field
 	for _, register := range registers {
 		for _, path := range register.Storage.GetAllPaths() {
@@ -336,7 +359,7 @@ func (d envDriver) getUniqueFields(registers []*tinyconf.Registered) []field {
 	return fields
 }
 
-func (d envDriver) getRootMap(fields []field) map[int]map[string]string {
+func (d *envDriver) getRootMap(fields []field) map[int]map[string]string {
 	roots := make(map[int]map[string]string)
 	root := make(map[string]string)
 
@@ -347,7 +370,7 @@ func (d envDriver) getRootMap(fields []field) map[int]map[string]string {
 	return roots
 }
 
-func (d envDriver) GenDoc(registers ...*tinyconf.Registered) string {
+func (d *envDriver) GenDoc(registers ...*tinyconf.Registered) string {
 	uniqueFields := d.getUniqueFields(registers)
 
 	sortedFields := slices118.Clone(uniqueFields)
@@ -370,13 +393,14 @@ func (d envDriver) GenDoc(registers ...*tinyconf.Registered) string {
 }
 
 type options struct {
-	prefix      string
-	autoKeys    bool
-	secretFiles bool
-	indexedKeys bool
-	isolation   bool
-	files       []string
-	customFiles bool
+	prefix        string
+	autoKeys      bool
+	secretFiles   bool
+	indexedKeys   bool
+	isolation     bool
+	files         []string
+	customFiles   bool
+	watchInterval time.Duration
 }
 
 // Option is an env driver option.
@@ -447,6 +471,15 @@ func WithFilesIsolation() Option {
 	}
 }
 
+// WithWatchInterval sets the interval of polling the .env files for changes while there are subscriptions,
+// 5 seconds by default. The files are watched by the events of the file system too,
+// polling detects the changes if the events are lost.
+func WithWatchInterval(interval time.Duration) Option {
+	return func(o *options) {
+		o.watchInterval = interval
+	}
+}
+
 // New creates new env driver.
 // By default, it reads .env files from the executable directory and from the working directory
 // and exports their values to the process environment.
@@ -455,36 +488,107 @@ func New(opts ...Option) (tinyconf.Driver, error) {
 	for _, opt := range opts {
 		opt(o)
 	}
-	d := envDriver{
-		name:        "env",
-		prefix:      o.prefix,
-		autoKeys:    o.autoKeys,
-		secretFiles: o.secretFiles,
-		indexedKeys: o.indexedKeys,
+	d := &envDriver{
+		name:          "env",
+		prefix:        o.prefix,
+		autoKeys:      o.autoKeys,
+		secretFiles:   o.secretFiles,
+		indexedKeys:   o.indexedKeys,
+		isolation:     o.isolation,
+		watchInterval: tree.DefaultWatchInterval,
+		exported:      make(map[string]string),
 	}
-	set := setENV
-	if o.isolation {
-		d.values = make(map[string]string)
-		set = func(envKey, envVal string) {
-			if _, exist := d.values[envKey]; !exist && envKey != "" {
-				d.values[envKey] = envVal
-			}
-		}
+	if o.watchInterval > 0 {
+		d.watchInterval = o.watchInterval
 	}
 	if !o.customFiles {
 		execPath, _ := os.Executable()
 		wd, _ := os.Getwd()
 		for _, dir := range []string{path.Dir(execPath), wd} {
-			// default .env files are optional
-			_ = readENVFile(path.Join(dir, ".env"), set)
+			d.files = append(d.files, envFile{path: path.Join(dir, ".env"), optional: true})
 		}
 	}
 	for _, file := range o.files {
-		if err := readENVFile(file, set); err != nil {
-			return nil, fmt.Errorf("failed to read env file %s: %w", file, err)
-		}
+		d.files = append(d.files, envFile{path: file})
+	}
+	if err := d.Load(); err != nil {
+		return nil, err
 	}
 	return d, nil
+}
+
+// Load reads the .env files again, Manager calls it before every Parse.
+// Values exported by the driver to the process environment are replaced by the new values of the files,
+// and are removed from it if they are removed from the files.
+// Variables that are set by others are not changed.
+func (d *envDriver) Load() error {
+	// state is taken before reading, so the changes made during the reading will be detected by Watch
+	state := d.stat()
+	values := make(map[string]string)
+	set := func(envKey, envVal string) {
+		// value from the previous file has priority
+		if _, exist := values[envKey]; !exist && envKey != "" {
+			values[envKey] = envVal
+		}
+	}
+	for _, file := range d.files {
+		if err := readENVFile(file.path, set); err != nil && !file.optional {
+			return fmt.Errorf("failed to read env file %s: %w", file.path, err)
+		}
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.state = state
+	if d.isolation {
+		d.values = values
+		return nil
+	}
+	prevExported := d.exported
+	d.exported = make(map[string]string)
+	for envKey, prevVal := range prevExported {
+		if _, exist := values[envKey]; !exist && os.Getenv(envKey) == prevVal {
+			_ = os.Unsetenv(envKey)
+		}
+	}
+	for envKey, envVal := range values {
+		curVal, exist := os.LookupEnv(envKey)
+		prevVal, own := prevExported[envKey]
+		if exist && !(own && curVal == prevVal) {
+			// the variable is set by others, the real environment has priority over the files
+			continue
+		}
+		_ = os.Setenv(envKey, envVal)
+		d.exported[envKey] = envVal
+	}
+	return nil
+}
+
+// stat returns the state of the .env files, the files are changed if the state is changed.
+func (d *envDriver) stat() string {
+	var state strings.Builder
+	for _, file := range d.files {
+		if info, err := os.Stat(file.path); err == nil {
+			fmt.Fprintf(&state, "%d %d", info.ModTime().UnixNano(), info.Size())
+		}
+		state.WriteByte(';')
+	}
+	return state.String()
+}
+
+// Watch calls onChange after the changes of the .env files until ctx is done.
+// The files are checked after the events of the file system and with the watch interval, if the events are lost.
+// The process environment is not watched, it is not changed from the outside of the process.
+func (d *envDriver) Watch(ctx context.Context, onChange func()) error {
+	files := make([]string, len(d.files))
+	for i, file := range d.files {
+		files[i] = file.path
+	}
+	// changes made after the last Load should be detected too
+	d.mu.RLock()
+	state := d.state
+	d.mu.RUnlock()
+	tree.WatchFiles(ctx, files, d.watchInterval, state, d.stat, onChange)
+	return nil
 }
 
 // setENV exports value to the process environment if it is not already set.
