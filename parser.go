@@ -263,10 +263,13 @@ func (c *Manager) parse(ctx context.Context, conf any, reload bool) ([]FieldSour
 		}
 		c.mu.Unlock()
 	}
-	if !reload {
+	logger := c.logger()
+	// the values of the fields are not formatted for the logs if nobody writes them
+	_, silent := logger.(*noopLogger)
+	if !reload && !silent {
 		for _, path := range paths {
 			field := register.Storage.MustFind(path)
-			c.logger().Debug("initial",
+			logger.Debug("initial",
 				LogField("config", confTypeOf.String()),
 				LogField("field", path),
 				LogField("value", getLoggerValue(field, convert.GetFieldValue(field, confParse))))
@@ -285,7 +288,7 @@ func (c *Manager) parse(ctx context.Context, conf any, reload bool) ([]FieldSour
 			err = loader.Load()
 		}
 		if err != nil {
-			c.logger().Error(errorMessage(err, "failed to load"), LogField("driver", d.GetName()), LogField("details", err.Error()))
+			logger.Error(errorMessage(err, "failed to load"), LogField("driver", d.GetName()), LogField("details", err.Error()))
 			errs = append(errs, fmt.Errorf("%s driver: %w", d.GetName(), err))
 			continue
 		}
@@ -294,16 +297,21 @@ func (c *Manager) parse(ctx context.Context, conf any, reload bool) ([]FieldSour
 	for _, d := range drivers {
 		for _, path := range paths {
 			field := register.Storage.MustFind(path)
-			log := c.logger().With(
-				LogField("config", confTypeOf.String()),
-				LogField("driver", d.GetName()),
-				LogField("field", path))
+			log := logger
+			if !silent {
+				log = logger.With(
+					LogField("config", confTypeOf.String()),
+					LogField("driver", d.GetName()),
+					LogField("field", path))
+			}
 			driverValue, err := d.GetValue(field)
 			switch {
 			case errors.Is(err, ErrIncorrectTagSettings):
-				log.Warn("ignore", LogField("details", err.Error()))
+				if !silent {
+					log.Warn("ignore", LogField("details", err.Error()))
+				}
 			case errors.Is(err, ErrValueNotFound):
-				if !reload {
+				if !reload && !silent {
 					log.Debug("skip", LogField("details", err.Error()))
 				}
 			case err != nil:
@@ -319,7 +327,7 @@ func (c *Manager) parse(ctx context.Context, conf any, reload bool) ([]FieldSour
 					value = convert.Merge(convert.GetFieldValue(field, confParse), value)
 				}
 				if !reflect.DeepEqual(convert.GetFieldValue(field, confParse), value) {
-					if !reload {
+					if !reload && !silent {
 						log.Debug("override",
 							LogField("key", driverValue.Source),
 							LogField("value", getLoggerValue(field, value)))
@@ -404,6 +412,10 @@ func (c *Manager) Sources(conf any) []FieldSource {
 
 // logChanges logs fields with different values in prev and next configs, next config is parsed with sources.
 func (c *Manager) logChanges(storage fmap.Storage, prev, next any, prefix string, sources []FieldSource) {
+	logger := c.logger()
+	if _, silent := logger.(*noopLogger); silent {
+		return
+	}
 	fieldSources := make(map[string]FieldSource, len(sources))
 	for _, source := range sources {
 		fieldSources[source.Field] = source
@@ -424,7 +436,7 @@ func (c *Manager) logChanges(storage fmap.Storage, prev, next any, prefix string
 			fields = append(fields, LogField("key", source.Source))
 		}
 		fields = append(fields, LogField("value", getLoggerValue(field, value)))
-		c.logger().Debug("override", fields...)
+		logger.Debug("override", fields...)
 	}
 }
 
