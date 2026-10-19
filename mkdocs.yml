@@ -74,6 +74,7 @@ nav:
   - Why tinyconf?: why-tinyconf.md
   - Use cases: use-cases.md
   - Upgrading to v2: upgrading.md
+  - For AI agents: ai-agents.md
   - Features:
       - features/index.md
       - Manager: features/manager.md
@@ -119,6 +120,7 @@ plugins:
           - why-tinyconf.md: for whom and for what, comparison with viper, koanf, cleanenv
           - use-cases.md: recipes
           - upgrading.md: upgrading from v1
+          - ai-agents.md: the skill for AI agents and llms.txt
         Features:
           - features/*.md
         Drivers:
