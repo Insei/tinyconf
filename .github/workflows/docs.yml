@@ -12,10 +12,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  # the versions of the documentation are stored in the gh-pages branch by mike
+  # the versions of the documentation are stored in the gh-pages branch by mike, Pages publishes the branch
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -55,23 +53,15 @@ jobs:
           fi
           mike set-default --push latest
 
-      - name: Checkout the site
+      - name: Publish llms.txt at the root of the site
         run: |
-          # mike builds the version into the site directory, the published site is checked out to another one
+          # llms.txt of the latest version is also at the root of the site, where the agents look for it first
           git fetch origin gh-pages --depth=1
           git worktree add pages origin/gh-pages
-          # llms.txt of the latest version is also at the root of the site, where the agents look for it first
-          cp -L pages/latest/llms.txt pages/latest/llms-full.txt pages/ 2>/dev/null || true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: pages
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          cd pages
+          cp -L latest/llms.txt latest/llms-full.txt .
+          git add llms.txt llms-full.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Copy llms.txt of the latest version to the root"
+            git push origin HEAD:gh-pages
+          fi
