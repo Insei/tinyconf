@@ -75,3 +75,7 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        env:
+          # Pages skips the deployment of the commit that is already deployed, the tag of the release is on the
+          # same commit as the last deployment of main, so every run deploys its own version
+          GITHUB_SHA: ${{ github.sha }}-${{ github.run_id }}
