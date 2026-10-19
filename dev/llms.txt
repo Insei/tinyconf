@@ -1,0 +1,44 @@
+# tinyconf
+
+> Simple and universal library for parsing configs in Go
+
+tinyconf fills Go config structs from a chain of drivers by struct tags: defaults, YAML, JSON, TOML, INI, properties, environment variables, flags, Consul, Vault and etcd. The next driver overrides the previous one. Packages parse and subscribe to their own parts of the config, reloads create new versions of the config. The module path is github.com/insei/tinyconf/v2.
+
+## Start
+
+- [Get started](https://insei.github.io/tinyconf/dev/index.md): installation and the first config
+- [Why tinyconf?](https://insei.github.io/tinyconf/dev/why-tinyconf/index.md): for whom and for what, comparison with viper, koanf, cleanenv
+- [Use cases](https://insei.github.io/tinyconf/dev/use-cases/index.md): recipes
+- [Upgrading to v2](https://insei.github.io/tinyconf/dev/upgrading/index.md): upgrading from v1
+- [For AI agents](https://insei.github.io/tinyconf/dev/ai-agents/index.md): the skill for AI agents and llms.txt
+
+## Features
+
+- [Features](https://insei.github.io/tinyconf/dev/features/index.md)
+- [Documentation generation](https://insei.github.io/tinyconf/dev/features/gendoc/index.md)
+- [Logging](https://insei.github.io/tinyconf/dev/features/logging/index.md)
+- [Manager](https://insei.github.io/tinyconf/dev/features/manager/index.md)
+- [Reloading](https://insei.github.io/tinyconf/dev/features/reloading/index.md)
+- [Required fields](https://insei.github.io/tinyconf/dev/features/required/index.md)
+- [Value sources](https://insei.github.io/tinyconf/dev/features/sources/index.md)
+- [Nested structs and sub configs](https://insei.github.io/tinyconf/dev/features/structs/index.md)
+- [Struct tags](https://insei.github.io/tinyconf/dev/features/tags/index.md)
+- [Supported types](https://insei.github.io/tinyconf/dev/features/types/index.md)
+
+## Drivers
+
+- [Drivers](https://insei.github.io/tinyconf/dev/drivers/index.md)
+- [consul](https://insei.github.io/tinyconf/dev/drivers/consul/index.md)
+- [Custom drivers](https://insei.github.io/tinyconf/dev/drivers/custom/index.md)
+- [env](https://insei.github.io/tinyconf/dev/drivers/env/index.md)
+- [etcd](https://insei.github.io/tinyconf/dev/drivers/etcd/index.md)
+- [flag](https://insei.github.io/tinyconf/dev/drivers/flag/index.md)
+- [Custom formats](https://insei.github.io/tinyconf/dev/drivers/format/index.md)
+- [ini](https://insei.github.io/tinyconf/dev/drivers/ini/index.md)
+- [json](https://insei.github.io/tinyconf/dev/drivers/json/index.md)
+- [properties](https://insei.github.io/tinyconf/dev/drivers/properties/index.md)
+- [tag](https://insei.github.io/tinyconf/dev/drivers/tag/index.md)
+- [toml](https://insei.github.io/tinyconf/dev/drivers/toml/index.md)
+- [vault](https://insei.github.io/tinyconf/dev/drivers/vault/index.md)
+- [yaml](https://insei.github.io/tinyconf/dev/drivers/yaml/index.md)
+
