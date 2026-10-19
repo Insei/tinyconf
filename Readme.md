@@ -3,9 +3,12 @@
 [![Goreport](https://goreportcard.com/badge/github.com/insei/tinyconf)](https://goreportcard.com/report/github.com/insei/tinyconf)
 [![GoDoc](https://godoc.org/github.com/insei/tinyconf/v2?status.svg)](https://godoc.org/github.com/insei/tinyconf/v2)
 # tinyconf
-tinyconf - a simple and universal library for parsing configs.
+tinyconf fills Go config structs from a chain of drivers — defaults, files, environment, flags, Consul, Vault, etcd.
+Every package owns its part of the config and gets its changes without restart, and every value tells where it came from.
 
 Documentation: [insei.github.io/tinyconf](https://insei.github.io/tinyconf/) — get started, [why tinyconf](https://insei.github.io/tinyconf/latest/why-tinyconf/), [use cases](https://insei.github.io/tinyconf/latest/use-cases/), features and drivers.
+
+For AI agents: the [skill](skills/tinyconf/SKILL.md) with the current API, and the documentation as one file, [llms-full.txt](https://insei.github.io/tinyconf/latest/llms-full.txt).
 
 # Installation
 Install via go get. Note that Go 1.19 or newer is required.
