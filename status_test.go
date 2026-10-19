@@ -35,6 +35,8 @@ func TestManager_ReloadStatus(t *testing.T) {
 	// the applied reload
 	file.set(map[string]any{"Name": "second"})
 	<-configs
+	// the status is updated after the subscribers of all configs are called
+	assert.Eventually(t, func() bool { return !c.ReloadStatus().LastApplied.IsZero() }, 5*time.Second, time.Millisecond)
 	status = c.ReloadStatus()
 	assert.NoError(t, status.LastError)
 	assert.False(t, status.LastReload.IsZero())
