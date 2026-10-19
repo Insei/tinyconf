@@ -43,14 +43,15 @@ envDriver, err := env.New(
 )
 ```
 
-| Option                 | Description                                                                          |
-| ---------------------- | ------------------------------------------------------------------------------------ |
-| `WithPrefix(prefix)`   | adds the prefix to the names of all variables                                        |
-| `WithAutoKeys()`       | reads the fields without the `env` tag, the name is built from the path of the field |
-| `WithSecretFiles()`    | reads the value from the file, if the variable with the `_FILE` suffix is set        |
-| `WithFiles(files...)`  | custom `.env` files instead of the default ones                                      |
-| `WithFilesIsolation()` | does not export the values of the `.env` files to the process environment            |
-| `WithIndexedKeys()`    | reads slices, arrays, maps and structs from separate variables                       |
+| Option                        | Description                                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------ |
+| `WithPrefix(prefix)`          | adds the prefix to the names of all variables                                        |
+| `WithAutoKeys()`              | reads the fields without the `env` tag, the name is built from the path of the field |
+| `WithSecretFiles()`           | reads the value from the file, if the variable with the `_FILE` suffix is set        |
+| `WithFiles(files...)`         | custom `.env` files instead of the default ones                                      |
+| `WithFilesIsolation()`        | does not export the values of the `.env` files to the process environment            |
+| `WithWatchInterval(interval)` | the interval of polling the `.env` files for changes, 5 seconds by default           |
+| `WithIndexedKeys()`           | reads slices, arrays, maps and structs from separate variables                       |
 
 ### Prefix
 
@@ -150,6 +151,16 @@ env.New(env.WithFiles(".env", ".env.local"))
 ### Isolation
 
 Exported values are visible to the whole process and to its child processes. With `env.WithFilesIsolation()` the values of the files are available only for the driver, `os.Getenv` does not see them. It is also useful in tests, where the changed environment of the process is a side effect.
+
+### Reloading
+
+The `.env` files are read again before every `Parse`, and they are watched for [reloading](https://insei.github.io/tinyconf/dev/features/reloading/index.md): a change of a file reloads the configs with subscribers. The files are watched by the events of the file system and by polling, as the files of the [yaml](https://insei.github.io/tinyconf/dev/drivers/yaml/index.md) driver; the default files that do not exist yet are watched too.
+
+```go
+envDriver, err := env.New(env.WithFiles(".env"), env.WithWatchInterval(time.Minute))
+```
+
+The driver changes only the variables that it exported itself: the new value of the file replaces the exported one, the variable removed from the file is removed from the process environment. Variables set by the environment of the process or changed by the application keep their values. The process environment itself is not watched, it is not changed from the outside of the process.
 
 ## Documentation
 

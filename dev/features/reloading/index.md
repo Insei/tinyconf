@@ -57,16 +57,17 @@ The versions from `Current` and `onChange` are shared by all readers, so they ar
 
 ## What is watched
 
-Changes are reported by drivers. The bundled [yaml](https://insei.github.io/tinyconf/dev/drivers/yaml/index.md), [json](https://insei.github.io/tinyconf/dev/drivers/json/index.md), [toml](https://insei.github.io/tinyconf/dev/drivers/toml/index.md), [ini](https://insei.github.io/tinyconf/dev/drivers/ini/index.md) and [properties](https://insei.github.io/tinyconf/dev/drivers/properties/index.md) drivers watch their files from the OS file system: the main file and the files from `WithFiles`. The [consul](https://insei.github.io/tinyconf/dev/drivers/consul/index.md) driver and Consul documents are notified by Consul right after the change. The [vault](https://insei.github.io/tinyconf/dev/drivers/vault/index.md) driver checks the versions of the secrets. The [etcd](https://insei.github.io/tinyconf/dev/drivers/etcd/index.md) driver and etcd documents watch the stream of the events of etcd.
+Changes are reported by drivers. The bundled [yaml](https://insei.github.io/tinyconf/dev/drivers/yaml/index.md), [json](https://insei.github.io/tinyconf/dev/drivers/json/index.md), [toml](https://insei.github.io/tinyconf/dev/drivers/toml/index.md), [ini](https://insei.github.io/tinyconf/dev/drivers/ini/index.md) and [properties](https://insei.github.io/tinyconf/dev/drivers/properties/index.md) drivers watch their files from the OS file system: the main file and the files from `WithFiles`. The [env](https://insei.github.io/tinyconf/dev/drivers/env/index.md) driver watches its `.env` files. The [consul](https://insei.github.io/tinyconf/dev/drivers/consul/index.md) driver and Consul documents are notified by Consul right after the change. The [vault](https://insei.github.io/tinyconf/dev/drivers/vault/index.md) driver checks the versions of the secrets. The [etcd](https://insei.github.io/tinyconf/dev/drivers/etcd/index.md) driver and etcd documents watch the stream of the events of etcd.
 
 | Source                                    | Watched                                    |
 | ----------------------------------------- | ------------------------------------------ |
 | files from `New` and `WithFiles`          | yes, events of the file system and polling |
+| `.env` files of the env driver            | yes, events of the file system and polling |
 | Consul keys and documents                 | yes, notified by Consul                    |
 | Vault secrets                             | yes, polling, every 30 seconds by default  |
 | etcd keys and documents                   | yes, notified by etcd                      |
 | files from `WithFS`, data from `WithData` | no                                         |
-| environment variables, flags, tags        | no                                         |
+| process environment, flags, tags          | no                                         |
 
 Files are watched by the events of the file system: inotify on Linux, kqueue on macOS and BSD, ReadDirectoryChangesW on Windows. The change is detected right after the file is written: the driver waits 100 milliseconds for the next events, so the several writes of an editor are one change.
 

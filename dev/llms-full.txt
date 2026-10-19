@@ -1242,16 +1242,17 @@ The versions from `Current` and `onChange` are shared by all readers, so they ar
 
 ## What is watched
 
-Changes are reported by drivers. The bundled [yaml](https://insei.github.io/tinyconf/dev/drivers/yaml/index.md), [json](https://insei.github.io/tinyconf/dev/drivers/json/index.md), [toml](https://insei.github.io/tinyconf/dev/drivers/toml/index.md), [ini](https://insei.github.io/tinyconf/dev/drivers/ini/index.md) and [properties](https://insei.github.io/tinyconf/dev/drivers/properties/index.md) drivers watch their files from the OS file system: the main file and the files from `WithFiles`. The [consul](https://insei.github.io/tinyconf/dev/drivers/consul/index.md) driver and Consul documents are notified by Consul right after the change. The [vault](https://insei.github.io/tinyconf/dev/drivers/vault/index.md) driver checks the versions of the secrets. The [etcd](https://insei.github.io/tinyconf/dev/drivers/etcd/index.md) driver and etcd documents watch the stream of the events of etcd.
+Changes are reported by drivers. The bundled [yaml](https://insei.github.io/tinyconf/dev/drivers/yaml/index.md), [json](https://insei.github.io/tinyconf/dev/drivers/json/index.md), [toml](https://insei.github.io/tinyconf/dev/drivers/toml/index.md), [ini](https://insei.github.io/tinyconf/dev/drivers/ini/index.md) and [properties](https://insei.github.io/tinyconf/dev/drivers/properties/index.md) drivers watch their files from the OS file system: the main file and the files from `WithFiles`. The [env](https://insei.github.io/tinyconf/dev/drivers/env/index.md) driver watches its `.env` files. The [consul](https://insei.github.io/tinyconf/dev/drivers/consul/index.md) driver and Consul documents are notified by Consul right after the change. The [vault](https://insei.github.io/tinyconf/dev/drivers/vault/index.md) driver checks the versions of the secrets. The [etcd](https://insei.github.io/tinyconf/dev/drivers/etcd/index.md) driver and etcd documents watch the stream of the events of etcd.
 
 | Source                                    | Watched                                    |
 | ----------------------------------------- | ------------------------------------------ |
 | files from `New` and `WithFiles`          | yes, events of the file system and polling |
+| `.env` files of the env driver            | yes, events of the file system and polling |
 | Consul keys and documents                 | yes, notified by Consul                    |
 | Vault secrets                             | yes, polling, every 30 seconds by default  |
 | etcd keys and documents                   | yes, notified by etcd                      |
 | files from `WithFS`, data from `WithData` | no                                         |
-| environment variables, flags, tags        | no                                         |
+| process environment, flags, tags          | no                                         |
 
 Files are watched by the events of the file system: inotify on Linux, kqueue on macOS and BSD, ReadDirectoryChangesW on Windows. The change is detected right after the file is written: the driver waits 100 milliseconds for the next events, so the several writes of an editor are one change.
 
@@ -2031,14 +2032,15 @@ envDriver, err := env.New(
 )
 ```
 
-| Option                 | Description                                                                          |
-| ---------------------- | ------------------------------------------------------------------------------------ |
-| `WithPrefix(prefix)`   | adds the prefix to the names of all variables                                        |
-| `WithAutoKeys()`       | reads the fields without the `env` tag, the name is built from the path of the field |
-| `WithSecretFiles()`    | reads the value from the file, if the variable with the `_FILE` suffix is set        |
-| `WithFiles(files...)`  | custom `.env` files instead of the default ones                                      |
-| `WithFilesIsolation()` | does not export the values of the `.env` files to the process environment            |
-| `WithIndexedKeys()`    | reads slices, arrays, maps and structs from separate variables                       |
+| Option                        | Description                                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------ |
+| `WithPrefix(prefix)`          | adds the prefix to the names of all variables                                        |
+| `WithAutoKeys()`              | reads the fields without the `env` tag, the name is built from the path of the field |
+| `WithSecretFiles()`           | reads the value from the file, if the variable with the `_FILE` suffix is set        |
+| `WithFiles(files...)`         | custom `.env` files instead of the default ones                                      |
+| `WithFilesIsolation()`        | does not export the values of the `.env` files to the process environment            |
+| `WithWatchInterval(interval)` | the interval of polling the `.env` files for changes, 5 seconds by default           |
+| `WithIndexedKeys()`           | reads slices, arrays, maps and structs from separate variables                       |
 
 ### Prefix
 
@@ -2138,6 +2140,16 @@ env.New(env.WithFiles(".env", ".env.local"))
 ### Isolation
 
 Exported values are visible to the whole process and to its child processes. With `env.WithFilesIsolation()` the values of the files are available only for the driver, `os.Getenv` does not see them. It is also useful in tests, where the changed environment of the process is a side effect.
+
+### Reloading
+
+The `.env` files are read again before every `Parse`, and they are watched for [reloading](https://insei.github.io/tinyconf/dev/features/reloading/index.md): a change of a file reloads the configs with subscribers. The files are watched by the events of the file system and by polling, as the files of the [yaml](https://insei.github.io/tinyconf/dev/drivers/yaml/index.md) driver; the default files that do not exist yet are watched too.
+
+```go
+envDriver, err := env.New(env.WithFiles(".env"), env.WithWatchInterval(time.Minute))
+```
+
+The driver changes only the variables that it exported itself: the new value of the file replaces the exported one, the variable removed from the file is removed from the process environment. Variables set by the environment of the process or changed by the application keep their values. The process environment itself is not watched, it is not changed from the outside of the process.
 
 ## Documentation
 

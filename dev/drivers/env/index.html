@@ -1326,6 +1326,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#reloading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reloading
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1658,6 +1669,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#reloading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reloading
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1757,6 +1779,10 @@
 <tr>
 <td><code>WithFilesIsolation()</code></td>
 <td>does not export the values of the <code>.env</code> files to the process environment</td>
+</tr>
+<tr>
+<td><code>WithWatchInterval(interval)</code></td>
+<td>the interval of polling the <code>.env</code> files for changes, 5 seconds by default</td>
 </tr>
 <tr>
 <td><code>WithIndexedKeys()</code></td>
@@ -1875,6 +1901,11 @@
 <p><code>env.WithFiles()</code> without arguments disables reading of the <code>.env</code> files at all.</p>
 <h3 id="isolation">Isolation<a class="headerlink" href="#isolation" title="Permanent link">&para;</a></h3>
 <p>Exported values are visible to the whole process and to its child processes. With <code>env.WithFilesIsolation()</code> the values of the files are available only for the driver, <code>os.Getenv</code> does not see them. It is also useful in tests, where the changed environment of the process is a side effect.</p>
+<h3 id="reloading">Reloading<a class="headerlink" href="#reloading" title="Permanent link">&para;</a></h3>
+<p>The <code>.env</code> files are read again before every <code>Parse</code>, and they are watched for <a href="../../features/reloading/">reloading</a>: a change of a file reloads the configs with subscribers. The files are watched by the events of the file system and by polling, as the files of the <a href="../yaml/">yaml</a> driver; the default files that do not exist yet are watched too.</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nx">envDriver</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">env</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">env</span><span class="p">.</span><span class="nx">WithFiles</span><span class="p">(</span><span class="s">".env"</span><span class="p">),</span><span class="w"> </span><span class="nx">env</span><span class="p">.</span><span class="nx">WithWatchInterval</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">))</span>
+</span></code></pre></div>
+<p>The driver changes only the variables that it exported itself: the new value of the file replaces the exported one, the variable removed from the file is removed from the process environment. Variables set by the environment of the process or changed by the application keep their values. The process environment itself is not watched, it is not changed from the outside of the process.</p>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <p><code>GenDoc("env")</code> generates a commented template of the <code>.env</code> file, see <a href="../../features/gendoc/">Documentation generation</a>. Names of the variables are shown with the prefix, fields without the <code>env</code> tag are included if the auto keys are enabled.</p>
 

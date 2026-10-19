@@ -1657,7 +1657,7 @@
 <li><a href="../gendoc/"><code>GenDoc</code></a> shows the values of the current versions.</li>
 </ul>
 <h2 id="what-is-watched">What is watched<a class="headerlink" href="#what-is-watched" title="Permanent link">&para;</a></h2>
-<p>Changes are reported by drivers. The bundled <a href="../../drivers/yaml/">yaml</a>, <a href="../../drivers/json/">json</a>, <a href="../../drivers/toml/">toml</a>, <a href="../../drivers/ini/">ini</a> and <a href="../../drivers/properties/">properties</a> drivers watch their files from the OS file system: the main file and the files from <code>WithFiles</code>. The <a href="../../drivers/consul/">consul</a> driver and Consul documents are notified by Consul right after the change. The <a href="../../drivers/vault/">vault</a> driver checks the versions of the secrets. The <a href="../../drivers/etcd/">etcd</a> driver and etcd documents watch the stream of the events of etcd.</p>
+<p>Changes are reported by drivers. The bundled <a href="../../drivers/yaml/">yaml</a>, <a href="../../drivers/json/">json</a>, <a href="../../drivers/toml/">toml</a>, <a href="../../drivers/ini/">ini</a> and <a href="../../drivers/properties/">properties</a> drivers watch their files from the OS file system: the main file and the files from <code>WithFiles</code>. The <a href="../../drivers/env/">env</a> driver watches its <code>.env</code> files. The <a href="../../drivers/consul/">consul</a> driver and Consul documents are notified by Consul right after the change. The <a href="../../drivers/vault/">vault</a> driver checks the versions of the secrets. The <a href="../../drivers/etcd/">etcd</a> driver and etcd documents watch the stream of the events of etcd.</p>
 <table>
 <thead>
 <tr>
@@ -1668,6 +1668,10 @@
 <tbody>
 <tr>
 <td>files from <code>New</code> and <code>WithFiles</code></td>
+<td>yes, events of the file system and polling</td>
+</tr>
+<tr>
+<td><code>.env</code> files of the env driver</td>
 <td>yes, events of the file system and polling</td>
 </tr>
 <tr>
@@ -1687,7 +1691,7 @@
 <td>no</td>
 </tr>
 <tr>
-<td>environment variables, flags, tags</td>
+<td>process environment, flags, tags</td>
 <td>no</td>
 </tr>
 </tbody>
