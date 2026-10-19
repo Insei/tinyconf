@@ -1346,6 +1346,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Authentication">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#approle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AppRole
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kubernetes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kubernetes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1549,6 +1588,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Authentication">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#approle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AppRole
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kubernetes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kubernetes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Token
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1671,6 +1749,21 @@
 <td>the file with the token, it is read before every request</td>
 </tr>
 <tr>
+<td><code>WithAppRole(roleID, secretID)</code></td>
+<td></td>
+<td>login by AppRole, see <a href="#authentication">Authentication</a></td>
+</tr>
+<tr>
+<td><code>WithKubernetes(role, tokenFile)</code></td>
+<td></td>
+<td>login by the service account of the pod</td>
+</tr>
+<tr>
+<td><code>WithAuthMount(mount)</code></td>
+<td><code>approle</code>, <code>kubernetes</code></td>
+<td>the mount of the auth method</td>
+</tr>
+<tr>
 <td><code>WithNamespace(namespace)</code></td>
 <td><code>VAULT_NAMESPACE</code></td>
 <td>the namespace of Vault Enterprise</td>
@@ -1709,8 +1802,22 @@
 </table>
 <p>The first argument of <code>New</code> can be an empty string, if the secrets are set by <code>WithPaths</code>.</p>
 <h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
-<p>The driver uses a token. Other methods — Kubernetes, AppRole, cloud IAM — are handled by <a href="https://developer.hashicorp.com/vault/docs/agent-and-proxy/agent">Vault Agent</a>: it logs in, renews the token and writes it to the file. Point the driver to this file:</p>
-<div class="language-go highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">vaultDriver</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vault</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="s">"app/config"</span><span class="p">,</span><span class="w"> </span><span class="nx">vault</span><span class="p">.</span><span class="nx">WithTokenFile</span><span class="p">(</span><span class="s">"/vault/secrets/token"</span><span class="p">))</span>
+<p>The driver logs in by AppRole or by the service account of a Kubernetes pod, or uses a token.</p>
+<h3 id="approle">AppRole<a class="headerlink" href="#approle" title="Permanent link">&para;</a></h3>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">vaultDriver</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vault</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="s">"app/config"</span><span class="p">,</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">vault</span><span class="p">.</span><span class="nx">WithAppRole</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">"VAULT_ROLE_ID"</span><span class="p">),</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Getenv</span><span class="p">(</span><span class="s">"VAULT_SECRET_ID"</span><span class="p">)),</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="kubernetes">Kubernetes<a class="headerlink" href="#kubernetes" title="Permanent link">&para;</a></h3>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// the token of the service account from /var/run/secrets/kubernetes.io/serviceaccount/token</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nx">vaultDriver</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vault</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="s">"app/config"</span><span class="p">,</span><span class="w"> </span><span class="nx">vault</span><span class="p">.</span><span class="nx">WithKubernetes</span><span class="p">(</span><span class="s">"app"</span><span class="p">,</span><span class="w"> </span><span class="s">""</span><span class="p">))</span>
+</span></code></pre></div>
+<p>The second argument is the file with the token of the service account, a projected token with the audience of Vault for example. The file is read before every login, so the token rotated by Kubernetes is used.</p>
+<p>The auth methods are mounted at <code>approle</code> and <code>kubernetes</code> by default, another mount is set by <code>WithAuthMount("k8s-prod")</code>.</p>
+<p>The driver logs in at the first request and keeps the token. The new token is requested after 2/3 of its lease, and when Vault denies the request: the token can be revoked before its lease expires. Wrong credentials are an error of <code>Parse</code> that wraps <code>tinyconf.ErrAccessDenied</code>. A login method has priority over <code>WithToken</code>, <code>WithTokenFile</code> and <code>VAULT_TOKEN</code>.</p>
+<h3 id="token">Token<a class="headerlink" href="#token" title="Permanent link">&para;</a></h3>
+<p><code>WithToken</code> or the <code>VAULT_TOKEN</code> variable set the token. Other methods — cloud IAM, LDAP, JWT — are handled by <a href="https://developer.hashicorp.com/vault/docs/agent-and-proxy/agent">Vault Agent</a>: it logs in, renews the token and writes it to the file. Point the driver to this file:</p>
+<div class="language-go highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nx">vaultDriver</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">vault</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="s">"app/config"</span><span class="p">,</span><span class="w"> </span><span class="nx">vault</span><span class="p">.</span><span class="nx">WithTokenFile</span><span class="p">(</span><span class="s">"/vault/secrets/token"</span><span class="p">))</span>
 </span></code></pre></div>
 <p>The file is read before every request, so the renewed token is used without restart of the application.</p>
 <h2 id="errors">Errors<a class="headerlink" href="#errors" title="Permanent link">&para;</a></h2>
@@ -1727,7 +1834,7 @@
 <td>error of <code>Parse</code>, unless <code>WithOptional()</code></td>
 </tr>
 <tr>
-<td>the token can not read the secret</td>
+<td>the token can not read the secret, wrong credentials of the login</td>
 <td>error of <code>Parse</code> that wraps <code>tinyconf.ErrAccessDenied</code>, logged as <code>access denied</code></td>
 </tr>
 <tr>
@@ -1742,18 +1849,18 @@
 <p>For KV version 2 the version of the secret is checked, for KV version 1 — the hash of its data.</p>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <p><code>GenDoc("vault")</code> generates the command of the Vault CLI that puts the current values to the first secret, values of <code>hidden:"true"</code> fields are empty:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>vault<span class="w"> </span>kv<span class="w"> </span>put<span class="w"> </span>-mount<span class="o">=</span>secret<span class="w"> </span>app/config<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;'EOF'</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="s">{</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="s">  "database": {</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="s">    "host": "db.internal",</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="s">    "password": ""</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="s">  },</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="s">  "hosts": [</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="s">    "a",</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="s">    "b"</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="s">  ]</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="s">}</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="s">EOF</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>vault<span class="w"> </span>kv<span class="w"> </span>put<span class="w"> </span>-mount<span class="o">=</span>secret<span class="w"> </span>app/config<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;'EOF'</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="s">{</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="s">  "database": {</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="s">    "host": "db.internal",</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="s">    "password": ""</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="s">  },</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="s">  "hosts": [</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="s">    "a",</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="s">    "b"</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="s">  ]</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="s">}</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="s">EOF</span>
 </span></code></pre></div>
 
 

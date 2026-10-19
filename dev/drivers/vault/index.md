@@ -54,24 +54,52 @@ vaultDriver, err := vault.New("app/config",
 )
 ```
 
-| Option                        | Default                                  | Description                                                    |
-| ----------------------------- | ---------------------------------------- | -------------------------------------------------------------- |
-| `WithAddress(address)`        | `VAULT_ADDR` or `https://127.0.0.1:8200` | URL of Vault                                                   |
-| `WithToken(token)`            | `VAULT_TOKEN`                            | the token                                                      |
-| `WithTokenFile(path)`         |                                          | the file with the token, it is read before every request       |
-| `WithNamespace(namespace)`    | `VAULT_NAMESPACE`                        | the namespace of Vault Enterprise                              |
-| `WithMount(mount)`            | `secret`                                 | the mount of the KV secrets engine                             |
-| `WithKVv1()`                  | KV version 2                             | read from the KV secrets engine version 1                      |
-| `WithHTTPClient(client)`      | `http.DefaultClient`                     | the client with TLS settings, for example                      |
-| `WithPaths(paths...)`         |                                          | additional secrets                                             |
-| `WithOptional()`              |                                          | secrets can be absent, by default an absent secret is an error |
-| `WithWatchInterval(interval)` | 30 seconds                               | the interval of checking the secrets for changes               |
+| Option                            | Default                                  | Description                                                    |
+| --------------------------------- | ---------------------------------------- | -------------------------------------------------------------- |
+| `WithAddress(address)`            | `VAULT_ADDR` or `https://127.0.0.1:8200` | URL of Vault                                                   |
+| `WithToken(token)`                | `VAULT_TOKEN`                            | the token                                                      |
+| `WithTokenFile(path)`             |                                          | the file with the token, it is read before every request       |
+| `WithAppRole(roleID, secretID)`   |                                          | login by AppRole, see [Authentication](#authentication)        |
+| `WithKubernetes(role, tokenFile)` |                                          | login by the service account of the pod                        |
+| `WithAuthMount(mount)`            | `approle`, `kubernetes`                  | the mount of the auth method                                   |
+| `WithNamespace(namespace)`        | `VAULT_NAMESPACE`                        | the namespace of Vault Enterprise                              |
+| `WithMount(mount)`                | `secret`                                 | the mount of the KV secrets engine                             |
+| `WithKVv1()`                      | KV version 2                             | read from the KV secrets engine version 1                      |
+| `WithHTTPClient(client)`          | `http.DefaultClient`                     | the client with TLS settings, for example                      |
+| `WithPaths(paths...)`             |                                          | additional secrets                                             |
+| `WithOptional()`                  |                                          | secrets can be absent, by default an absent secret is an error |
+| `WithWatchInterval(interval)`     | 30 seconds                               | the interval of checking the secrets for changes               |
 
 The first argument of `New` can be an empty string, if the secrets are set by `WithPaths`.
 
 ## Authentication
 
-The driver uses a token. Other methods — Kubernetes, AppRole, cloud IAM — are handled by [Vault Agent](https://developer.hashicorp.com/vault/docs/agent-and-proxy/agent): it logs in, renews the token and writes it to the file. Point the driver to this file:
+The driver logs in by AppRole or by the service account of a Kubernetes pod, or uses a token.
+
+### AppRole
+
+```go
+vaultDriver, err := vault.New("app/config",
+    vault.WithAppRole(os.Getenv("VAULT_ROLE_ID"), os.Getenv("VAULT_SECRET_ID")),
+)
+```
+
+### Kubernetes
+
+```go
+// the token of the service account from /var/run/secrets/kubernetes.io/serviceaccount/token
+vaultDriver, err := vault.New("app/config", vault.WithKubernetes("app", ""))
+```
+
+The second argument is the file with the token of the service account, a projected token with the audience of Vault for example. The file is read before every login, so the token rotated by Kubernetes is used.
+
+The auth methods are mounted at `approle` and `kubernetes` by default, another mount is set by `WithAuthMount("k8s-prod")`.
+
+The driver logs in at the first request and keeps the token. The new token is requested after 2/3 of its lease, and when Vault denies the request: the token can be revoked before its lease expires. Wrong credentials are an error of `Parse` that wraps `tinyconf.ErrAccessDenied`. A login method has priority over `WithToken`, `WithTokenFile` and `VAULT_TOKEN`.
+
+### Token
+
+`WithToken` or the `VAULT_TOKEN` variable set the token. Other methods — cloud IAM, LDAP, JWT — are handled by [Vault Agent](https://developer.hashicorp.com/vault/docs/agent-and-proxy/agent): it logs in, renews the token and writes it to the file. Point the driver to this file:
 
 ```go
 vaultDriver, err := vault.New("app/config", vault.WithTokenFile("/vault/secrets/token"))
@@ -81,11 +109,11 @@ The file is read before every request, so the renewed token is used without rest
 
 ## Errors
 
-| Case                              | Result                                                                            |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| the secret is absent              | error of `Parse`, unless `WithOptional()`                                         |
-| the token can not read the secret | error of `Parse` that wraps `tinyconf.ErrAccessDenied`, logged as `access denied` |
-| Vault is not available or sealed  | error of `Parse`                                                                  |
+| Case                                                              | Result                                                                            |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| the secret is absent                                              | error of `Parse`, unless `WithOptional()`                                         |
+| the token can not read the secret, wrong credentials of the login | error of `Parse` that wraps `tinyconf.ErrAccessDenied`, logged as `access denied` |
+| Vault is not available or sealed                                  | error of `Parse`                                                                  |
 
 The driver is skipped in the `Parse` call with the error, see [Missing files and values](https://insei.github.io/tinyconf/dev/drivers/yaml/#missing-files-and-values).
 

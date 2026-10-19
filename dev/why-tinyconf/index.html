@@ -1955,7 +1955,7 @@
 <h2 id="known-limitations">Known limitations<a class="headerlink" href="#known-limitations" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Fewer remote stores than koanf.</strong> Consul, Vault and etcd only; others need a <a href="../drivers/custom/">custom driver</a>.</li>
-<li><strong>Vault: token authentication only.</strong> Kubernetes, AppRole and cloud login are delegated to Vault Agent; changes are detected by polling, because Vault does not notify.</li>
+<li><strong>Vault: AppRole, Kubernetes and token authentication.</strong> Cloud IAM, LDAP and JWT login are delegated to Vault Agent; changes are detected by polling, because Vault does not notify.</li>
 <li><strong>No HCL out of the box.</strong> The <a href="../drivers/format/">format driver</a> accepts any decoder, but the conversion of HCL to a map is up to you.</li>
 <li><strong>Own flag parser.</strong> It ignores unknown flags, so it lives next to cobra or any CLI framework, but it is not a pflag integration.</li>
 <li><strong>Subscriptions are package functions,</strong> <code>tinyconf.Subscribe(ctx, config, ...)</code>, to keep Go 1.19 support; methods with type parameters need Go 1.27.</li>

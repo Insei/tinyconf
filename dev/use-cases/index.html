@@ -2073,11 +2073,11 @@
 </div>
 <div class="tabbed-block">
 <div class="language-go highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1">// add after the file driver: the secret overrides the file</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="nx">vault</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="s">"app/database"</span><span class="p">,</span><span class="w"> </span><span class="nx">vault</span><span class="p">.</span><span class="nx">WithTokenFile</span><span class="p">(</span><span class="s">"/vault/secrets/token"</span><span class="p">))</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="nx">vault</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="s">"app/database"</span><span class="p">,</span><span class="w"> </span><span class="nx">vault</span><span class="p">.</span><span class="nx">WithKubernetes</span><span class="p">(</span><span class="s">"app"</span><span class="p">,</span><span class="w"> </span><span class="s">""</span><span class="p">))</span>
 </span></code></pre></div>
 <div class="language-go highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nx">Password</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="s">`yaml:"password" vault:"password" hidden:"true" required:"true"`</span>
 </span></code></pre></div>
-<p>The token is renewed by Vault Agent, see <a href="../drivers/vault/#authentication">vault</a>.</p>
+<p>The driver logs in by the service account of the pod, AppRole and the token of Vault Agent are supported too, see <a href="../drivers/vault/#authentication">vault</a>.</p>
 </div>
 </div>
 </div>
