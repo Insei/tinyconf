@@ -215,4 +215,32 @@ func TestVault(t *testing.T) {
 		srv.put(t, "reload/config", map[string]any{"name": "second", "database": map[string]any{"port": 6432}})
 		assert.Equal(t, 6432, next(t, databases).Port)
 	})
+
+	t.Run("approle", func(t *testing.T) {
+		srv.put(t, "approle/config", map[string]any{"name": "approle"})
+		srv.request(t, http.MethodPost, "sys/auth/approle", map[string]any{"type": "approle"})
+		srv.request(t, http.MethodPut, "sys/policies/acl/read-approle", map[string]any{
+			"policy": `path "secret/data/approle/*" { capabilities = ["read"] }`,
+		})
+		srv.request(t, http.MethodPost, "auth/approle/role/app", map[string]any{"token_policies": []string{"read-approle"}, "token_ttl": "1h"})
+		var roleID, secretID struct {
+			Data struct {
+				RoleID   string `json:"role_id"`
+				SecretID string `json:"secret_id"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(srv.request(t, http.MethodGet, "auth/approle/role/app/role-id", nil), &roleID))
+		require.NoError(t, json.Unmarshal(srv.request(t, http.MethodPost, "auth/approle/role/app/secret-id", nil), &secretID))
+
+		driver, err := vault.New("approle/config", vault.WithAddress(srv.address), vault.WithAppRole(roleID.Data.RoleID, secretID.Data.SecretID))
+		require.NoError(t, err)
+		conf, _, err := parse(t, driver)
+		require.NoError(t, err)
+		assert.Equal(t, "approle", conf.Name)
+
+		driver, err = vault.New("approle/config", vault.WithAddress(srv.address), vault.WithAppRole(roleID.Data.RoleID, "wrong"))
+		require.NoError(t, err)
+		_, _, err = parse(t, driver)
+		assert.ErrorIs(t, err, tinyconf.ErrAccessDenied)
+	})
 }
