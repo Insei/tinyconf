@@ -246,7 +246,7 @@ func main() {
 | env | `env.New(opts...)` | `WithPrefix("APP_")`, `WithAutoKeys()` names from the field paths without tags (`HTTP.MaxConns` → `HTTP_MAX_CONNS`), `WithIndexedKeys()` `SERVERS_0_HOST`, `WithSecretFiles()` `DB_PASSWORD_FILE`, `WithFiles(".env.local")` custom .env files, `WithFiles()` no .env files, `WithWatchInterval(d)` .env files are watched |
 | flag | `flag.New(opts...)` | `WithArgs(args)` instead of `os.Args[1:]`; slices by repeated or comma separated flags: `--host=a --host=b,c` |
 | Consul KV | `consul.New("app/config", opts...)` | key per field: `prefix/http/port`; `WithAddress`, `WithToken` (or `CONSUL_HTTP_ADDR`, `CONSUL_HTTP_TOKEN`), `WithDatacenter`; a whole document: `yaml.New("", yaml.WithSource(consul.Document("app/config")))` |
-| Vault KV | `vault.New("app", opts...)` | one secret with JSON keys; `WithAddress`, `WithToken`, `WithTokenFile` (or `VAULT_ADDR`, `VAULT_TOKEN`), `WithMount("secret")`, `WithKVv1()`, `WithPaths(...)`, `WithOptional()`; changes by polling |
+| Vault KV | `vault.New("app", opts...)` | one secret with JSON keys; `WithAddress`, `WithToken`, `WithTokenFile` (or `VAULT_ADDR`, `VAULT_TOKEN`), `WithAppRole(roleID, secretID)`, `WithKubernetes(role, "")` login by the service account, `WithMount("secret")`, `WithKVv1()`, `WithPaths(...)`, `WithOptional()`; changes by polling |
 | etcd | `etcd.New("/app/config", opts...)` | key per field; `WithEndpoints(...)`, `WithAuth(user, password)`; `etcd.Document(key)` like Consul |
 | any format | `format.New("hcl", decode, "config.hcl", opts...)` | `decode func([]byte) (map[string]any, error)`, the options of the file drivers, `WithEncoder` for `GenDoc` |
 
