@@ -2,16 +2,23 @@ package e2e
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/moby/moby/api/types/container"
 	"github.com/testcontainers/testcontainers-go"
 	tcvault "github.com/testcontainers/testcontainers-go/modules/vault"
 
@@ -35,7 +42,11 @@ func startVault(t *testing.T) *vaultServer {
 	ctx := context.Background()
 	c, err := tcvault.Run(ctx, vaultImage, tcvault.WithToken(vaultRoot),
 		// KV version 1 for the tests of the old secrets engine, the dev server has KV version 2 at secret/
-		tcvault.WithInitCommand("secrets enable -version=1 -path=kv1 kv"))
+		tcvault.WithInitCommand("secrets enable -version=1 -path=kv1 kv"),
+		// Vault calls the fake API of Kubernetes in the test for the Kubernetes auth method
+		testcontainers.WithHostConfigModifier(func(hc *container.HostConfig) {
+			hc.ExtraHosts = append(hc.ExtraHosts, "host.docker.internal:host-gateway")
+		}))
 	testcontainers.CleanupContainer(t, c)
 	require.NoError(t, err)
 	address, err := c.HttpHostAddress(ctx)
@@ -83,6 +94,92 @@ func (s *vaultServer) createToken(t *testing.T, path string) string {
 	}
 	require.NoError(t, json.Unmarshal(s.request(t, http.MethodPost, "auth/token/create", map[string]any{"policies": []string{name}}), &resp))
 	return resp.Auth.ClientToken
+}
+
+// fakeKubernetes is the TokenReview API of Kubernetes for the Kubernetes auth method of Vault:
+// the valid tokens are the tokens of the service account default/app.
+type fakeKubernetes struct {
+	*httptest.Server
+	address string
+
+	mu      sync.Mutex
+	valid   map[string]bool
+	reviews []string
+}
+
+func startFakeKubernetes(t *testing.T) *fakeKubernetes {
+	t.Helper()
+	k := &fakeKubernetes{valid: map[string]bool{}}
+	k.Server = httptest.NewUnstartedServer(http.HandlerFunc(k.handle))
+	// Vault in the container calls it by the address of the host
+	listener, err := net.Listen("tcp", "0.0.0.0:0")
+	require.NoError(t, err)
+	k.Listener = listener
+	k.Start()
+	t.Cleanup(k.Close)
+	k.address = fmt.Sprintf("http://host.docker.internal:%d", listener.Addr().(*net.TCPAddr).Port)
+	return k
+}
+
+func (k *fakeKubernetes) handle(w http.ResponseWriter, r *http.Request) {
+	var review struct {
+		Spec struct {
+			Token     string   `json:"token"`
+			Audiences []string `json:"audiences"`
+		} `json:"spec"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&review)
+	k.mu.Lock()
+	k.reviews = append(k.reviews, review.Spec.Token)
+	status := map[string]any{"authenticated": false}
+	if k.valid[review.Spec.Token] {
+		status = map[string]any{
+			"authenticated": true,
+			"user": map[string]any{
+				"username": "system:serviceaccount:default:app",
+				"uid":      "uid-app",
+				"groups":   []string{"system:serviceaccounts", "system:serviceaccounts:default"},
+			},
+			"audiences": review.Spec.Audiences,
+		}
+	}
+	k.mu.Unlock()
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenReview", "status": status})
+}
+
+// token issues the new token of the service account default/app, the previous tokens stay valid until revoke.
+func (k *fakeKubernetes) token(t *testing.T, id string) string {
+	t.Helper()
+	encode := func(v any) string {
+		data, err := json.Marshal(v)
+		require.NoError(t, err)
+		return base64.RawURLEncoding.EncodeToString(data)
+	}
+	token := encode(map[string]any{"alg": "RS256", "typ": "JWT"}) + "." + encode(map[string]any{
+		"iss": "kubernetes/serviceaccount",
+		"sub": "system:serviceaccount:default:app",
+		"jti": id,
+		"kubernetes.io/serviceaccount/namespace":            "default",
+		"kubernetes.io/serviceaccount/service-account.name": "app",
+		"kubernetes.io/serviceaccount/service-account.uid":  "uid-app",
+	}) + "." + base64.RawURLEncoding.EncodeToString([]byte("signature"))
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.valid[token] = true
+	return token
+}
+
+func (k *fakeKubernetes) revoke(token string) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	delete(k.valid, token)
+}
+
+func (k *fakeKubernetes) reviewed() []string {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	return append([]string{}, k.reviews...)
 }
 
 type vaultDatabase struct {
@@ -239,6 +336,48 @@ func TestVault(t *testing.T) {
 		assert.Equal(t, "approle", conf.Name)
 
 		driver, err = vault.New("approle/config", vault.WithAddress(srv.address), vault.WithAppRole(roleID.Data.RoleID, "wrong"))
+		require.NoError(t, err)
+		_, _, err = parse(t, driver)
+		assert.ErrorIs(t, err, tinyconf.ErrAccessDenied)
+	})
+
+	t.Run("kubernetes", func(t *testing.T) {
+		k8s := startFakeKubernetes(t)
+		srv.put(t, "kubernetes/config", map[string]any{"name": "kubernetes"})
+		srv.request(t, http.MethodPost, "sys/auth/k8s", map[string]any{"type": "kubernetes"})
+		// without the CA and the reviewer token Vault reviews the token of the login by itself
+		srv.request(t, http.MethodPost, "auth/k8s/config", map[string]any{"kubernetes_host": k8s.address, "disable_local_ca_jwt": true})
+		srv.request(t, http.MethodPut, "sys/policies/acl/read-kubernetes", map[string]any{
+			"policy": `path "secret/data/kubernetes/*" { capabilities = ["read"] }`,
+		})
+		// the short lease makes the driver login again in the test
+		srv.request(t, http.MethodPost, "auth/k8s/role/app", map[string]any{
+			"bound_service_account_names":      []string{"app"},
+			"bound_service_account_namespaces": []string{"default"},
+			"token_policies":                   []string{"read-kubernetes"},
+			"token_ttl":                        "3s",
+		})
+		first := k8s.token(t, "first")
+		tokenFile := filepath.Join(t.TempDir(), "token")
+		require.NoError(t, os.WriteFile(tokenFile, []byte(first), 0o600))
+
+		driver, err := vault.New("kubernetes/config", vault.WithAddress(srv.address), vault.WithKubernetes("app", tokenFile), vault.WithAuthMount("k8s"))
+		require.NoError(t, err)
+		conf, manager, err := parse(t, driver)
+		require.NoError(t, err)
+		assert.Equal(t, "kubernetes", conf.Name)
+		assert.Equal(t, []string{first}, k8s.reviewed())
+
+		// Kubernetes rotates the token of the service account, the old one is not valid anymore
+		second := k8s.token(t, "second")
+		k8s.revoke(first)
+		require.NoError(t, os.WriteFile(tokenFile, []byte(second), 0o600))
+		// the token of Vault is requested again after 2/3 of its lease
+		time.Sleep(2500 * time.Millisecond)
+		require.NoError(t, manager.Parse(context.Background(), &vaultConfig{}))
+		assert.Equal(t, []string{first, second}, k8s.reviewed())
+
+		driver, err = vault.New("kubernetes/config", vault.WithAddress(srv.address), vault.WithKubernetes("other", tokenFile), vault.WithAuthMount("k8s"))
 		require.NoError(t, err)
 		_, _, err = parse(t, driver)
 		assert.ErrorIs(t, err, tinyconf.ErrAccessDenied)
