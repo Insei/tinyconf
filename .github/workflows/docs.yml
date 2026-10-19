@@ -44,8 +44,10 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             # v1.4.2 is the version 1.4, the latest release
             version="${GITHUB_REF_NAME#v}"
+            export LLMSTXT_BASE_URL="https://insei.github.io/tinyconf/${version%.*}/"
             mike deploy --push --update-aliases "${version%.*}" latest
           elif mike list | grep -v '^dev' | grep -q .; then
+            export LLMSTXT_BASE_URL="https://insei.github.io/tinyconf/dev/"
             mike deploy --push dev
           else
             # latest is dev until the first release with the versions of the documentation
@@ -58,6 +60,8 @@ jobs:
           # mike builds the version into the site directory, the published site is checked out to another one
           git fetch origin gh-pages --depth=1
           git worktree add pages origin/gh-pages
+          # llms.txt of the latest version is also at the root of the site, where the agents look for it first
+          cp -L pages/latest/llms.txt pages/latest/llms-full.txt pages/ 2>/dev/null || true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: pages

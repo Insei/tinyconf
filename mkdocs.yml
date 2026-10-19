@@ -1,5 +1,5 @@
 site_name: tinyconf
-site_description: Simple and universal library for parsing configs in Go
+site_description: Go config structs filled from a chain of drivers, every package owns its part of the config and gets its changes without restart
 site_url: https://insei.github.io/tinyconf/
 repo_url: https://github.com/Insei/tinyconf
 repo_name: Insei/tinyconf
@@ -74,6 +74,7 @@ nav:
   - Why tinyconf?: why-tinyconf.md
   - Use cases: use-cases.md
   - Upgrading to v2: upgrading.md
+  - For AI agents: ai-agents.md
   - Features:
       - features/index.md
       - Manager: features/manager.md
@@ -100,3 +101,27 @@ nav:
       - etcd: drivers/etcd.md
       - Custom formats: drivers/format.md
       - Custom drivers: drivers/custom.md
+
+plugins:
+  - search
+  # llms.txt and llms-full.txt for AI agents: https://llmstxt.org
+  - llmstxt:
+      full_output: llms-full.txt
+      # the links point to the pages of the deployed version, it is set by the docs workflow
+      base_url: !ENV [LLMSTXT_BASE_URL, "https://insei.github.io/tinyconf/latest/"]
+      markdown_description: >-
+        tinyconf fills Go config structs from a chain of drivers by struct tags: defaults, YAML, JSON, TOML, INI,
+        properties, environment variables, flags, Consul, Vault and etcd. The next driver overrides the previous one.
+        Packages parse and subscribe to their own parts of the config, reloads create new versions of the config.
+        The module path is github.com/insei/tinyconf/v2.
+      sections:
+        Start:
+          - index.md: installation and the first config
+          - why-tinyconf.md: for whom and for what, comparison with viper, koanf, cleanenv
+          - use-cases.md: recipes
+          - upgrading.md: upgrading from v1
+          - ai-agents.md: the skill for AI agents
+        Features:
+          - features/*.md
+        Drivers:
+          - drivers/*.md
