@@ -105,19 +105,19 @@ and `HTTP_HOST=example.com` in the environment the program prints
 
 ## What to read next
 
-- **[Why tinyconf? →](https://insei.github.io/tinyconf/2.1/why-tinyconf/index.md)**
+- **[Why tinyconf? →](https://insei.github.io/tinyconf/2.2/why-tinyconf/index.md)**
 
   Where it fits, what it gives up, and how it compares to viper, koanf, cleanenv and others.
 
-- **[Use cases →](https://insei.github.io/tinyconf/2.1/use-cases/index.md)**
+- **[Use cases →](https://insei.github.io/tinyconf/2.2/use-cases/index.md)**
 
   Recipes for typical tasks: environment only, file with overrides, files per environment, secrets, containers, command line tools, optional sections, reloading, tests.
 
-- **[Features →](https://insei.github.io/tinyconf/2.1/features/index.md)**
+- **[Features →](https://insei.github.io/tinyconf/2.2/features/index.md)**
 
   The manager, struct tags, supported types, nested structs and sub configs, required fields, value sources, reloading, documentation generation, logging.
 
-- **[Drivers →](https://insei.github.io/tinyconf/2.1/drivers/index.md)**
+- **[Drivers →](https://insei.github.io/tinyconf/2.2/drivers/index.md)**
 
   Bundled drivers and how to write your own.
 
@@ -155,7 +155,7 @@ tinyconf.Subscribe(ctx, config, func(prev, next *HTTP) {
 })
 ```
 
-Other libraries give one callback for any change of the whole config (viper), or a callback per provider (koanf), and leave it to you to find out what has changed and who should know. See [Sub configs](https://insei.github.io/tinyconf/2.1/features/structs/#sub-configs) and [Reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md).
+Other libraries give one callback for any change of the whole config (viper), or a callback per provider (koanf), and leave it to you to find out what has changed and who should know. See [Sub configs](https://insei.github.io/tinyconf/2.2/features/structs/#sub-configs) and [Reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md).
 
 ### Reloads that are safe by design
 
@@ -169,15 +169,15 @@ The config is your struct, every field says where its value lives:
 Port int `initial:"8080" yaml:"port" env:"HTTP_PORT" flag:"http-port" required:"true" doc:"port of the server"`
 ```
 
-Drivers are applied in the order of addition, the next one overrides the previous one field by field. Eleven drivers out of the box — defaults from tags, YAML, JSON, TOML, INI, properties, environment, flags, Consul, Vault, etcd — and [any file format](https://insei.github.io/tinyconf/2.1/drivers/format/index.md) by a decoder. `time.Duration`, `url.URL`, `TextUnmarshaler`, slices, maps, structs in lists and pointers behave the same in every driver: a conformance test checks it.
+Drivers are applied in the order of addition, the next one overrides the previous one field by field. Eleven drivers out of the box — defaults from tags, YAML, JSON, TOML, INI, properties, environment, flags, Consul, Vault, etcd — and [any file format](https://insei.github.io/tinyconf/2.2/drivers/format/index.md) by a decoder. `time.Duration`, `url.URL`, `TextUnmarshaler`, slices, maps, structs in lists and pointers behave the same in every driver: a conformance test checks it.
 
 ### You always know where a value came from
 
-`Sources(conf)` returns the driver and the key of the final value of every field. The debug log shows the initial value of every field, every override and every change after reloads. Secrets are masked everywhere: `hidden:"true"` in the logs and templates, the `tinyconf.Secret` type also in `fmt`, JSON and the logs of the application. See [Value sources](https://insei.github.io/tinyconf/2.1/features/sources/index.md) and [Logging](https://insei.github.io/tinyconf/2.1/features/logging/index.md).
+`Sources(conf)` returns the driver and the key of the final value of every field. The debug log shows the initial value of every field, every override and every change after reloads. Secrets are masked everywhere: `hidden:"true"` in the logs and templates, the `tinyconf.Secret` type also in `fmt`, JSON and the logs of the application. See [Value sources](https://insei.github.io/tinyconf/2.2/features/sources/index.md) and [Logging](https://insei.github.io/tinyconf/2.2/features/logging/index.md).
 
 ### Templates of the config from the code
 
-`GenDoc` renders the registered configs with the current values and the `doc` descriptions in the format of every driver: a YAML or TOML file, a `.env` file, flags help, `consul kv put`, `vault kv put` and `etcdctl put` commands. See [Documentation generation](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md).
+`GenDoc` renders the registered configs with the current values and the `doc` descriptions in the format of every driver: a YAML or TOML file, a `.env` file, flags help, `consul kv put`, `vault kv put` and `etcdctl put` commands. See [Documentation generation](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md).
 
 ### Light, fast and tested
 
@@ -187,7 +187,7 @@ Drivers are applied in the order of addition, the next one overrides the previou
 
 ### Ready for AI agents
 
-The repository has a [skill for agents](https://insei.github.io/tinyconf/2.1/ai-agents/index.md) whose programs are built in CI, and the documentation is published as `llms.txt` and `llms-full.txt` for every version, so an agent writes the code for the current API, not for the one it remembers.
+The repository has a [skill for agents](https://insei.github.io/tinyconf/2.2/ai-agents/index.md) whose programs are built in CI, and the documentation is published as `llms.txt` and `llms-full.txt` for every version, so an agent writes the code for the current API, not for the one it remembers.
 
 ## When another library fits better
 
@@ -204,7 +204,7 @@ Checked against the current documentation of the libraries on 2026-10-16.
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------- | -------------------------------------------- | ----------------------------------------------- |
 | **Model**                          | struct + tags                                                                                                        | key-value + `Unmarshal`                             | key-value + `Unmarshal`                              | struct + tags                                          | struct + tags                                   | struct + tags                                | struct + tags                                   |
 | **Defaults in tags**               | ✓ (tag driver)                                                                                                       | ✗ (`SetDefault`)                                    | ✗ (provider)                                         | ✓                                                      | ✓                                               | ✗ (pre-filled struct)                        | ✓                                               |
-| **File formats**                   | YAML, JSON, TOML, INI, properties + [any by a decoder](https://insei.github.io/tinyconf/2.1/drivers/format/index.md) | JSON, TOML, YAML, INI, envfile, properties + codecs | many, each a module                                  | YAML, JSON, TOML, EDN, .env                            | JSON + modules                                  | JSON, YAML, TOML                             | ✗                                               |
+| **File formats**                   | YAML, JSON, TOML, INI, properties + [any by a decoder](https://insei.github.io/tinyconf/2.2/drivers/format/index.md) | JSON, TOML, YAML, INI, envfile, properties + codecs | many, each a module                                  | YAML, JSON, TOML, EDN, .env                            | JSON + modules                                  | JSON, YAML, TOML                             | ✗                                               |
 | **Environment / flags**            | ✓ / ✓                                                                                                                | ✓ / pflag                                           | ✓ / modules                                          | ✓ / ✗                                                  | ✓ / ✓                                           | ✓ / ✓                                        | ✓ / ✗                                           |
 | **Remote stores**                  | Consul, Vault, etcd                                                                                                  | Consul, etcd, Firestore, NATS (separate module)     | Consul, etcd, Vault, S3, AWS, Azure, NATS… (modules) | ✗                                                      | ✗                                               | Consul, etcd, Vault, SSM (in core)           | ✗                                               |
 | **Required fields**                | ✓                                                                                                                    | ✗                                                   | ✗                                                    | ✓                                                      | ✓                                               | ✓                                            | ✓                                               |
@@ -219,25 +219,25 @@ Checked against the current documentation of the libraries on 2026-10-16.
 
 ## Known limitations
 
-- **Fewer remote stores than koanf.** Consul, Vault and etcd only; others need a [custom driver](https://insei.github.io/tinyconf/2.1/drivers/custom/index.md).
-- **Vault: token authentication only.** Kubernetes, AppRole and cloud login are delegated to Vault Agent; changes are detected by polling, because Vault does not notify.
-- **No HCL out of the box.** The [format driver](https://insei.github.io/tinyconf/2.1/drivers/format/index.md) accepts any decoder, but the conversion of HCL to a map is up to you.
+- **Fewer remote stores than koanf.** Consul, Vault and etcd only; others need a [custom driver](https://insei.github.io/tinyconf/2.2/drivers/custom/index.md).
+- **Vault: AppRole, Kubernetes and token authentication.** Cloud IAM, LDAP and JWT login are delegated to Vault Agent; changes are detected by polling, because Vault does not notify.
+- **No HCL out of the box.** The [format driver](https://insei.github.io/tinyconf/2.2/drivers/format/index.md) accepts any decoder, but the conversion of HCL to a map is up to you.
 - **Own flag parser.** It ignores unknown flags, so it lives next to cobra or any CLI framework, but it is not a pflag integration.
 - **Subscriptions are package functions,** `tinyconf.Subscribe(ctx, config, ...)`, to keep Go 1.19 support; methods with type parameters need Go 1.27.
 - **A younger and smaller project** than viper and koanf.
 
 ## Migrating
 
-From tinyconf v1: see [Upgrading to v2](https://insei.github.io/tinyconf/2.1/upgrading/index.md).
+From tinyconf v1: see [Upgrading to v2](https://insei.github.io/tinyconf/2.2/upgrading/index.md).
 
 | From                                     | To tinyconf                                                                                          |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| viper `SetDefault("http.port", 8080)`    | `initial:"8080"` with the [tag driver](https://insei.github.io/tinyconf/2.1/drivers/tag/index.md)    |
-| viper `AutomaticEnv()`                   | [`env.WithAutoKeys()`](https://insei.github.io/tinyconf/2.1/drivers/env/#auto-keys)                  |
-| viper `WatchConfig()` + `OnConfigChange` | [`tinyconf.Subscribe`](https://insei.github.io/tinyconf/2.1/features/reloading/index.md) per package |
+| viper `SetDefault("http.port", 8080)`    | `initial:"8080"` with the [tag driver](https://insei.github.io/tinyconf/2.2/drivers/tag/index.md)    |
+| viper `AutomaticEnv()`                   | [`env.WithAutoKeys()`](https://insei.github.io/tinyconf/2.2/drivers/env/#auto-keys)                  |
+| viper `WatchConfig()` + `OnConfigChange` | [`tinyconf.Subscribe`](https://insei.github.io/tinyconf/2.2/features/reloading/index.md) per package |
 | viper `Sub("http")`                      | `config.Parse(context.Background(), &HTTP{})` or `tinyconf.Current[HTTP](config)`                    |
 | cleanenv `env-default`, `env-required`   | `initial:"..."` and `required:"true"`                                                                |
-| cleanenv `env-description` + `Usage`     | `doc:"..."` + [`GenDoc("env")`](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md)       |
+| cleanenv `env-description` + `Usage`     | `doc:"..."` + [`GenDoc("env")`](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md)       |
 | caarlos0/env `envDefault`, `required`    | `initial:"..."` and `required:"true"`                                                                |
 
 # Use cases
@@ -278,7 +278,7 @@ func must[T any](value T, err error) T {
 
 ## Defaults in code
 
-Default values live in the tags, right next to the fields. The [tag driver](https://insei.github.io/tinyconf/2.1/drivers/tag/index.md) goes first, so every other driver can override it.
+Default values live in the tags, right next to the fields. The [tag driver](https://insei.github.io/tinyconf/2.2/drivers/tag/index.md) goes first, so every other driver can override it.
 
 ```go
 type Config struct {
@@ -301,7 +301,7 @@ c := &Config{Host: must(os.Hostname())}
 
 ## Environment only
 
-A twelve-factor service without config files. With the [auto keys](https://insei.github.io/tinyconf/2.1/drivers/env/#auto-keys) the `env` tags are not needed, with the [prefix](https://insei.github.io/tinyconf/2.1/drivers/env/#prefix) the variables of the service do not clash with others.
+A twelve-factor service without config files. With the [auto keys](https://insei.github.io/tinyconf/2.2/drivers/env/#auto-keys) the `env` tags are not needed, with the [prefix](https://insei.github.io/tinyconf/2.2/drivers/env/#prefix) the variables of the service do not clash with others.
 
 ```go
 type Config struct {
@@ -345,11 +345,11 @@ config := must(tinyconf.New(
 ))
 ```
 
-`yaml.WithOptional()` lets the application start without the file at all. Prefer JSON or TOML? The [json](https://insei.github.io/tinyconf/2.1/drivers/json/index.md) and [toml](https://insei.github.io/tinyconf/2.1/drivers/toml/index.md) drivers have the same options, only the tag is different.
+`yaml.WithOptional()` lets the application start without the file at all. Prefer JSON or TOML? The [json](https://insei.github.io/tinyconf/2.2/drivers/json/index.md) and [toml](https://insei.github.io/tinyconf/2.2/drivers/toml/index.md) drivers have the same options, only the tag is different.
 
 ## Files per environment
 
-One base file and a small file with differences for every environment. Files are [merged](https://insei.github.io/tinyconf/2.1/drivers/yaml/#several-files): the next file overrides only the keys it has.
+One base file and a small file with differences for every environment. Files are [merged](https://insei.github.io/tinyconf/2.2/drivers/yaml/#several-files): the next file overrides only the keys it has.
 
 ```go
 stage := os.Getenv("APP_ENV") // dev, stage, prod
@@ -408,9 +408,9 @@ type Config struct {
 }
 ```
 
-- `hidden:"true"` masks the value in [logs](https://insei.github.io/tinyconf/2.1/features/logging/index.md) and removes it from [`GenDoc`](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md).
-- [`tinyconf.Secret`](https://insei.github.io/tinyconf/2.1/features/types/#secrets) instead of `string` masks the value when the application prints or logs the config itself: `%+v`, JSON, zap, slog.
-- `required:"true"` makes `Parse` [fail](https://insei.github.io/tinyconf/2.1/features/required/index.md) without the value.
+- `hidden:"true"` masks the value in [logs](https://insei.github.io/tinyconf/2.2/features/logging/index.md) and removes it from [`GenDoc`](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md).
+- [`tinyconf.Secret`](https://insei.github.io/tinyconf/2.2/features/types/#secrets) instead of `string` masks the value when the application prints or logs the config itself: `%+v`, JSON, zap, slog.
+- `required:"true"` makes `Parse` [fail](https://insei.github.io/tinyconf/2.2/features/required/index.md) without the value.
 
 Where the value comes from:
 
@@ -439,14 +439,14 @@ database:
 
 ```go
 // add after the file driver: the secret overrides the file
-vault.New("app/database", vault.WithTokenFile("/vault/secrets/token"))
+vault.New("app/database", vault.WithKubernetes("app", ""))
 ```
 
 ```go
 Password string `yaml:"password" vault:"password" hidden:"true" required:"true"`
 ```
 
-The token is renewed by Vault Agent, see [vault](https://insei.github.io/tinyconf/2.1/drivers/vault/#authentication).
+The driver logs in by the service account of the pod, AppRole and the token of Vault Agent are supported too, see [vault](https://insei.github.io/tinyconf/2.2/drivers/vault/#authentication).
 
 ## Containers
 
@@ -516,7 +516,7 @@ if c.Help {
 tool --output=build --include='*.go' --include='*.md' --verbose
 ```
 
-The driver [ignores unknown flags](https://insei.github.io/tinyconf/2.1/drivers/flag/#unknown-flags), so it works next to any CLI framework that owns the sub commands and positional arguments.
+The driver [ignores unknown flags](https://insei.github.io/tinyconf/2.2/drivers/flag/#unknown-flags), so it works next to any CLI framework that owns the sub commands and positional arguments.
 
 ## Lists and maps in environment
 
@@ -557,11 +557,11 @@ SERVERS_1_HOST=b
 SERVERS_1_PORT=2
 ```
 
-The indexed form requires [`env.WithIndexedKeys()`](https://insei.github.io/tinyconf/2.1/drivers/env/#indexed-keys). A value with the separator inside can be quoted, `"a,b",c`, or the separator can be changed with the [`separator` tag](https://insei.github.io/tinyconf/2.1/features/tags/#common-tags).
+The indexed form requires [`env.WithIndexedKeys()`](https://insei.github.io/tinyconf/2.2/drivers/env/#indexed-keys). A value with the separator inside can be quoted, `"a,b",c`, or the separator can be changed with the [`separator` tag](https://insei.github.io/tinyconf/2.2/features/tags/#common-tags).
 
 ## Optional sections
 
-A feature that is turned on by the presence of its settings. The section is a [struct stored by pointer](https://insei.github.io/tinyconf/2.1/features/structs/#structs-stored-by-pointer): it stays `nil` until some driver has a value for one of its fields.
+A feature that is turned on by the presence of its settings. The section is a [struct stored by pointer](https://insei.github.io/tinyconf/2.2/features/structs/#structs-stored-by-pointer): it stays `nil` until some driver has a value for one of its fields.
 
 ```go
 type TLS struct {
@@ -627,7 +627,7 @@ if err := config.Register(root); err != nil {
 store := must(storage.New(config)) // parses only the storage section
 ```
 
-The package gets a [sub config](https://insei.github.io/tinyconf/2.1/features/structs/#sub-configs): its own fields with the keys of the whole config, `storage.dsn` in the file.
+The package gets a [sub config](https://insei.github.io/tinyconf/2.2/features/structs/#sub-configs): its own fields with the keys of the whole config, `storage.dsn` in the file.
 
 ## Fail fast
 
@@ -647,11 +647,11 @@ if err := config.Parse(context.Background(), c); err != nil {
 env driver: field HTTP.Port: failed to parse ... "abc": invalid syntax; field Database.Password: required value is not set
 ```
 
-`Parse` does not stop on the first error: incorrect values of all fields and all missing [required fields](https://insei.github.io/tinyconf/2.1/features/required/index.md) are in the same error.
+`Parse` does not stop on the first error: incorrect values of all fields and all missing [required fields](https://insei.github.io/tinyconf/2.2/features/required/index.md) are in the same error.
 
 ## Reload without restart
 
-Every package subscribes to its own part of the config, the manager calls it only when this part is changed. See [Reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md).
+Every package subscribes to its own part of the config, the manager calls it only when this part is changed. See [Reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md).
 
 ```go
 c := &Config{}
@@ -693,7 +693,7 @@ config := must(tinyconf.New(
 ))
 ```
 
-The address and the token are taken from `CONSUL_HTTP_ADDR` and `CONSUL_HTTP_TOKEN`, the same variables the Consul CLI uses. [Subscribe](#reload-without-restart) to apply the changes: Consul notifies the driver right after the change. See [consul](https://insei.github.io/tinyconf/2.1/drivers/consul/index.md).
+The address and the token are taken from `CONSUL_HTTP_ADDR` and `CONSUL_HTTP_TOKEN`, the same variables the Consul CLI uses. [Subscribe](#reload-without-restart) to apply the changes: Consul notifies the driver right after the change. See [consul](https://insei.github.io/tinyconf/2.2/drivers/consul/index.md).
 
 ## Config template
 
@@ -714,13 +714,13 @@ if len(os.Args) > 1 && os.Args[1] == "-doc" {
 }
 ```
 
-`GenDoc` shows the current values of the registered config, so after `Parse` the template has the defaults and everything that is set in this environment — it is also a "show effective config" command. Without `Parse` the template has empty values. Fields with `hidden:"true"` are never shown. See [Documentation generation](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md).
+`GenDoc` shows the current values of the registered config, so after `Parse` the template has the defaults and everything that is set in this environment — it is also a "show effective config" command. Without `Parse` the template has empty values. Fields with `hidden:"true"` are never shown. See [Documentation generation](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md).
 
 ## Debugging
 
 "Why is the port 9090?" Two tools answer it.
 
-[`Sources`](https://insei.github.io/tinyconf/2.1/features/sources/index.md) shows the driver that has set the final value:
+[`Sources`](https://insei.github.io/tinyconf/2.2/features/sources/index.md) shows the driver that has set the final value:
 
 ```go
 for _, source := range config.Sources(c) {
@@ -733,7 +733,7 @@ HTTP.Host is set by env driver from HTTP_HOST
 HTTP.Port is set by yaml driver from http.port
 ```
 
-The [logger](https://insei.github.io/tinyconf/2.1/features/logging/index.md) on the debug level shows the [history](https://insei.github.io/tinyconf/2.1/features/logging/#history-of-a-field) of every field: the initial value and every driver that has overridden it, then every change after reloads.
+The [logger](https://insei.github.io/tinyconf/2.2/features/logging/index.md) on the debug level shows the [history](https://insei.github.io/tinyconf/2.2/features/logging/#history-of-a-field) of every field: the initial value and every driver that has overridden it, then every change after reloads.
 
 ```go
 tinyconf.WithLogger(logger.NewFmtLogger(logger.DEBUG))
@@ -768,11 +768,11 @@ func TestPort(t *testing.T) {
 }
 ```
 
-To test with a `.env` file without changing the environment of the test process, use `env.WithFiles(path)` together with [`env.WithFilesIsolation()`](https://insei.github.io/tinyconf/2.1/drivers/env/#isolation).
+To test with a `.env` file without changing the environment of the test process, use `env.WithFiles(path)` together with [`env.WithFilesIsolation()`](https://insei.github.io/tinyconf/2.2/drivers/env/#isolation).
 
 ## Custom source
 
-Values from Vault, Consul, a database or any other storage: write a [custom driver](https://insei.github.io/tinyconf/2.1/drivers/custom/index.md). `Load` reads the storage once per `Parse`, `GetValue` converts the values with the `convert` package, so the driver supports the same types as the bundled ones.
+Values from Vault, Consul, a database or any other storage: write a [custom driver](https://insei.github.io/tinyconf/2.2/drivers/custom/index.md). `Load` reads the storage once per `Parse`, `GetValue` converts the values with the `convert` package, so the driver supports the same types as the bundled ones.
 
 ```go
 type kvDriver struct {
@@ -805,7 +805,7 @@ func (d *kvDriver) GetValue(field fmap.Field) (*tinyconf.Value, error) {
 }
 ```
 
-Add the `Watch` method of the `tinyconf.Watcher` interface, and the driver takes part in [reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md).
+Add the `Watch` method of the `tinyconf.Watcher` interface, and the driver takes part in [reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md).
 
 # Upgrading to v2
 
@@ -817,13 +817,13 @@ v2 changes the module path and a few methods. The steps for the code of v1:
    go get github.com/insei/tinyconf/v2@latest
    ```
 
-1. `Parse` takes the context: `Parse(conf)` is `Parse(context.Background(), conf)`. The context stops the requests of the [remote drivers](https://insei.github.io/tinyconf/2.1/features/manager/#parse).
+1. `Parse` takes the context: `Parse(conf)` is `Parse(context.Background(), conf)`. The context stops the requests of the [remote drivers](https://insei.github.io/tinyconf/2.2/features/manager/#parse).
 
-1. The zap adapter is the separate module, zap is not a dependency of the core anymore: `logger.NewZapLogger(l)` is `zaplogger.New(l)` from `github.com/insei/tinyconf/logger/zaplogger`, see [Logging](https://insei.github.io/tinyconf/2.1/features/logging/index.md).
+1. The zap adapter is the separate module, zap is not a dependency of the core anymore: `logger.NewZapLogger(l)` is `zaplogger.New(l)` from `github.com/insei/tinyconf/logger/zaplogger`, see [Logging](https://insei.github.io/tinyconf/2.2/features/logging/index.md).
 
-1. Fields of an [embedded struct](https://insei.github.io/tinyconf/2.1/features/structs/#embedded-structs) without the tag are on the level of the embedding struct, like in `encoding/json`. Check the keys of such fields in the files and the environment variables.
+1. Fields of an [embedded struct](https://insei.github.io/tinyconf/2.2/features/structs/#embedded-structs) without the tag are on the level of the embedding struct, like in `encoding/json`. Check the keys of such fields in the files and the environment variables.
 
-1. `Parse` returns the errors: a value that can't be converted to the type of the field, a file that can't be read, a field with `required:"true"` without a value. v1 only logged them and returned `nil`. All fields are parsed anyway, the errors are returned as one error, see [Errors](https://insei.github.io/tinyconf/2.1/features/manager/#errors).
+1. `Parse` returns the errors: a value that can't be converted to the type of the field, a file that can't be read, a field with `required:"true"` without a value. v1 only logged them and returned `nil`. All fields are parsed anyway, the errors are returned as one error, see [Errors](https://insei.github.io/tinyconf/2.2/features/manager/#errors).
 
 # For AI agents
 
@@ -861,26 +861,26 @@ Reference of tinyconf capabilities grouped by area.
 
 Looking for a recipe?
 
-The [Use cases](https://insei.github.io/tinyconf/2.1/use-cases/index.md) page shows how the features work together in typical setups: a twelve-factor service, a config file with overrides, a command line tool, a Kubernetes deployment.
+The [Use cases](https://insei.github.io/tinyconf/2.2/use-cases/index.md) page shows how the features work together in typical setups: a twelve-factor service, a config file with overrides, a command line tool, a Kubernetes deployment.
 
 ## Configuration
 
 | Page                                                                                             | What's inside                                                                                    |
 | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| [Manager](https://insei.github.io/tinyconf/2.1/features/manager/index.md)                        | `New`, `WithDriver`, `WithLogger`, `Register`, `Parse`, priority of drivers, errors, concurrency |
-| [Struct tags](https://insei.github.io/tinyconf/2.1/features/tags/index.md)                       | Tags of drivers and common tags: `doc`, `hidden`, `required`, `separator`, `kvseparator`         |
-| [Supported types](https://insei.github.io/tinyconf/2.1/features/types/index.md)                  | Scalars, durations, time, slices, arrays, maps, structs, pointers — the same for all drivers     |
-| [Nested structs and sub configs](https://insei.github.io/tinyconf/2.1/features/structs/index.md) | Grouping fields into structs, optional sections with pointers, parsing a part of the config      |
-| [Required fields](https://insei.github.io/tinyconf/2.1/features/required/index.md)               | `required:"true"` tag and `ErrRequired`                                                          |
+| [Manager](https://insei.github.io/tinyconf/2.2/features/manager/index.md)                        | `New`, `WithDriver`, `WithLogger`, `Register`, `Parse`, priority of drivers, errors, concurrency |
+| [Struct tags](https://insei.github.io/tinyconf/2.2/features/tags/index.md)                       | Tags of drivers and common tags: `doc`, `hidden`, `required`, `separator`, `kvseparator`         |
+| [Supported types](https://insei.github.io/tinyconf/2.2/features/types/index.md)                  | Scalars, durations, time, slices, arrays, maps, structs, pointers — the same for all drivers     |
+| [Nested structs and sub configs](https://insei.github.io/tinyconf/2.2/features/structs/index.md) | Grouping fields into structs, optional sections with pointers, parsing a part of the config      |
+| [Required fields](https://insei.github.io/tinyconf/2.2/features/required/index.md)               | `required:"true"` tag and `ErrRequired`                                                          |
 
 ## Operations
 
 | Page                                                                                      | What's inside                                                                    |
 | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| [Documentation generation](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md) | `GenDoc`: a config template in the format of the driver                          |
-| [Value sources](https://insei.github.io/tinyconf/2.1/features/sources/index.md)           | `Sources`: which driver has set the value of every field                         |
-| [Reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md)             | `Subscribe` and `Current`: configs are parsed again after changes of the sources |
-| [Logging](https://insei.github.io/tinyconf/2.1/features/logging/index.md)                 | What the manager logs, bundled loggers, custom logger                            |
+| [Documentation generation](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md) | `GenDoc`: a config template in the format of the driver                          |
+| [Value sources](https://insei.github.io/tinyconf/2.2/features/sources/index.md)           | `Sources`: which driver has set the value of every field                         |
+| [Reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md)             | `Subscribe` and `Current`: configs are parsed again after changes of the sources |
+| [Logging](https://insei.github.io/tinyconf/2.2/features/logging/index.md)                 | What the manager logs, bundled loggers, custom logger                            |
 
 # Documentation generation
 
@@ -939,8 +939,8 @@ the output is
 - The value is the current value of the field in the registered config, so call `GenDoc` after `Parse` to get the actual values, or before it to get a clean template.
 - Values of the fields with `hidden:"true"` are not shown.
 - Slices and maps are shown in the format of the driver: `hosts: ["a","b"]` for yaml, `HOSTS=a,b` for env, so the value can be copied from the template as is.
-- The name of the driver is the name of its tag: `yaml`, `json`, `toml`, `ini`, `properties`, `env`, `flag`, `consul`, `vault`, `etcd`. The consul, vault and etcd drivers generate the commands of their CLI, see [consul](https://insei.github.io/tinyconf/2.1/drivers/consul/#documentation), [vault](https://insei.github.io/tinyconf/2.1/drivers/vault/#documentation) and [etcd](https://insei.github.io/tinyconf/2.1/drivers/etcd/#documentation).
-- The json and toml drivers generate documents without descriptions, see [json](https://insei.github.io/tinyconf/2.1/drivers/json/#documentation) and [toml](https://insei.github.io/tinyconf/2.1/drivers/toml/#documentation).
+- The name of the driver is the name of its tag: `yaml`, `json`, `toml`, `ini`, `properties`, `env`, `flag`, `consul`, `vault`, `etcd`. The consul, vault and etcd drivers generate the commands of their CLI, see [consul](https://insei.github.io/tinyconf/2.2/drivers/consul/#documentation), [vault](https://insei.github.io/tinyconf/2.2/drivers/vault/#documentation) and [etcd](https://insei.github.io/tinyconf/2.2/drivers/etcd/#documentation).
+- The json and toml drivers generate documents without descriptions, see [json](https://insei.github.io/tinyconf/2.2/drivers/json/#documentation) and [toml](https://insei.github.io/tinyconf/2.2/drivers/toml/#documentation).
 
 A common way to use it is a command line flag of the application that prints the template and exits.
 
@@ -962,7 +962,7 @@ On the debug level the log has the whole history of every field: grep the log by
 
 - At the start of every `Parse` every field is logged with its initial value: the value in the struct before drivers, usually zero.
 - Every driver that has changed the value of the field is logged with `override`. A driver that has the same value as the field already has is not logged.
-- After every [reload](https://insei.github.io/tinyconf/2.1/features/reloading/index.md) only the fields with a new value are logged, with the driver that has set it. Unchanged fields are not logged.
+- After every [reload](https://insei.github.io/tinyconf/2.2/features/reloading/index.md) only the fields with a new value are logged, with the driver that has set it. Unchanged fields are not logged.
 
 ```text
 [DEBUG] initial: {config: *main.Config} {field: HTTP.Port} {value: 0}
@@ -979,7 +979,7 @@ On the debug level the log has the whole history of every field: grep the log by
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | tag                               | name of the tag, `initial`                                                                                                                         |
 | yaml, json, toml, ini, properties | path by the tags, `http.port`                                                                                                                      |
-| env                               | name of the variable, with the prefix; `HOSTS_*` for the value from [indexed keys](https://insei.github.io/tinyconf/2.1/drivers/env/#indexed-keys) |
+| env                               | name of the variable, with the prefix; `HOSTS_*` for the value from [indexed keys](https://insei.github.io/tinyconf/2.2/drivers/env/#indexed-keys) |
 | flag                              | name of the flag, `-http-port`                                                                                                                     |
 | consul                            | the key, `app/http/port`                                                                                                                           |
 | vault                             | path by the tags, `database.password`                                                                                                              |
@@ -1103,8 +1103,8 @@ config, err := tinyconf.New(
 | Option                 | Description                                                                                                                                                               |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `WithDriver(driver)`   | adds the driver, can be used many times                                                                                                                                   |
-| `WithLogger(logger)`   | sets the logger, see [Logging](https://insei.github.io/tinyconf/2.1/features/logging/index.md)                                                                            |
-| `WithDeferredLogger()` | keeps the log records until the logger is set by `SetLogger`, see [Logger from the config](https://insei.github.io/tinyconf/2.1/features/logging/#logger-from-the-config) |
+| `WithLogger(logger)`   | sets the logger, see [Logging](https://insei.github.io/tinyconf/2.2/features/logging/index.md)                                                                            |
+| `WithDeferredLogger()` | keeps the log records until the logger is set by `SetLogger`, see [Logger from the config](https://insei.github.io/tinyconf/2.2/features/logging/#logger-from-the-config) |
 
 ## Priority of drivers
 
@@ -1121,7 +1121,7 @@ c := &Config{}
 err := config.Register(c)
 ```
 
-`Register` takes a pointer to struct. The registered config is used by `Parse` and by [`GenDoc`](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md).
+`Register` takes a pointer to struct. The registered config is used by `Parse` and by [`GenDoc`](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md).
 
 ## Parse
 
@@ -1129,9 +1129,9 @@ err := config.Register(c)
 err := config.Parse(context.Background(), c)
 ```
 
-`Parse` fills the registered config with values from drivers. The config can be a registered one or a field of the registered config with struct type, see [sub configs](https://insei.github.io/tinyconf/2.1/features/structs/#sub-configs). `tinyconf.ErrNotRegisteredConfig` is returned for all other configs.
+`Parse` fills the registered config with values from drivers. The config can be a registered one or a field of the registered config with struct type, see [sub configs](https://insei.github.io/tinyconf/2.2/features/structs/#sub-configs). `tinyconf.ErrNotRegisteredConfig` is returned for all other configs.
 
-The context is used by the drivers that read their sources by the network — [consul](https://insei.github.io/tinyconf/2.1/drivers/consul/index.md), [vault](https://insei.github.io/tinyconf/2.1/drivers/vault/index.md), [etcd](https://insei.github.io/tinyconf/2.1/drivers/etcd/index.md) and the remote documents: their requests are stopped when the context is done. A start of the application in Kubernetes is a typical case:
+The context is used by the drivers that read their sources by the network — [consul](https://insei.github.io/tinyconf/2.2/drivers/consul/index.md), [vault](https://insei.github.io/tinyconf/2.2/drivers/vault/index.md), [etcd](https://insei.github.io/tinyconf/2.2/drivers/etcd/index.md) and the remote documents: their requests are stopped when the context is done. A start of the application in Kubernetes is a typical case:
 
 ```go
 ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -1151,12 +1151,12 @@ Every request of the drivers is limited to 30 seconds anyway. The reloads use th
 
 | Method                                 | Description                                                                                                                                               |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GenDoc(driverName)`                   | generates a template of all registered configs, see [Documentation generation](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md)             |
-| `Sources(conf)`                        | returns which driver has set the value of every field, see [Value sources](https://insei.github.io/tinyconf/2.1/features/sources/index.md)                |
-| `tinyconf.Subscribe(ctx, m, onChange)` | calls `onChange` after the changes of the config or the sub config, see [Reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md)     |
-| `tinyconf.Current[T](m)`               | returns the current version of the config or the sub config, see [Reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md)            |
-| `ReloadStatus()`                       | state of watching and reloading for the health checks, see [Health checks](https://insei.github.io/tinyconf/2.1/features/reloading/#health-checks)        |
-| `SetLogger(logger)`                    | replaces the logger, safe for concurrent use, see [Logger from the config](https://insei.github.io/tinyconf/2.1/features/logging/#logger-from-the-config) |
+| `GenDoc(driverName)`                   | generates a template of all registered configs, see [Documentation generation](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md)             |
+| `Sources(conf)`                        | returns which driver has set the value of every field, see [Value sources](https://insei.github.io/tinyconf/2.2/features/sources/index.md)                |
+| `tinyconf.Subscribe(ctx, m, onChange)` | calls `onChange` after the changes of the config or the sub config, see [Reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md)     |
+| `tinyconf.Current[T](m)`               | returns the current version of the config or the sub config, see [Reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md)            |
+| `ReloadStatus()`                       | state of watching and reloading for the health checks, see [Health checks](https://insei.github.io/tinyconf/2.2/features/reloading/#health-checks)        |
+| `SetLogger(logger)`                    | replaces the logger, safe for concurrent use, see [Logger from the config](https://insei.github.io/tinyconf/2.2/features/logging/#logger-from-the-config) |
 
 ## Errors
 
@@ -1171,7 +1171,7 @@ if err := config.Parse(context.Background(), c); err != nil {
 
 Fields that were parsed without errors are filled even if `Parse` returns an error.
 
-Missing [required fields](https://insei.github.io/tinyconf/2.1/features/required/index.md) are reported in the same error and can be checked with `errors.Is(err, tinyconf.ErrRequired)`.
+Missing [required fields](https://insei.github.io/tinyconf/2.2/features/required/index.md) are reported in the same error and can be checked with `errors.Is(err, tinyconf.ErrRequired)`.
 
 Not an error
 
@@ -1181,7 +1181,7 @@ A field without a value in the driver and a field without the tag of the driver 
 
 All methods of the manager are safe for concurrent use: configs can be registered and parsed from several goroutines. The config struct itself is not protected, do not read it while it is being parsed by another goroutine.
 
-Configs are documented by `GenDoc` and checked for [sub configs](https://insei.github.io/tinyconf/2.1/features/structs/#sub-configs) in the registration order.
+Configs are documented by `GenDoc` and checked for [sub configs](https://insei.github.io/tinyconf/2.2/features/structs/#sub-configs) in the registration order.
 
 # Reloading
 
@@ -1213,10 +1213,10 @@ level := tinyconf.Current[Logging](config).Level
 func Subscribe[T any](ctx context.Context, m *Manager, onChange func(prev, next *T)) error
 ```
 
-- `T` is a registered config or a [sub config](https://insei.github.io/tinyconf/2.1/features/structs/#sub-configs): the type of a field of the registered config. A package subscribes to its own part and knows nothing about the whole config.
+- `T` is a registered config or a [sub config](https://insei.github.io/tinyconf/2.2/features/structs/#sub-configs): the type of a field of the registered config. A package subscribes to its own part and knows nothing about the whole config.
 - `Subscribe` does not block, the subscription is active until `ctx` is done.
 - `onChange` is called only if some fields of `T` are changed, with the previous and the new versions. A change of another part of the config does not call it.
-- The configs with errors are not applied: the errors are [logged](https://insei.github.io/tinyconf/2.1/features/logging/index.md), the subscribers are not called and keep the last good version.
+- The configs with errors are not applied: the errors are [logged](https://insei.github.io/tinyconf/2.2/features/logging/index.md), the subscribers are not called and keep the last good version.
 
 ## Current
 
@@ -1234,24 +1234,25 @@ The versions from `Current` and `onChange` are shared by all readers, so they ar
 
 - Watching starts with the first subscription and stops after the context of the last one is done. One watching serves all subscribers: every driver watches its sources once for the whole application.
 - After every change the registered configs with subscribers are parsed again, **from their values before drivers at the first `Parse`**, so the result is the same as `Parse` would give at the start. A value removed from the file gets its default back.
-- All drivers are applied, not only the changed one: the usual [priority of drivers](https://insei.github.io/tinyconf/2.1/features/manager/#priority-of-drivers) is kept.
+- All drivers are applied, not only the changed one: the usual [priority of drivers](https://insei.github.io/tinyconf/2.2/features/manager/#priority-of-drivers) is kept.
 - The new version replaces the current one atomically, and the subscribers of the changed parts are called.
 - The config passed to `Register` and `Parse` is never changed in the background, the application can read it as before.
 - `Parse` called by the application updates the current version too, but does not call the subscribers: the application knows what it does.
-- [`GenDoc`](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md) shows the values of the current versions.
+- [`GenDoc`](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md) shows the values of the current versions.
 
 ## What is watched
 
-Changes are reported by drivers. The bundled [yaml](https://insei.github.io/tinyconf/2.1/drivers/yaml/index.md), [json](https://insei.github.io/tinyconf/2.1/drivers/json/index.md), [toml](https://insei.github.io/tinyconf/2.1/drivers/toml/index.md), [ini](https://insei.github.io/tinyconf/2.1/drivers/ini/index.md) and [properties](https://insei.github.io/tinyconf/2.1/drivers/properties/index.md) drivers watch their files from the OS file system: the main file and the files from `WithFiles`. The [consul](https://insei.github.io/tinyconf/2.1/drivers/consul/index.md) driver and Consul documents are notified by Consul right after the change. The [vault](https://insei.github.io/tinyconf/2.1/drivers/vault/index.md) driver checks the versions of the secrets. The [etcd](https://insei.github.io/tinyconf/2.1/drivers/etcd/index.md) driver and etcd documents watch the stream of the events of etcd.
+Changes are reported by drivers. The bundled [yaml](https://insei.github.io/tinyconf/2.2/drivers/yaml/index.md), [json](https://insei.github.io/tinyconf/2.2/drivers/json/index.md), [toml](https://insei.github.io/tinyconf/2.2/drivers/toml/index.md), [ini](https://insei.github.io/tinyconf/2.2/drivers/ini/index.md) and [properties](https://insei.github.io/tinyconf/2.2/drivers/properties/index.md) drivers watch their files from the OS file system: the main file and the files from `WithFiles`. The [env](https://insei.github.io/tinyconf/2.2/drivers/env/index.md) driver watches its `.env` files. The [consul](https://insei.github.io/tinyconf/2.2/drivers/consul/index.md) driver and Consul documents are notified by Consul right after the change. The [vault](https://insei.github.io/tinyconf/2.2/drivers/vault/index.md) driver checks the versions of the secrets. The [etcd](https://insei.github.io/tinyconf/2.2/drivers/etcd/index.md) driver and etcd documents watch the stream of the events of etcd.
 
 | Source                                    | Watched                                    |
 | ----------------------------------------- | ------------------------------------------ |
 | files from `New` and `WithFiles`          | yes, events of the file system and polling |
+| `.env` files of the env driver            | yes, events of the file system and polling |
 | Consul keys and documents                 | yes, notified by Consul                    |
 | Vault secrets                             | yes, polling, every 30 seconds by default  |
 | etcd keys and documents                   | yes, notified by etcd                      |
 | files from `WithFS`, data from `WithData` | no                                         |
-| environment variables, flags, tags        | no                                         |
+| process environment, flags, tags          | no                                         |
 
 Files are watched by the events of the file system: inotify on Linux, kqueue on macOS and BSD, ReadDirectoryChangesW on Windows. The change is detected right after the file is written: the driver waits 100 milliseconds for the next events, so the several writes of an editor are one change.
 
@@ -1308,7 +1309,7 @@ func configHealthy(config *tinyconf.Manager) error {
 
 - Handlers are called one by one in the order of subscription, from one goroutine. The next reload starts after all handlers return, so a slow handler delays the next reload.
 - Several changes that happen while the configs are being parsed are merged into one reload.
-- On the debug level only the fields with a new value are [logged](https://insei.github.io/tinyconf/2.1/features/logging/#history-of-a-field) after a reload, with the driver that has set the value.
+- On the debug level only the fields with a new value are [logged](https://insei.github.io/tinyconf/2.2/features/logging/#history-of-a-field) after a reload, with the driver that has set the value.
 - What can be applied on the fly is up to the application: a log level can be changed at any time, a listening port requires restart of the server. Compare `prev` and `next` and act on the fields that matter.
 
 # Required fields
@@ -1347,15 +1348,15 @@ err := config.Parse(context.Background(), c) // DSN is not required to be in the
 
 ## All at once
 
-`Parse` checks all required fields and reports all missing ones in one error, together with the [errors of drivers](https://insei.github.io/tinyconf/2.1/features/manager/#errors). The application can show the full list of what should be set in one start, not one variable per attempt.
+`Parse` checks all required fields and reports all missing ones in one error, together with the [errors of drivers](https://insei.github.io/tinyconf/2.2/features/manager/#errors). The application can show the full list of what should be set in one start, not one variable per attempt.
 
 Defaults and required
 
-A field with a default value in the [tag driver](https://insei.github.io/tinyconf/2.1/drivers/tag/index.md) always has a value, so `required` makes sense only for the fields without defaults: secrets, addresses of external services.
+A field with a default value in the [tag driver](https://insei.github.io/tinyconf/2.2/drivers/tag/index.md) always has a value, so `required` makes sense only for the fields without defaults: secrets, addresses of external services.
 
 ## Sub configs
 
-When a [sub config](https://insei.github.io/tinyconf/2.1/features/structs/#sub-configs) is parsed, only its own required fields are checked.
+When a [sub config](https://insei.github.io/tinyconf/2.2/features/structs/#sub-configs) is parsed, only its own required fields are checked.
 
 # Value sources
 
@@ -1390,7 +1391,7 @@ Password is set by env driver from PASSWORD
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | tag                               | name of the tag, `initial`                                                                                                                         |
 | yaml, json, toml, ini, properties | path by the tags, `http.port`                                                                                                                      |
-| env                               | name of the variable, with the prefix; `HOSTS_*` for the value from [indexed keys](https://insei.github.io/tinyconf/2.1/drivers/env/#indexed-keys) |
+| env                               | name of the variable, with the prefix; `HOSTS_*` for the value from [indexed keys](https://insei.github.io/tinyconf/2.2/drivers/env/#indexed-keys) |
 | flag                              | name of the flag, `-http-port`                                                                                                                     |
 | consul                            | the key, `app/http/port`                                                                                                                           |
 | vault                             | path by the tags, `database.password`                                                                                                              |
@@ -1401,7 +1402,7 @@ Password is set by env driver from PASSWORD
 - Sources are returned in the order of the config fields.
 - Only the last driver that has set the value is reported, the overridden ones are not.
 - Fields without values from drivers are not included: they have the value that was in the config before `Parse`.
-- Sources are stored per config type, pass the same pointer type that was used in `Parse`. For a [sub config](https://insei.github.io/tinyconf/2.1/features/structs/#sub-configs) the paths are relative to it.
+- Sources are stored per config type, pass the same pointer type that was used in `Parse`. For a [sub config](https://insei.github.io/tinyconf/2.2/features/structs/#sub-configs) the paths are relative to it.
 
 It is handy to log the sources once at the start of the application: the answer to "why is this value here" is in the logs. Values themselves are not included, so secrets are not leaked.
 
@@ -1430,7 +1431,7 @@ http:
 
 For the yaml driver the tag of the struct field is a key of the nested map, so `Host` is read from `http.host`. Names of environment variables are not built from the parent names: `Host` is read from `HTTP_HOST`, as it is written in its tag.
 
-Types that are parsed from a single value — `time.Time`, `url.URL` and types with `UnmarshalText` — are not nested structs, see [Supported types](https://insei.github.io/tinyconf/2.1/features/types/index.md).
+Types that are parsed from a single value — `time.Time`, `url.URL` and types with `UnmarshalText` — are not nested structs, see [Supported types](https://insei.github.io/tinyconf/2.2/features/types/index.md).
 
 ## Embedded structs
 
@@ -1459,8 +1460,8 @@ http:
 
 - The yaml, json, toml, ini, properties, consul, vault and etcd drivers read `Read` from `http.read_timeout`, the embedded struct adds no level. `yaml:",inline"` works the same way.
 - With the name in the tag, `` Timeouts `yaml:"timeouts"` ``, the embedded struct is a usual nested struct: `http.timeouts.read_timeout`.
-- An embedded struct without the tag is expected, the manager does not [warn](https://insei.github.io/tinyconf/2.1/features/logging/#warnings-of-drivers) about it.
-- [Auto keys](https://insei.github.io/tinyconf/2.1/drivers/env/#auto-keys) and [indexed keys](https://insei.github.io/tinyconf/2.1/drivers/env/#indexed-keys) of the env driver skip the name of the embedded struct too: `HTTP.Timeouts.Read` is `HTTP_READ` with auto keys, and `SERVERS_0_READ` for the struct in the slice.
+- An embedded struct without the tag is expected, the manager does not [warn](https://insei.github.io/tinyconf/2.2/features/logging/#warnings-of-drivers) about it.
+- [Auto keys](https://insei.github.io/tinyconf/2.2/drivers/env/#auto-keys) and [indexed keys](https://insei.github.io/tinyconf/2.2/drivers/env/#indexed-keys) of the env driver skip the name of the embedded struct too: `HTTP.Timeouts.Read` is `HTTP_READ` with auto keys, and `SERVERS_0_READ` for the struct in the slice.
 
 ## Structs stored by pointer
 
@@ -1492,7 +1493,7 @@ if c.TLS != nil {
 }
 ```
 
-[Required fields](https://insei.github.io/tinyconf/2.1/features/required/index.md) inside such struct are checked even if the pointer is `nil`: a required field makes the whole section mandatory.
+[Required fields](https://insei.github.io/tinyconf/2.2/features/required/index.md) inside such struct are checked even if the pointer is `nil`: a required field makes the whole section mandatory.
 
 Parsed as a single value
 
@@ -1536,12 +1537,12 @@ Every driver reads its own tag, the value of the tag is the name of the value in
 
 | Driver                                                             | Tag                   | Value                            |
 | ------------------------------------------------------------------ | --------------------- | -------------------------------- |
-| [tag](https://insei.github.io/tinyconf/2.1/drivers/tag/index.md)   | any, set in `tag.New` | the default value itself         |
-| [yaml](https://insei.github.io/tinyconf/2.1/drivers/yaml/index.md) | `yaml`                | key in the file                  |
-| [json](https://insei.github.io/tinyconf/2.1/drivers/json/index.md) | `json`                | key in the file                  |
-| [toml](https://insei.github.io/tinyconf/2.1/drivers/toml/index.md) | `toml`                | key in the file                  |
-| [env](https://insei.github.io/tinyconf/2.1/drivers/env/index.md)   | `env`                 | name of the environment variable |
-| [flag](https://insei.github.io/tinyconf/2.1/drivers/flag/index.md) | `flag`                | name of the command line flag    |
+| [tag](https://insei.github.io/tinyconf/2.2/drivers/tag/index.md)   | any, set in `tag.New` | the default value itself         |
+| [yaml](https://insei.github.io/tinyconf/2.2/drivers/yaml/index.md) | `yaml`                | key in the file                  |
+| [json](https://insei.github.io/tinyconf/2.2/drivers/json/index.md) | `json`                | key in the file                  |
+| [toml](https://insei.github.io/tinyconf/2.2/drivers/toml/index.md) | `toml`                | key in the file                  |
+| [env](https://insei.github.io/tinyconf/2.2/drivers/env/index.md)   | `env`                 | name of the environment variable |
+| [flag](https://insei.github.io/tinyconf/2.2/drivers/flag/index.md) | `flag`                | name of the command line flag    |
 
 A field without the tag of the driver is skipped by this driver.
 
@@ -1549,14 +1550,14 @@ A field without the tag of the driver is skipped by this driver.
 
 | Tag               | Description                                                                                                                                                              |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `doc:"text"`      | description of the field for [`GenDoc`](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md)                                                                   |
-| `merge:"true"`    | slices and maps from several drivers are merged instead of replaced, see [Several drivers](https://insei.github.io/tinyconf/2.1/features/types/#several-drivers)         |
-| `hidden:"true"`   | the value is masked in logs and is not shown in `GenDoc`, use it for secrets; see also the [`Secret`](https://insei.github.io/tinyconf/2.1/features/types/#secrets) type |
-| `required:"true"` | `Parse` returns an error if the field has no value, see [Required fields](https://insei.github.io/tinyconf/2.1/features/required/index.md)                               |
+| `doc:"text"`      | description of the field for [`GenDoc`](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md)                                                                   |
+| `merge:"true"`    | slices and maps from several drivers are merged instead of replaced, see [Several drivers](https://insei.github.io/tinyconf/2.2/features/types/#several-drivers)         |
+| `hidden:"true"`   | the value is masked in logs and is not shown in `GenDoc`, use it for secrets; see also the [`Secret`](https://insei.github.io/tinyconf/2.2/features/types/#secrets) type |
+| `required:"true"` | `Parse` returns an error if the field has no value, see [Required fields](https://insei.github.io/tinyconf/2.2/features/required/index.md)                               |
 | `separator:";"`   | separator of slice, array and map items in string values, `,` by default                                                                                                 |
 | `kvseparator:"="` | separator of map key and value in string values, `:` by default                                                                                                          |
 
-See [Supported types](https://insei.github.io/tinyconf/2.1/features/types/index.md) for the syntax of string values.
+See [Supported types](https://insei.github.io/tinyconf/2.2/features/types/index.md) for the syntax of string values.
 
 # Supported types
 
@@ -1600,7 +1601,7 @@ ports:
   - 443
 ```
 
-Items that contain the separator can be quoted with double or single quotes: `"a,b",c` is two items. The separator can be changed with the [`separator` tag](https://insei.github.io/tinyconf/2.1/features/tags/#common-tags). The number of items for an array should be equal to its length.
+Items that contain the separator can be quoted with double or single quotes: `"a,b",c` is two items. The separator can be changed with the [`separator` tag](https://insei.github.io/tinyconf/2.2/features/tags/#common-tags). The number of items for an array should be equal to its length.
 
 ## Maps
 
@@ -1654,7 +1655,7 @@ String values of slices, arrays, maps and structs are parsed as JSON if they sta
 
 Fields with struct type
 
-A field with struct type, stored by value or by pointer, is not a single value: it is parsed by its fields, and every field has its own tags. See [Nested structs and sub configs](https://insei.github.io/tinyconf/2.1/features/structs/index.md).
+A field with struct type, stored by value or by pointer, is not a single value: it is parsed by its fields, and every field has its own tags. See [Nested structs and sub configs](https://insei.github.io/tinyconf/2.2/features/structs/index.md).
 
 ## Secrets
 
@@ -1675,7 +1676,7 @@ db.Connect(conf.Database.User, conf.Database.Password.Value())
 - `String`, `GoString` and `MarshalText` return `******` for a not empty value, so `fmt`, `encoding/json`, yaml, zap and slog print the mask. The length of the value is not shown; an empty value is shown as empty, so it is visible that the secret is not set.
 - The value is parsed like a usual string by all drivers, slices and pointers of secrets work too.
 - `Value()` or `string(secret)` returns the value.
-- [`GenDoc`](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md) shows `******` as the value of the field.
+- [`GenDoc`](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md) shows `******` as the value of the field.
 
 ## Several drivers
 
@@ -1699,7 +1700,7 @@ HOSTS=from-env LABELS=env:prod
 - Maps get the keys of the next drivers, the same key is overridden by the next driver.
 - The values of the drivers in one `Parse` call are merged: the first driver with the value replaces the value of the struct, so the next `Parse` does not duplicate the items.
 - Arrays, `[]byte` and other types are replaced.
-- [`Sources`](https://insei.github.io/tinyconf/2.1/features/sources/index.md) reports the last driver, the [log](https://insei.github.io/tinyconf/2.1/features/logging/index.md) has every step.
+- [`Sources`](https://insei.github.io/tinyconf/2.2/features/sources/index.md) reports the last driver, the [log](https://insei.github.io/tinyconf/2.2/features/logging/index.md) has every step.
 # Drivers
 
 # Drivers
@@ -1708,21 +1709,21 @@ A driver is a source of values. Every driver reads its own struct tag and knows 
 
 | Driver                                                                         | Package              | Struct tag                 | Source                                                            |
 | ------------------------------------------------------------------------------ | -------------------- | -------------------------- | ----------------------------------------------------------------- |
-| [tag](https://insei.github.io/tinyconf/2.1/drivers/tag/index.md)               | `drivers/tag`        | any, `initial` for example | default values from struct tags                                   |
-| [yaml](https://insei.github.io/tinyconf/2.1/drivers/yaml/index.md)             | `drivers/yaml`       | `yaml`                     | YAML files                                                        |
-| [json](https://insei.github.io/tinyconf/2.1/drivers/json/index.md)             | `drivers/json`       | `json`                     | JSON files                                                        |
-| [toml](https://insei.github.io/tinyconf/2.1/drivers/toml/index.md)             | `drivers/toml`       | `toml`                     | TOML files                                                        |
-| [ini](https://insei.github.io/tinyconf/2.1/drivers/ini/index.md)               | `drivers/ini`        | `ini`                      | INI files                                                         |
-| [properties](https://insei.github.io/tinyconf/2.1/drivers/properties/index.md) | `drivers/properties` | `properties`               | `.properties` files of Java and Spring                            |
-| [env](https://insei.github.io/tinyconf/2.1/drivers/env/index.md)               | `drivers/env`        | `env`                      | environment variables and `.env` files                            |
-| [flag](https://insei.github.io/tinyconf/2.1/drivers/flag/index.md)             | `drivers/flag`       | `flag`                     | command line flags                                                |
-| [consul](https://insei.github.io/tinyconf/2.1/drivers/consul/index.md)         | `drivers/consul`     | `consul`                   | Consul KV: a key per field, or a document for yaml, json and toml |
-| [vault](https://insei.github.io/tinyconf/2.1/drivers/vault/index.md)           | `drivers/vault`      | `vault`                    | secrets from the KV secrets engine of HashiCorp Vault             |
-| [etcd](https://insei.github.io/tinyconf/2.1/drivers/etcd/index.md)             | `drivers/etcd`       | `etcd`                     | etcd: a key per field, or a document for yaml, json and toml      |
+| [tag](https://insei.github.io/tinyconf/2.2/drivers/tag/index.md)               | `drivers/tag`        | any, `initial` for example | default values from struct tags                                   |
+| [yaml](https://insei.github.io/tinyconf/2.2/drivers/yaml/index.md)             | `drivers/yaml`       | `yaml`                     | YAML files                                                        |
+| [json](https://insei.github.io/tinyconf/2.2/drivers/json/index.md)             | `drivers/json`       | `json`                     | JSON files                                                        |
+| [toml](https://insei.github.io/tinyconf/2.2/drivers/toml/index.md)             | `drivers/toml`       | `toml`                     | TOML files                                                        |
+| [ini](https://insei.github.io/tinyconf/2.2/drivers/ini/index.md)               | `drivers/ini`        | `ini`                      | INI files                                                         |
+| [properties](https://insei.github.io/tinyconf/2.2/drivers/properties/index.md) | `drivers/properties` | `properties`               | `.properties` files of Java and Spring                            |
+| [env](https://insei.github.io/tinyconf/2.2/drivers/env/index.md)               | `drivers/env`        | `env`                      | environment variables and `.env` files                            |
+| [flag](https://insei.github.io/tinyconf/2.2/drivers/flag/index.md)             | `drivers/flag`       | `flag`                     | command line flags                                                |
+| [consul](https://insei.github.io/tinyconf/2.2/drivers/consul/index.md)         | `drivers/consul`     | `consul`                   | Consul KV: a key per field, or a document for yaml, json and toml |
+| [vault](https://insei.github.io/tinyconf/2.2/drivers/vault/index.md)           | `drivers/vault`      | `vault`                    | secrets from the KV secrets engine of HashiCorp Vault             |
+| [etcd](https://insei.github.io/tinyconf/2.2/drivers/etcd/index.md)             | `drivers/etcd`       | `etcd`                     | etcd: a key per field, or a document for yaml, json and toml      |
 
-Drivers are added to the [manager](https://insei.github.io/tinyconf/2.1/features/manager/index.md) with `tinyconf.WithDriver`, the next driver overrides values of the previous one. All drivers support the same [set of types](https://insei.github.io/tinyconf/2.1/features/types/index.md).
+Drivers are added to the [manager](https://insei.github.io/tinyconf/2.2/features/manager/index.md) with `tinyconf.WithDriver`, the next driver overrides values of the previous one. All drivers support the same [set of types](https://insei.github.io/tinyconf/2.2/features/types/index.md).
 
-Need another file format? See [Custom formats](https://insei.github.io/tinyconf/2.1/drivers/format/index.md): a decoder function is enough. Another source? See [Custom drivers](https://insei.github.io/tinyconf/2.1/drivers/custom/index.md).
+Need another file format? See [Custom formats](https://insei.github.io/tinyconf/2.2/drivers/format/index.md): a decoder function is enough. Another source? See [Custom drivers](https://insei.github.io/tinyconf/2.2/drivers/custom/index.md).
 
 # consul
 
@@ -1733,7 +1734,7 @@ The consul package reads the config from [Consul KV](https://developer.hashicorp
 | [key per field](#key-per-field) | every value in its own key: `app/http/port`          | `consul`                              |
 | [document](#document)           | YAML, JSON or TOML document in one key: `app/config` | of the format: `yaml`, `json`, `toml` |
 
-Both ways report changes for [reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md) as soon as they happen: the driver uses [blocking queries](https://developer.hashicorp.com/consul/api-docs/features/blocking) of Consul, not polling. The package talks to the HTTP API of Consul directly and adds no dependencies.
+Both ways report changes for [reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md) as soon as they happen: the driver uses [blocking queries](https://developer.hashicorp.com/consul/api-docs/features/blocking) of Consul, not polling. The package talks to the HTTP API of Consul directly and adds no dependencies.
 
 ## Key per field
 
@@ -1761,17 +1762,17 @@ consul kv put app/http/port 9090
 consul kv put app/hosts a.example.com,b.example.com
 ```
 
-Values are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.1/features/types/index.md), like environment variables: slices are comma separated, structs in slices are JSON.
+Values are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.2/features/types/index.md), like environment variables: slices are comma separated, structs in slices are JSON.
 
 All keys with the prefix are read by one request once per `Parse` call. A key that is absent is not an error, the field keeps its value from the previous driver.
 
 Set the tags of the parents
 
-The key of the nested field is built from the `consul` tags of its parents. If the `HTTP` field has no `consul` tag, the `Host` field is read from `app/host`, not from `app/http/host`. When a value is found this way, the manager [logs a warning](https://insei.github.io/tinyconf/2.1/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.1/features/structs/#embedded-structs) without the tag are the exception, their fields are on the level of the embedding struct.
+The key of the nested field is built from the `consul` tags of its parents. If the `HTTP` field has no `consul` tag, the `Host` field is read from `app/host`, not from `app/http/host`. When a value is found this way, the manager [logs a warning](https://insei.github.io/tinyconf/2.2/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.2/features/structs/#embedded-structs) without the tag are the exception, their fields are on the level of the embedding struct.
 
 ## Document
 
-`consul.Document` is a source of the config content for the [yaml](https://insei.github.io/tinyconf/2.1/drivers/yaml/index.md), [json](https://insei.github.io/tinyconf/2.1/drivers/json/index.md) and [toml](https://insei.github.io/tinyconf/2.1/drivers/toml/index.md) drivers. The values are read by the tags of the format driver and merged with the files of the driver, as one more file:
+`consul.Document` is a source of the config content for the [yaml](https://insei.github.io/tinyconf/2.2/drivers/yaml/index.md), [json](https://insei.github.io/tinyconf/2.2/drivers/json/index.md) and [toml](https://insei.github.io/tinyconf/2.2/drivers/toml/index.md) drivers. The values are read by the tags of the format driver and merged with the files of the driver, as one more file:
 
 ```go
 yamlDriver, err := yaml.New("config.yaml",
@@ -1818,7 +1819,7 @@ With ACL Consul hides the keys that the token can not read, and answers as if th
 | the token can not read the key of the document    | error of `Parse`: `403 Forbidden`                                                  |
 | access is denied while watching                   | the driver stops watching, the error is logged: retries do not fix the permissions |
 
-All these errors wrap `tinyconf.ErrAccessDenied`: the manager [logs](https://insei.github.io/tinyconf/2.1/features/logging/index.md) them as `access denied`, and they can be checked with `errors.Is`. The token needs `read` on the prefix: `key_prefix "app/" { policy = "read" }`.
+All these errors wrap `tinyconf.ErrAccessDenied`: the manager [logs](https://insei.github.io/tinyconf/2.2/features/logging/index.md) them as `access denied`, and they can be checked with `errors.Is`. The token needs `read` on the prefix: `key_prefix "app/" { policy = "read" }`.
 
 ## Watching
 
@@ -1841,7 +1842,7 @@ After `Parse` these are the values of the current environment: a way to move the
 
 # Custom drivers
 
-Reading config files of another format? A decoder function and the [format driver](https://insei.github.io/tinyconf/2.1/drivers/format/index.md) are enough, no custom driver is needed.
+Reading config files of another format? A decoder function and the [format driver](https://insei.github.io/tinyconf/2.2/drivers/format/index.md) are enough, no custom driver is needed.
 
 A driver is any type that implements the `tinyconf.Driver` interface:
 
@@ -1863,7 +1864,7 @@ type Driver interface {
 
 The field is described by [`fmap.Field`](https://pkg.go.dev/github.com/insei/fmap/v3#Field): `GetTag()` returns its struct tags, `GetStructPath()` — its path in the config, `HTTP.Port` for example.
 
-The returned value should have exactly the type of the field. To support [the same types](https://insei.github.io/tinyconf/2.1/features/types/index.md) as the bundled drivers, use the `convert` package:
+The returned value should have exactly the type of the field. To support [the same types](https://insei.github.io/tinyconf/2.2/features/types/index.md) as the bundled drivers, use the `convert` package:
 
 - `convert.StringToField(s, field)` — for sources with string values;
 - `convert.TreeToField(v, field, tag)` — for values decoded from formats like YAML or JSON.
@@ -1873,7 +1874,7 @@ The returned `tinyconf.Value` has three fields:
 | Field     | Description                                                                                                                                                                                           |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Value`   | the value with the type of the field                                                                                                                                                                  |
-| `Source`  | the key of the value in the source, `HTTP_PORT` or `http.port` for example; it is returned by [`Manager.Sources`](https://insei.github.io/tinyconf/2.1/features/sources/index.md) and logged as `key` |
+| `Source`  | the key of the value in the source, `HTTP_PORT` or `http.port` for example; it is returned by [`Manager.Sources`](https://insei.github.io/tinyconf/2.2/features/sources/index.md) and logged as `key` |
 | `Warning` | optional message for the user, the manager logs it with the `Warn` level; use it when the value is found, but probably not where the user expects                                                     |
 
 Two errors have a special meaning, all other errors are returned from `Parse`:
@@ -1897,7 +1898,7 @@ type Loader interface {
 
 `Load` is called once at the start of every `Parse` call, before any `GetValue` call. If it returns an error, the driver is skipped in this `Parse` call and the error is returned from `Parse`.
 
-A driver that reads its source by the network should implement `tinyconf.ContextLoader` instead: `LoadContext` gets the context of [`Parse`](https://insei.github.io/tinyconf/2.1/features/manager/#parse), or the context of watching for reloads, and the requests should stop when it is done.
+A driver that reads its source by the network should implement `tinyconf.ContextLoader` instead: `LoadContext` gets the context of [`Parse`](https://insei.github.io/tinyconf/2.2/features/manager/#parse), or the context of watching for reloads, and the requests should stop when it is done.
 
 ```go
 type ContextLoader interface {
@@ -1918,7 +1919,7 @@ func (d *kvDriver) Load() error {
 
 ## Watcher
 
-A driver can report changes of its source for [reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md) by implementing the optional `tinyconf.Watcher` interface:
+A driver can report changes of its source for [reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md) by implementing the optional `tinyconf.Watcher` interface:
 
 ```go
 type Watcher interface {
@@ -2016,7 +2017,7 @@ HTTP_PORT=9090
 HOSTS=a.example.com,b.example.com
 ```
 
-Values are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.1/features/types/index.md).
+Values are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.2/features/types/index.md).
 
 ## Options
 
@@ -2031,14 +2032,15 @@ envDriver, err := env.New(
 )
 ```
 
-| Option                 | Description                                                                          |
-| ---------------------- | ------------------------------------------------------------------------------------ |
-| `WithPrefix(prefix)`   | adds the prefix to the names of all variables                                        |
-| `WithAutoKeys()`       | reads the fields without the `env` tag, the name is built from the path of the field |
-| `WithSecretFiles()`    | reads the value from the file, if the variable with the `_FILE` suffix is set        |
-| `WithFiles(files...)`  | custom `.env` files instead of the default ones                                      |
-| `WithFilesIsolation()` | does not export the values of the `.env` files to the process environment            |
-| `WithIndexedKeys()`    | reads slices, arrays, maps and structs from separate variables                       |
+| Option                        | Description                                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------ |
+| `WithPrefix(prefix)`          | adds the prefix to the names of all variables                                        |
+| `WithAutoKeys()`              | reads the fields without the `env` tag, the name is built from the path of the field |
+| `WithSecretFiles()`           | reads the value from the file, if the variable with the `_FILE` suffix is set        |
+| `WithFiles(files...)`         | custom `.env` files instead of the default ones                                      |
+| `WithFilesIsolation()`        | does not export the values of the `.env` files to the process environment            |
+| `WithWatchInterval(interval)` | the interval of polling the `.env` files for changes, 5 seconds by default           |
+| `WithIndexedKeys()`           | reads slices, arrays, maps and structs from separate variables                       |
 
 ### Prefix
 
@@ -2139,9 +2141,19 @@ env.New(env.WithFiles(".env", ".env.local"))
 
 Exported values are visible to the whole process and to its child processes. With `env.WithFilesIsolation()` the values of the files are available only for the driver, `os.Getenv` does not see them. It is also useful in tests, where the changed environment of the process is a side effect.
 
+### Reloading
+
+The `.env` files are read again before every `Parse`, and they are watched for [reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md): a change of a file reloads the configs with subscribers. The files are watched by the events of the file system and by polling, as the files of the [yaml](https://insei.github.io/tinyconf/2.2/drivers/yaml/index.md) driver; the default files that do not exist yet are watched too.
+
+```go
+envDriver, err := env.New(env.WithFiles(".env"), env.WithWatchInterval(time.Minute))
+```
+
+The driver changes only the variables that it exported itself: the new value of the file replaces the exported one, the variable removed from the file is removed from the process environment. Variables set by the environment of the process or changed by the application keep their values. The process environment itself is not watched, it is not changed from the outside of the process.
+
 ## Documentation
 
-`GenDoc("env")` generates a commented template of the `.env` file, see [Documentation generation](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md). Names of the variables are shown with the prefix, fields without the `env` tag are included if the auto keys are enabled.
+`GenDoc("env")` generates a commented template of the `.env` file, see [Documentation generation](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md). Names of the variables are shown with the prefix, fields without the `env` tag are included if the auto keys are enabled.
 
 # etcd
 
@@ -2152,7 +2164,7 @@ The etcd package reads the config from [etcd](https://etcd.io) version 3 in two 
 | [key per field](#key-per-field) | every value in its own key: `app/http/port`          | `etcd`                                |
 | [document](#document)           | YAML, JSON or TOML document in one key: `app/config` | of the format: `yaml`, `json`, `toml` |
 
-Both ways report changes for [reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md) as soon as they happen: the driver watches the keys by the stream of the events of etcd, not by polling. The package talks to the [gRPC gateway](https://etcd.io/docs/v3.5/dev-guide/api_grpc_gateway/) of etcd — its JSON API — directly and adds no dependencies.
+Both ways report changes for [reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md) as soon as they happen: the driver watches the keys by the stream of the events of etcd, not by polling. The package talks to the [gRPC gateway](https://etcd.io/docs/v3.5/dev-guide/api_grpc_gateway/) of etcd — its JSON API — directly and adds no dependencies.
 
 ## Key per field
 
@@ -2180,17 +2192,17 @@ etcdctl put app/http/port 9090
 etcdctl put app/hosts a.example.com,b.example.com
 ```
 
-Values are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.1/features/types/index.md), like environment variables: slices are comma separated, structs in slices are JSON.
+Values are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.2/features/types/index.md), like environment variables: slices are comma separated, structs in slices are JSON.
 
 All keys with the prefix are read by one request once per `Parse` call. A key that is absent is not an error, the field keeps its value from the previous driver.
 
 Set the tags of the parents
 
-The key of the nested field is built from the `etcd` tags of its parents. If the `HTTP` field has no `etcd` tag, the `Host` field is read from `app/host`, not from `app/http/host`. When a value is found this way, the manager [logs a warning](https://insei.github.io/tinyconf/2.1/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.1/features/structs/#embedded-structs) without the tag are the exception.
+The key of the nested field is built from the `etcd` tags of its parents. If the `HTTP` field has no `etcd` tag, the `Host` field is read from `app/host`, not from `app/http/host`. When a value is found this way, the manager [logs a warning](https://insei.github.io/tinyconf/2.2/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.2/features/structs/#embedded-structs) without the tag are the exception.
 
 ## Document
 
-`etcd.Document` is a source of the config content for the [yaml](https://insei.github.io/tinyconf/2.1/drivers/yaml/index.md), [json](https://insei.github.io/tinyconf/2.1/drivers/json/index.md) and [toml](https://insei.github.io/tinyconf/2.1/drivers/toml/index.md) drivers. The values are read by the tags of the format driver and merged with the files of the driver, as one more file:
+`etcd.Document` is a source of the config content for the [yaml](https://insei.github.io/tinyconf/2.2/drivers/yaml/index.md), [json](https://insei.github.io/tinyconf/2.2/drivers/json/index.md) and [toml](https://insei.github.io/tinyconf/2.2/drivers/toml/index.md) drivers. The values are read by the tags of the format driver and merged with the files of the driver, as one more file:
 
 ```go
 yamlDriver, err := yaml.New("config.yaml",
@@ -2236,7 +2248,7 @@ With the user the driver gets the token of etcd and gets it again when the token
 | the user can not read the prefix or the key    | error of `Parse`: `permission denied`                                              |
 | access is denied while watching                | the driver stops watching, the error is logged: retries do not fix the permissions |
 
-All these errors wrap `tinyconf.ErrAccessDenied`: the manager [logs](https://insei.github.io/tinyconf/2.1/features/logging/index.md) them as `access denied`, and they can be checked with `errors.Is`. The role of the user needs `read` on the prefix: `etcdctl role grant-permission --prefix=true app read app/`.
+All these errors wrap `tinyconf.ErrAccessDenied`: the manager [logs](https://insei.github.io/tinyconf/2.2/features/logging/index.md) them as `access denied`, and they can be checked with `errors.Is`. The role of the user needs `read` on the prefix: `etcdctl role grant-permission --prefix=true app read app/`.
 
 ## Watching
 
@@ -2310,7 +2322,7 @@ A field without the `flag` tag is not read from the command line.
 - Bool fields do not take the next argument as a value: use `--verbose=false` to set false.
 - Slices and arrays can be filled with repeated flags: `--host=a --host=b,c` is `[a b c]`. For all other types the last occurrence of the flag is used.
 - All arguments after `--` are ignored.
-- Values are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.1/features/types/index.md).
+- Values are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.2/features/types/index.md).
 
 ## Unknown flags
 
@@ -2347,7 +2359,7 @@ Values of the fields with `hidden:"true"` are not shown.
 
 # Custom formats
 
-The format driver reads config files of any format with nested objects. The format is set by a function that decodes the content to a map, everything else is the same as in the [yaml](https://insei.github.io/tinyconf/2.1/drivers/yaml/index.md), [json](https://insei.github.io/tinyconf/2.1/drivers/json/index.md) and [toml](https://insei.github.io/tinyconf/2.1/drivers/toml/index.md) drivers: several files, merging, embedded files, [remote documents](https://insei.github.io/tinyconf/2.1/drivers/consul/#document), environment variables in the content, [reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md), [documentation](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md).
+The format driver reads config files of any format with nested objects. The format is set by a function that decodes the content to a map, everything else is the same as in the [yaml](https://insei.github.io/tinyconf/2.2/drivers/yaml/index.md), [json](https://insei.github.io/tinyconf/2.2/drivers/json/index.md) and [toml](https://insei.github.io/tinyconf/2.2/drivers/toml/index.md) drivers: several files, merging, embedded files, [remote documents](https://insei.github.io/tinyconf/2.2/drivers/consul/#document), environment variables in the content, [reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md), [documentation](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md).
 
 ```go
 import "github.com/insei/tinyconf/v2/drivers/format"
@@ -2355,7 +2367,7 @@ import "github.com/insei/tinyconf/v2/drivers/format"
 driver, err := format.New("hujson", decodeHuJSON, "config.hujson")
 ```
 
-The name of the driver is the name of the struct tag with the keys, and the name for [`GenDoc`](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md):
+The name of the driver is the name of the struct tag with the keys, and the name for [`GenDoc`](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md):
 
 ```go
 type Config struct {
@@ -2377,7 +2389,7 @@ The decoder returns the content as a map:
 - slices are lists, other values are scalars: strings, numbers, booleans, `time.Time`;
 - empty content can be decoded to a nil map.
 
-Values are converted to the types of the fields by the same rules as the values of yaml and json, see [Supported types](https://insei.github.io/tinyconf/2.1/features/types/index.md).
+Values are converted to the types of the fields by the same rules as the values of yaml and json, see [Supported types](https://insei.github.io/tinyconf/2.2/features/types/index.md).
 
 For example, [HuJSON](https://github.com/tailscale/hujson) — JSON with comments and trailing commas:
 
@@ -2403,13 +2415,13 @@ Libraries that decode to the structs only, like HCL, need the conversion of thei
 | `WithFiles(files...)`         | additional files from the OS file system                                                                                                                                                          |
 | `WithFS(fsys, files...)`      | files from any `fs.FS`, `embed.FS` for example                                                                                                                                                    |
 | `WithData(name, data)`        | in-memory content, the name is used in error messages                                                                                                                                             |
-| `WithSource(source)`          | content from a remote storage: [`consul.Document`](https://insei.github.io/tinyconf/2.1/drivers/consul/#document), [`etcd.Document`](https://insei.github.io/tinyconf/2.1/drivers/etcd/#document) |
+| `WithSource(source)`          | content from a remote storage: [`consul.Document`](https://insei.github.io/tinyconf/2.2/drivers/consul/#document), [`etcd.Document`](https://insei.github.io/tinyconf/2.2/drivers/etcd/#document) |
 | `WithOptional()`              | files can be absent                                                                                                                                                                               |
 | `WithEnvExpansion()`          | replaces `${VAR}` in the content with environment variables                                                                                                                                       |
-| `WithWatchInterval(interval)` | interval of polling the files for [reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md), 5 seconds by default                                                             |
+| `WithWatchInterval(interval)` | interval of polling the files for [reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md), 5 seconds by default                                                             |
 | `WithEncoder(encode)`         | encoder of the documents for `GenDoc`                                                                                                                                                             |
 
-The rules of the files are the same as in the [yaml](https://insei.github.io/tinyconf/2.1/drivers/yaml/#several-files) driver.
+The rules of the files are the same as in the [yaml](https://insei.github.io/tinyconf/2.2/drivers/yaml/#several-files) driver.
 
 ## Documentation
 
@@ -2427,7 +2439,7 @@ The document has the same structure as the result of the decoder, with the curre
 
 ## Not a file format?
 
-If the values are not stored as documents — a database, an API, a secret manager — write a [custom driver](https://insei.github.io/tinyconf/2.1/drivers/custom/index.md).
+If the values are not stored as documents — a database, an API, a secret manager — write a [custom driver](https://insei.github.io/tinyconf/2.2/drivers/custom/index.md).
 
 # ini
 
@@ -2443,7 +2455,7 @@ The driver has its own parser and adds no dependencies.
 
 ## Keys
 
-The `ini` tag is a key in the file. Tags of [nested structs](https://insei.github.io/tinyconf/2.1/features/structs/index.md) are sections:
+The `ini` tag is a key in the file. Tags of [nested structs](https://insei.github.io/tinyconf/2.2/features/structs/index.md) are sections:
 
 ```go
 type Config struct {
@@ -2473,7 +2485,7 @@ Dots in the names of the sections and in the keys are nested objects: `[http.tls
 
 Set the tags of the parents
 
-The path of the nested field is built from the `ini` tags of its parents. If the `HTTP` field has no `ini` tag, the `Host` field is read from the `host` key in the root of the file, and the manager [logs a warning](https://insei.github.io/tinyconf/2.1/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.1/features/structs/#embedded-structs) without the tag are the exception.
+The path of the nested field is built from the `ini` tags of its parents. If the `HTTP` field has no `ini` tag, the `Host` field is read from the `host` key in the root of the file, and the manager [logs a warning](https://insei.github.io/tinyconf/2.2/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.2/features/structs/#embedded-structs) without the tag are the exception.
 
 ## Syntax
 
@@ -2487,7 +2499,7 @@ The path of the nested field is built from the `ini` tags of its parents. If the
 | value in single quotes, as is        | `name = 'my app; # not a comment'`     |
 | empty value                          | `name =`                               |
 
-Values of INI are strings, they are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.1/features/types/index.md) like environment variables: `true`, `9090`, `1m30s`; lists are comma separated `hosts = a,b`, maps are `labels = env:prod,team:core`, structs in lists are JSON with the keys by the `ini` tags: `servers = '[{"host": "a", "port": 1}]'`. A map can be a section too:
+Values of INI are strings, they are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.2/features/types/index.md) like environment variables: `true`, `9090`, `1m30s`; lists are comma separated `hosts = a,b`, maps are `labels = env:prod,team:core`, structs in lists are JSON with the keys by the `ini` tags: `servers = '[{"host": "a", "port": 1}]'`. A map can be a section too:
 
 ```ini
 [labels]
@@ -2499,19 +2511,19 @@ A key can not be a value and a section at the same time: `http = 1` and `[http]`
 
 ## Options
 
-The options are the same as of the [yaml](https://insei.github.io/tinyconf/2.1/drivers/yaml/#options) driver:
+The options are the same as of the [yaml](https://insei.github.io/tinyconf/2.2/drivers/yaml/#options) driver:
 
 | Option                        | Description                                                                                                                                                                                                         |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `WithFiles(files...)`         | additional files from the OS file system                                                                                                                                                                            |
 | `WithFS(fsys, files...)`      | files from any `fs.FS`, `embed.FS` for example                                                                                                                                                                      |
 | `WithData(name, data)`        | in-memory content, the name is used in error messages                                                                                                                                                               |
-| `WithSource(source)`          | content from a remote storage: [`consul.Document`](https://insei.github.io/tinyconf/2.1/drivers/consul/#document), [`etcd.Document`](https://insei.github.io/tinyconf/2.1/drivers/etcd/#document)                   |
+| `WithSource(source)`          | content from a remote storage: [`consul.Document`](https://insei.github.io/tinyconf/2.2/drivers/consul/#document), [`etcd.Document`](https://insei.github.io/tinyconf/2.2/drivers/etcd/#document)                   |
 | `WithOptional()`              | files can be absent                                                                                                                                                                                                 |
 | `WithEnvExpansion()`          | replaces `${VAR}` in the content with environment variables                                                                                                                                                         |
-| `WithWatchInterval(interval)` | interval of polling the files for [reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md), 5 seconds by default; changes are detected by the events of the file system without waiting for it |
+| `WithWatchInterval(interval)` | interval of polling the files for [reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md), 5 seconds by default; changes are detected by the events of the file system without waiting for it |
 
-Files are [merged](https://insei.github.io/tinyconf/2.1/drivers/yaml/#several-files) in the order of addition, sections are merged by keys.
+Files are [merged](https://insei.github.io/tinyconf/2.2/drivers/yaml/#several-files) in the order of addition, sections are merged by keys.
 
 ## Documentation
 
@@ -2538,7 +2550,7 @@ jsonDriver, err := json.New("config.json")
 
 ## Keys
 
-The `json` tag is a key in the file. Tags of [nested structs](https://insei.github.io/tinyconf/2.1/features/structs/index.md) are keys of nested objects:
+The `json` tag is a key in the file. Tags of [nested structs](https://insei.github.io/tinyconf/2.2/features/structs/index.md) are keys of nested objects:
 
 ```go
 type Config struct {
@@ -2562,11 +2574,11 @@ type Config struct {
 }
 ```
 
-Options after the comma are ignored: `json:"port,omitempty"` is the `port` key. Set the `json` tag on all parents of the field: without the tag of the parent the field is read from the root of the file, and the manager [logs a warning](https://insei.github.io/tinyconf/2.1/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.1/features/structs/#embedded-structs) without the tag are the exception, their fields are on the level of the embedding struct.
+Options after the comma are ignored: `json:"port,omitempty"` is the `port` key. Set the `json` tag on all parents of the field: without the tag of the parent the field is read from the root of the file, and the manager [logs a warning](https://insei.github.io/tinyconf/2.2/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.2/features/structs/#embedded-structs) without the tag are the exception, their fields are on the level of the embedding struct.
 
 ## Options
 
-The options are the same as in the [yaml driver](https://insei.github.io/tinyconf/2.1/drivers/yaml/#options):
+The options are the same as in the [yaml driver](https://insei.github.io/tinyconf/2.2/drivers/yaml/#options):
 
 ```go
 jsonDriver, err := json.New("config.json",
@@ -2581,12 +2593,12 @@ jsonDriver, err := json.New("config.json",
 | `WithFiles(files...)`         | additional files from the OS file system                                                                                                                                                                            |
 | `WithFS(fsys, files...)`      | files from any `fs.FS`, `embed.FS` for example                                                                                                                                                                      |
 | `WithData(name, data)`        | in-memory content, the name is used in error messages                                                                                                                                                               |
-| `WithSource(source)`          | content from a remote storage: [`consul.Document`](https://insei.github.io/tinyconf/2.1/drivers/consul/#document)                                                                                                   |
+| `WithSource(source)`          | content from a remote storage: [`consul.Document`](https://insei.github.io/tinyconf/2.2/drivers/consul/#document)                                                                                                   |
 | `WithOptional()`              | files can be absent                                                                                                                                                                                                 |
 | `WithEnvExpansion()`          | replaces `${VAR}` and `${VAR:-default}` in the content with environment variables                                                                                                                                   |
-| `WithWatchInterval(interval)` | interval of polling the files for [reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md), 5 seconds by default; changes are detected by the events of the file system without waiting for it |
+| `WithWatchInterval(interval)` | interval of polling the files for [reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md), 5 seconds by default; changes are detected by the events of the file system without waiting for it |
 
-Several files are [merged](https://insei.github.io/tinyconf/2.1/drivers/yaml/#several-files) in the order of addition, objects are merged by keys. Files are read once per `Parse` call.
+Several files are [merged](https://insei.github.io/tinyconf/2.2/drivers/yaml/#several-files) in the order of addition, objects are merged by keys. Files are read once per `Parse` call.
 
 ## Documentation
 
@@ -2622,7 +2634,7 @@ The driver has its own parser and adds no dependencies.
 
 ## Keys
 
-The `properties` tag is a part of the key. Tags of [nested structs](https://insei.github.io/tinyconf/2.1/features/structs/index.md) are the parts before the dots:
+The `properties` tag is a part of the key. Tags of [nested structs](https://insei.github.io/tinyconf/2.2/features/structs/index.md) are the parts before the dots:
 
 ```go
 type Config struct {
@@ -2642,7 +2654,7 @@ http.port=9090
 
 Set the tags of the parents
 
-The key of the nested field is built from the `properties` tags of its parents. If the `HTTP` field has no `properties` tag, the `Host` field is read from the `host` key, and the manager [logs a warning](https://insei.github.io/tinyconf/2.1/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.1/features/structs/#embedded-structs) without the tag are the exception.
+The key of the nested field is built from the `properties` tags of its parents. If the `HTTP` field has no `properties` tag, the `Host` field is read from the `host` key, and the manager [logs a warning](https://insei.github.io/tinyconf/2.2/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.2/features/structs/#embedded-structs) without the tag are the exception.
 
 ## Syntax
 
@@ -2658,25 +2670,25 @@ The syntax of [`java.util.Properties`](https://docs.oracle.com/javase/8/docs/api
 
 The spaces before the value are skipped, the spaces at the end are a part of the value, like in Java.
 
-Values are strings, they are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.1/features/types/index.md) like environment variables: `true`, `9090`, `1m30s`; lists are comma separated `hosts=a,b`, maps are `labels=env:prod,team:core` or the keys `labels.env=prod`, structs in lists are JSON with the keys by the `properties` tags: `servers=[{"host": "a", "port": 1}]`.
+Values are strings, they are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.2/features/types/index.md) like environment variables: `true`, `9090`, `1m30s`; lists are comma separated `hosts=a,b`, maps are `labels=env:prod,team:core` or the keys `labels.env=prod`, structs in lists are JSON with the keys by the `properties` tags: `servers=[{"host": "a", "port": 1}]`.
 
 A key can not be a value and an object at the same time: `http=1` and `http.port=2` in one file is an error of `Parse` with the number of the line.
 
 ## Options
 
-The options are the same as of the [yaml](https://insei.github.io/tinyconf/2.1/drivers/yaml/#options) driver:
+The options are the same as of the [yaml](https://insei.github.io/tinyconf/2.2/drivers/yaml/#options) driver:
 
 | Option                        | Description                                                                                                                                                                                                         |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `WithFiles(files...)`         | additional files from the OS file system: `application-prod.properties`                                                                                                                                             |
 | `WithFS(fsys, files...)`      | files from any `fs.FS`, `embed.FS` for example                                                                                                                                                                      |
 | `WithData(name, data)`        | in-memory content, the name is used in error messages                                                                                                                                                               |
-| `WithSource(source)`          | content from a remote storage: [`consul.Document`](https://insei.github.io/tinyconf/2.1/drivers/consul/#document), [`etcd.Document`](https://insei.github.io/tinyconf/2.1/drivers/etcd/#document)                   |
+| `WithSource(source)`          | content from a remote storage: [`consul.Document`](https://insei.github.io/tinyconf/2.2/drivers/consul/#document), [`etcd.Document`](https://insei.github.io/tinyconf/2.2/drivers/etcd/#document)                   |
 | `WithOptional()`              | files can be absent                                                                                                                                                                                                 |
 | `WithEnvExpansion()`          | replaces `${VAR}` in the content with environment variables                                                                                                                                                         |
-| `WithWatchInterval(interval)` | interval of polling the files for [reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md), 5 seconds by default; changes are detected by the events of the file system without waiting for it |
+| `WithWatchInterval(interval)` | interval of polling the files for [reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md), 5 seconds by default; changes are detected by the events of the file system without waiting for it |
 
-Files are [merged](https://insei.github.io/tinyconf/2.1/drivers/yaml/#several-files) in the order of addition, like the profiles of Spring:
+Files are [merged](https://insei.github.io/tinyconf/2.2/drivers/yaml/#several-files) in the order of addition, like the profiles of Spring:
 
 ```go
 propertiesDriver, err := properties.New("application.properties",
@@ -2726,7 +2738,7 @@ config, err := tinyconf.New(
 )
 ```
 
-Values are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.1/features/types/index.md). An incorrect default value is an error of `Parse`, so a typo in the tag is found at the first start.
+Values are parsed by the rules of [string values](https://insei.github.io/tinyconf/2.2/features/types/index.md). An incorrect default value is an error of `Parse`, so a typo in the tag is found at the first start.
 
 The driver has no own documentation format, `GenDoc` returns an empty string for it. Default values are visible in the documentation of other drivers as the values of the fields.
 
@@ -2742,7 +2754,7 @@ tomlDriver, err := toml.New("config.toml")
 
 ## Keys
 
-The `toml` tag is a key in the file. Tags of [nested structs](https://insei.github.io/tinyconf/2.1/features/structs/index.md) are names of tables:
+The `toml` tag is a key in the file. Tags of [nested structs](https://insei.github.io/tinyconf/2.2/features/structs/index.md) are names of tables:
 
 ```go
 type Server struct {
@@ -2782,11 +2794,11 @@ host = "b"
 port = 2
 ```
 
-Set the `toml` tag on all parents of the field: without the tag of the parent the field is read from the root of the file, and the manager [logs a warning](https://insei.github.io/tinyconf/2.1/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.1/features/structs/#embedded-structs) without the tag are the exception, their fields are on the level of the embedding struct. Native TOML dates are supported for `time.Time` fields.
+Set the `toml` tag on all parents of the field: without the tag of the parent the field is read from the root of the file, and the manager [logs a warning](https://insei.github.io/tinyconf/2.2/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.2/features/structs/#embedded-structs) without the tag are the exception, their fields are on the level of the embedding struct. Native TOML dates are supported for `time.Time` fields.
 
 ## Options
 
-The options are the same as in the [yaml driver](https://insei.github.io/tinyconf/2.1/drivers/yaml/#options):
+The options are the same as in the [yaml driver](https://insei.github.io/tinyconf/2.2/drivers/yaml/#options):
 
 ```go
 tomlDriver, err := toml.New("config.toml",
@@ -2801,12 +2813,12 @@ tomlDriver, err := toml.New("config.toml",
 | `WithFiles(files...)`         | additional files from the OS file system                                                                                                                                                                            |
 | `WithFS(fsys, files...)`      | files from any `fs.FS`, `embed.FS` for example                                                                                                                                                                      |
 | `WithData(name, data)`        | in-memory content, the name is used in error messages                                                                                                                                                               |
-| `WithSource(source)`          | content from a remote storage: [`consul.Document`](https://insei.github.io/tinyconf/2.1/drivers/consul/#document)                                                                                                   |
+| `WithSource(source)`          | content from a remote storage: [`consul.Document`](https://insei.github.io/tinyconf/2.2/drivers/consul/#document)                                                                                                   |
 | `WithOptional()`              | files can be absent                                                                                                                                                                                                 |
 | `WithEnvExpansion()`          | replaces `${VAR}` and `${VAR:-default}` in the content with environment variables                                                                                                                                   |
-| `WithWatchInterval(interval)` | interval of polling the files for [reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md), 5 seconds by default; changes are detected by the events of the file system without waiting for it |
+| `WithWatchInterval(interval)` | interval of polling the files for [reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md), 5 seconds by default; changes are detected by the events of the file system without waiting for it |
 
-Several files are [merged](https://insei.github.io/tinyconf/2.1/drivers/yaml/#several-files) in the order of addition, tables are merged by keys. Files are read once per `Parse` call.
+Several files are [merged](https://insei.github.io/tinyconf/2.2/drivers/yaml/#several-files) in the order of addition, tables are merged by keys. Files are read once per `Parse` call.
 
 ## Documentation
 
@@ -2842,7 +2854,7 @@ The driver talks to the HTTP API of Vault directly and adds no dependencies.
 
 ## Keys
 
-A secret in Vault is a JSON object. The `vault` tag is a key in it, tags of [nested structs](https://insei.github.io/tinyconf/2.1/features/structs/index.md) are keys of nested objects:
+A secret in Vault is a JSON object. The `vault` tag is a key in it, tags of [nested structs](https://insei.github.io/tinyconf/2.2/features/structs/index.md) are keys of nested objects:
 
 ```go
 type Config struct {
@@ -2860,11 +2872,11 @@ vault kv put -mount=secret app/config - <<'EOF'
 EOF
 ```
 
-Values of the secret can be JSON values or strings: `"port": 5432` and `"port": "5432"` are the same for an `int` field, `"timeout": "1m30s"` is a `time.Duration`, see [Supported types](https://insei.github.io/tinyconf/2.1/features/types/index.md).
+Values of the secret can be JSON values or strings: `"port": 5432` and `"port": "5432"` are the same for an `int` field, `"timeout": "1m30s"` is a `time.Duration`, see [Supported types](https://insei.github.io/tinyconf/2.2/features/types/index.md).
 
 Set the tags of the parents
 
-The path of the nested field is built from the `vault` tags of its parents. If the `Database` field has no `vault` tag, the `Password` field is read from the `password` key in the root of the secret, and the manager [logs a warning](https://insei.github.io/tinyconf/2.1/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.1/features/structs/#embedded-structs) without the tag are the exception.
+The path of the nested field is built from the `vault` tags of its parents. If the `Database` field has no `vault` tag, the `Password` field is read from the `password` key in the root of the secret, and the manager [logs a warning](https://insei.github.io/tinyconf/2.2/features/logging/index.md). [Embedded structs](https://insei.github.io/tinyconf/2.2/features/structs/#embedded-structs) without the tag are the exception.
 
 ## Several secrets
 
@@ -2872,7 +2884,7 @@ The path of the nested field is built from the `vault` tags of its parents. If t
 vaultDriver, err := vault.New("app/config", vault.WithPaths("app/database", "shared/certificates"))
 ```
 
-Secrets are merged in the order of addition, like [several files](https://insei.github.io/tinyconf/2.1/drivers/yaml/#several-files): values from the next secret override values from the previous one, nested objects are merged by keys. It is a common layout: the settings and the credentials in different secrets with different access policies.
+Secrets are merged in the order of addition, like [several files](https://insei.github.io/tinyconf/2.2/drivers/yaml/#several-files): values from the next secret override values from the previous one, nested objects are merged by keys. It is a common layout: the settings and the credentials in different secrets with different access policies.
 
 ## Options
 
@@ -2884,24 +2896,52 @@ vaultDriver, err := vault.New("app/config",
 )
 ```
 
-| Option                        | Default                                  | Description                                                    |
-| ----------------------------- | ---------------------------------------- | -------------------------------------------------------------- |
-| `WithAddress(address)`        | `VAULT_ADDR` or `https://127.0.0.1:8200` | URL of Vault                                                   |
-| `WithToken(token)`            | `VAULT_TOKEN`                            | the token                                                      |
-| `WithTokenFile(path)`         |                                          | the file with the token, it is read before every request       |
-| `WithNamespace(namespace)`    | `VAULT_NAMESPACE`                        | the namespace of Vault Enterprise                              |
-| `WithMount(mount)`            | `secret`                                 | the mount of the KV secrets engine                             |
-| `WithKVv1()`                  | KV version 2                             | read from the KV secrets engine version 1                      |
-| `WithHTTPClient(client)`      | `http.DefaultClient`                     | the client with TLS settings, for example                      |
-| `WithPaths(paths...)`         |                                          | additional secrets                                             |
-| `WithOptional()`              |                                          | secrets can be absent, by default an absent secret is an error |
-| `WithWatchInterval(interval)` | 30 seconds                               | the interval of checking the secrets for changes               |
+| Option                            | Default                                  | Description                                                    |
+| --------------------------------- | ---------------------------------------- | -------------------------------------------------------------- |
+| `WithAddress(address)`            | `VAULT_ADDR` or `https://127.0.0.1:8200` | URL of Vault                                                   |
+| `WithToken(token)`                | `VAULT_TOKEN`                            | the token                                                      |
+| `WithTokenFile(path)`             |                                          | the file with the token, it is read before every request       |
+| `WithAppRole(roleID, secretID)`   |                                          | login by AppRole, see [Authentication](#authentication)        |
+| `WithKubernetes(role, tokenFile)` |                                          | login by the service account of the pod                        |
+| `WithAuthMount(mount)`            | `approle`, `kubernetes`                  | the mount of the auth method                                   |
+| `WithNamespace(namespace)`        | `VAULT_NAMESPACE`                        | the namespace of Vault Enterprise                              |
+| `WithMount(mount)`                | `secret`                                 | the mount of the KV secrets engine                             |
+| `WithKVv1()`                      | KV version 2                             | read from the KV secrets engine version 1                      |
+| `WithHTTPClient(client)`          | `http.DefaultClient`                     | the client with TLS settings, for example                      |
+| `WithPaths(paths...)`             |                                          | additional secrets                                             |
+| `WithOptional()`                  |                                          | secrets can be absent, by default an absent secret is an error |
+| `WithWatchInterval(interval)`     | 30 seconds                               | the interval of checking the secrets for changes               |
 
 The first argument of `New` can be an empty string, if the secrets are set by `WithPaths`.
 
 ## Authentication
 
-The driver uses a token. Other methods — Kubernetes, AppRole, cloud IAM — are handled by [Vault Agent](https://developer.hashicorp.com/vault/docs/agent-and-proxy/agent): it logs in, renews the token and writes it to the file. Point the driver to this file:
+The driver logs in by AppRole or by the service account of a Kubernetes pod, or uses a token.
+
+### AppRole
+
+```go
+vaultDriver, err := vault.New("app/config",
+    vault.WithAppRole(os.Getenv("VAULT_ROLE_ID"), os.Getenv("VAULT_SECRET_ID")),
+)
+```
+
+### Kubernetes
+
+```go
+// the token of the service account from /var/run/secrets/kubernetes.io/serviceaccount/token
+vaultDriver, err := vault.New("app/config", vault.WithKubernetes("app", ""))
+```
+
+The second argument is the file with the token of the service account, a projected token with the audience of Vault for example. The file is read before every login, so the token rotated by Kubernetes is used.
+
+The auth methods are mounted at `approle` and `kubernetes` by default, another mount is set by `WithAuthMount("k8s-prod")`.
+
+The driver logs in at the first request and keeps the token. The new token is requested after 2/3 of its lease, and when Vault denies the request: the token can be revoked before its lease expires. Wrong credentials are an error of `Parse` that wraps `tinyconf.ErrAccessDenied`. A login method has priority over `WithToken`, `WithTokenFile` and `VAULT_TOKEN`.
+
+### Token
+
+`WithToken` or the `VAULT_TOKEN` variable set the token. Other methods — cloud IAM, LDAP, JWT — are handled by [Vault Agent](https://developer.hashicorp.com/vault/docs/agent-and-proxy/agent): it logs in, renews the token and writes it to the file. Point the driver to this file:
 
 ```go
 vaultDriver, err := vault.New("app/config", vault.WithTokenFile("/vault/secrets/token"))
@@ -2911,17 +2951,17 @@ The file is read before every request, so the renewed token is used without rest
 
 ## Errors
 
-| Case                              | Result                                                                            |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| the secret is absent              | error of `Parse`, unless `WithOptional()`                                         |
-| the token can not read the secret | error of `Parse` that wraps `tinyconf.ErrAccessDenied`, logged as `access denied` |
-| Vault is not available or sealed  | error of `Parse`                                                                  |
+| Case                                                              | Result                                                                            |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| the secret is absent                                              | error of `Parse`, unless `WithOptional()`                                         |
+| the token can not read the secret, wrong credentials of the login | error of `Parse` that wraps `tinyconf.ErrAccessDenied`, logged as `access denied` |
+| Vault is not available or sealed                                  | error of `Parse`                                                                  |
 
-The driver is skipped in the `Parse` call with the error, see [Missing files and values](https://insei.github.io/tinyconf/2.1/drivers/yaml/#missing-files-and-values).
+The driver is skipped in the `Parse` call with the error, see [Missing files and values](https://insei.github.io/tinyconf/2.2/drivers/yaml/#missing-files-and-values).
 
 ## Reloading
 
-Vault does not notify about changes, so the driver checks the versions of the secrets every 30 seconds while there are [subscriptions](https://insei.github.io/tinyconf/2.1/features/reloading/index.md). The interval is set with `WithWatchInterval`. A secret that appears, disappears or becomes available again after an error is a change too.
+Vault does not notify about changes, so the driver checks the versions of the secrets every 30 seconds while there are [subscriptions](https://insei.github.io/tinyconf/2.2/features/reloading/index.md). The interval is set with `WithWatchInterval`. A secret that appears, disappears or becomes available again after an error is a change too.
 
 For KV version 2 the version of the secret is checked, for KV version 1 — the hash of its data.
 
@@ -2956,7 +2996,7 @@ yamlDriver, err := yaml.New("config.yaml")
 
 ## Keys
 
-The `yaml` tag is a key in the file. Tags of [nested structs](https://insei.github.io/tinyconf/2.1/features/structs/index.md) are keys of nested maps:
+The `yaml` tag is a key in the file. Tags of [nested structs](https://insei.github.io/tinyconf/2.2/features/structs/index.md) are keys of nested maps:
 
 ```go
 type Config struct {
@@ -2981,9 +3021,9 @@ Set the tags of the parents
 
 The path of the nested field is built from the `yaml` tags of its parents. If the `HTTP` field has no `yaml` tag, the `Host` field is read from the `host` key in the root of the file, not from `http.host`.
 
-When a value is found this way, the manager [logs a warning](https://insei.github.io/tinyconf/2.1/features/logging/index.md) with the name of the parent without the tag and the key that was used.
+When a value is found this way, the manager [logs a warning](https://insei.github.io/tinyconf/2.2/features/logging/index.md) with the name of the parent without the tag and the key that was used.
 
-[Embedded structs](https://insei.github.io/tinyconf/2.1/features/structs/#embedded-structs) are the exception: they do not need the tag, their fields are on the level of the embedding struct.
+[Embedded structs](https://insei.github.io/tinyconf/2.2/features/structs/#embedded-structs) are the exception: they do not need the tag, their fields are on the level of the embedding struct.
 
 ## Options
 
@@ -3000,10 +3040,10 @@ yamlDriver, err := yaml.New("config.yaml",
 | `WithFiles(files...)`         | additional files from the OS file system                                                                                                                                                                            |
 | `WithFS(fsys, files...)`      | files from any `fs.FS`, `embed.FS` for example                                                                                                                                                                      |
 | `WithData(name, data)`        | in-memory content, the name is used in error messages                                                                                                                                                               |
-| `WithSource(source)`          | content from a remote storage: [`consul.Document`](https://insei.github.io/tinyconf/2.1/drivers/consul/#document)                                                                                                   |
+| `WithSource(source)`          | content from a remote storage: [`consul.Document`](https://insei.github.io/tinyconf/2.2/drivers/consul/#document)                                                                                                   |
 | `WithOptional()`              | files can be absent                                                                                                                                                                                                 |
 | `WithEnvExpansion()`          | replaces `${VAR}` in the content with environment variables                                                                                                                                                         |
-| `WithWatchInterval(interval)` | interval of polling the files for [reloading](https://insei.github.io/tinyconf/2.1/features/reloading/index.md), 5 seconds by default; changes are detected by the events of the file system without waiting for it |
+| `WithWatchInterval(interval)` | interval of polling the files for [reloading](https://insei.github.io/tinyconf/2.2/features/reloading/index.md), 5 seconds by default; changes are detected by the events of the file system without waiting for it |
 
 The first argument of `New` can be an empty string, if all sources are set by options.
 
@@ -3072,4 +3112,4 @@ Files are read once per `Parse` call, not for every field. The next `Parse` call
 
 ## Documentation
 
-`GenDoc("yaml")` generates a commented template of the file, see [Documentation generation](https://insei.github.io/tinyconf/2.1/features/gendoc/index.md).
+`GenDoc("yaml")` generates a commented template of the file, see [Documentation generation](https://insei.github.io/tinyconf/2.2/features/gendoc/index.md).
