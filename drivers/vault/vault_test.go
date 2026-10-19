@@ -3,12 +3,14 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -31,6 +33,13 @@ type fakeVault struct {
 	denied   map[string]bool
 	token    string
 	requests []*http.Request
+	// login is the auth method that issues the tokens: the mount, the expected body and the lease of the tokens in seconds
+	login     string
+	loginBody map[string]any
+	lease     int
+	logins    int
+	// loginResponse replaces the response of the login, if it is set
+	loginResponse func(w http.ResponseWriter)
 }
 
 func newFakeVault(secrets map[string]map[string]any) *fakeVault {
@@ -68,6 +77,10 @@ func (f *fakeVault) handle(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		_ = json.NewEncoder(w).Encode(map[string]any{"errors": errs})
 	}
+	if r.URL.Path == "/v1/auth/"+f.login+"/login" {
+		f.handleLogin(w, r, writeErrors)
+		return
+	}
 	if f.token != "" && r.Header.Get("X-Vault-Token") != f.token {
 		writeErrors(http.StatusForbidden, "permission denied")
 		return
@@ -90,6 +103,29 @@ func (f *fakeVault) handle(w http.ResponseWriter, r *http.Request) {
 		resp["data"] = map[string]any{"data": data, "metadata": map[string]any{"version": f.versions[path]}}
 	}
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// handleLogin issues the new token, if the body of the login is expected; the previous tokens are not valid anymore.
+func (f *fakeVault) handleLogin(w http.ResponseWriter, r *http.Request, writeErrors func(status int, errs ...string)) {
+	if f.loginResponse != nil {
+		f.loginResponse(w)
+		return
+	}
+	var body map[string]any
+	_ = json.NewDecoder(r.Body).Decode(&body)
+	if !reflect.DeepEqual(body, f.loginBody) {
+		writeErrors(http.StatusBadRequest, "invalid role or secret ID")
+		return
+	}
+	f.logins++
+	f.token = fmt.Sprintf("login-%d", f.logins)
+	_ = json.NewEncoder(w).Encode(map[string]any{"auth": map[string]any{"client_token": f.token, "lease_duration": f.lease}})
+}
+
+func (f *fakeVault) loginCount() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.logins
 }
 
 type server struct {
